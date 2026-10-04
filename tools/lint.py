@@ -39,6 +39,21 @@ for w, r in als:
     if not r[1]: err.append(w + ': no keys')
     for e in r[1].split(','):
         if e.partition(':')[0] not in keys: err.append(f'{w}: key {e.partition(":")[0]!r} not in muscles.txt')
+acts = rows('activities.txt', 7)
+AG, KINDS = ('Endurance', 'Combat', 'Team', 'Other'), ('easy', 'long', 'tempo', 'vo2', 'hiit', 'rounds')
+for w, r in acts:
+    if r[2] not in AG: err.append(f'{w}: unknown activity group {r[2]!r}')
+    try: float(r[3])
+    except ValueError: err.append(f'{w}: MET {r[3]!r} is not a number')
+    kd, _, mn = r[6].partition(':')
+    if kd not in KINDS or not mn.isdigit() or not 5 <= int(mn) <= 300: err.append(f'{w}: default {r[6]!r} must be kind:minutes ({"/".join(KINDS)})')
+    if kd == 'rounds' and r[2] != 'Combat': err.append(w + ': rounds are for the Combat group')
+    if r[4] != '-':
+        for e in r[4].split(','):
+            try: wt = float(e.rsplit(':', 1)[1]); k = e.rsplit(':', 1)[0].partition(':')[0]
+            except (IndexError, ValueError): err.append(f'{w}: bad profile entry {e!r} (key[:part]:weight)'); continue
+            if not 0.2 <= wt <= 1: err.append(f'{w}: weight {wt} for {k!r} outside 0.2-1')
+            if k not in keys: err.append(f'{w}: key {k!r} not in muscles.txt')
 nex = None
 if os.path.exists(P('meta3.json')):
     M = json.loads(rd(P('meta3.json'))); db = M['db']; names = set(); nex = len(M['ex'])
@@ -49,6 +64,11 @@ if os.path.exists(P('meta3.json')):
         for e in r[1].split(','):
             k, _, p = e.partition(':')
             if p and p not in pts.get(k, ()): err.append(f'{w}: {k!r} has no part {p!r}')
+    for w, r in acts:
+        if r[4] != '-':
+            for e in r[4].split(','):
+                k, _, p = e.rsplit(':', 1)[0].partition(':')
+                if p and p not in pts.get(k, ()): err.append(f'{w}: {k!r} has no part {p!r}')
     def tg(w, t, zero=False):
         for k, part, lv in t:
             if k not in db: err.append(f'{w}: unknown muscle {k!r}')
@@ -69,4 +89,4 @@ if os.path.exists(P('meta3.json')):
 else: print('NOTE: meta3.json missing, exercise checks skipped (run meta.py && exercises.py first)')
 if err:
     print('\n'.join('LINT: ' + x for x in err)); print(f'{len(err)} problem(s)'); sys.exit(1)
-print(f'lint OK: {len(mus)} muscles, {len(als)} aliases, ' + (f'{nex} exercises checked' if nex is not None else 'exercise checks skipped'))
+print(f'lint OK: {len(mus)} muscles, {len(als)} aliases, {len(acts)} activities, ' + (f'{nex} exercises checked' if nex is not None else 'exercise checks skipped'))

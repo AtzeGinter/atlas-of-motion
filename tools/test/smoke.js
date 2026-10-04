@@ -88,7 +88,7 @@ async function weekRun(){
  const rename=t=>{q('#dayRen').click();q('#dayIn').value=t;enter();};
  q('[data-tab="wk"]').click();clearAll();selDay(0);
  // week strip
- ok(qa('#wstrip [data-day]').length===7&&qa('#wstrip [data-day]').map(b=>b.firstChild.textContent).join()==='D1,D2,D3,D4,D5,D6,D7','week strip: seven day buttons D1..D7');
+ ok(qa('#wstrip [data-day]').length===7&&qa('#wstrip [data-day]').map(b=>b.firstChild.textContent).join()==='Day 1,Day 2,Day 3,Day 4,Day 5,Day 6,Day 7','week strip: seven day cards named Day 1..Day 7');
  ok(dayBtn(0).getAttribute('aria-pressed')==='true'&&qa('#wstrip .rest').length===7&&q('#dayLbl').textContent.includes('Day 1'),'Day 1 selected, all seven days are rest days (dashed)');
  // adding to the selected day
  selDay(2);addEx('Barbell bench press');
@@ -109,9 +109,9 @@ async function weekRun(){
  selDay(1);q('#dayRen').click();
  ok(!!q('#dayIn')&&q('#dayIn').value==='Day 2','pencil turns the day name into an input');
  q('#dayIn').value='Push day';enter();
- ok(!q('#dayIn')&&nameOf(1)==='Push day'&&dayBtn(1).firstChild.textContent==='PD'&&q('#dayLbl').textContent.includes('Push day'),'Enter renames the day (stored "Push day", button "PD")');
+ ok(!q('#dayIn')&&nameOf(1)==='Push day'&&dayBtn(1).firstChild.textContent==='Push day'&&q('#dayLbl').textContent.includes('Push day'),'Enter renames the day (stored "Push day", card shows the name)');
  rename('');
- ok(nameOf(1)==='Day 2'&&dayBtn(1).firstChild.textContent==='D2','an empty name falls back to "Day 2"');
+ ok(nameOf(1)==='Day 2'&&dayBtn(1).firstChild.textContent==='Day 2','an empty name falls back to "Day 2"');
  rename('Legs and glutes day long');
  ok(nameOf(1)==='Legs and glutes'&&nameOf(1).length<=16,'names are cut at 16 characters ("'+nameOf(1)+'")');
  rename('<b>Push</b>');
@@ -348,7 +348,7 @@ async function migrateRun(){
  // reload with the v3 data: names and several days survive
  const w2=boot({store:{'aom.plan.v3':JSON.stringify({days:[{name:'Push',items:[{n:'Barbell bench press',sets:5,v:['']}]},{name:'',items:[]},{name:'Legs',items:[{n:'Back squat',sets:3,v:['Wide','Deep']}]}]})}}),d2=w2.document;
  await waitFor(()=>!d2.getElementById('loading'),60000,'v3 reload instance');
- ok(d2.querySelector('#wstrip [data-day="0"]').textContent.startsWith('Push')&&d2.querySelector('#wstrip [data-day="1"]').textContent.startsWith('D2')&&d2.querySelector('#wstrip [data-day="2"]').textContent.startsWith('Legs')&&d2.querySelectorAll('#wstrip [data-day]').length===7,'stored names restored (empty -> "Day 2"), missing days padded to seven');
+ ok(d2.querySelector('#wstrip [data-day="0"]').textContent.startsWith('Push')&&d2.querySelector('#wstrip [data-day="1"]').textContent.startsWith('Day 2')&&d2.querySelector('#wstrip [data-day="2"]').textContent.startsWith('Legs')&&d2.querySelectorAll('#wstrip [data-day]').length===7,'stored names restored (empty -> "Day 2"), missing days padded to seven');
  d2.querySelector('#wstrip [data-day="2"]').click();
  ok(d2.querySelector('#plan').textContent.includes('Back squat')&&d2.querySelector('#plan').textContent.includes('Wide, Deep'),'Day 3 holds Back squat (Wide, Deep)');
 }
@@ -652,7 +652,16 @@ async function phoneRun(){
  pq('#ovOpen').click();
  ok(!pq('#ov').hidden&&pq('#vp').contains(pq('#ov'))&&pqa('#ovGrid tr.g').length===27&&pqa('#ovGrid tr.g').every(r=>r.querySelectorAll('.cb').length===7),'phone: the overview opens (full-screen overlay in the viewport) with the 27 x 7 grid');
  ok(pq('#ovGrid tr.g[data-g="1"] .cb[data-d="1"]').dataset.c==='1'&&/Recovery conflicts <b>1<\/b>/.test(pq('#ovSum').innerHTML),'phone: the conflict cell is flagged');
+ // endurance on the phone: add form in the sheet, pill on the card, endurance row + balance cards in the full-screen overview
  pq('#ovClose').click();
+ pq('#endOpen').click();const ps=(id,v)=>{pq(id).value=v;pq(id).dispatchEvent(new p.Event('change',{bubbles:true}));};
+ ps('#endAct','muaythai');pq('#endAdd').click();
+ ok(pqa('#ses .srow').length===1&&pq('#wstrip [data-day="1"]').textContent.includes('Thai 8×3′')&&pq('#endForm').hidden,'phone: Muay Thai session added through the form, pill on the Day 2 card');
+ pq('#ovOpen').click();
+ ok(pqa('#ovGrid tr.er .eb').length===7&&pq('#ovGrid tr.er .eb[data-d="1"]').dataset.m==='90'&&pq('#ovBal [data-b="vo2"]').dataset.v==='1'&&pqa('#ovBal .bc').length===4&&pq('#ovBal').closest('.ovscroll'),'phone: overview shows the endurance row (90 min on Day 2) and the four balance cards');
+ pq('#ovClose').click();
+ pq('#ses [data-srm="0"]').click();
+ ok(pqa('#ses .srow').length===0,'phone: session removed again');
  ok(pq('#ov').hidden&&sheet()!==undefined&&!!pq('#side'),'phone: "Show body" closes the overview, the sheet is untouched');
  pq('#ovOpen').click();pd.dispatchEvent(new p.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
  ok(pq('#ov').hidden,'phone: Escape closes the overview');
@@ -661,6 +670,165 @@ async function phoneRun(){
  ok(pq('#hint').textContent.includes('right-drag')&&p.__dpr===2,'phone->desktop: mouse hint text restored, pixel ratio cap back to 2');
  p.__setPhone(true);
  ok(card.parentNode===pq('#cslot'),'desktop->phone: card moves into the sheet again');
+}
+// ---- v1.2: endurance sessions, heart-rate zones, week balance, recovery warnings, overview ----
+async function endRun(){
+ const cp=require('child_process'),os=require('os');
+ // activity data in META + lint validation
+ const A=id=>META.act.find(a=>a.id===id);
+ ok(META.act.length===15&&['running','trail','cycling','spin','rowing','skierg','swimming','walking','stairs','rope','boxing','muaythai','football','basketball','other'].every(id=>A(id)),'META.act lists the 15 activities');
+ ok(META.act.every(a=>a.p.every(e=>META.db[e[0]]&&e[2]>=0.2&&e[2]<=1))&&A('other').p.length===0,'every profile entry references an existing muscle with weight 0.2-1; "other" has no profile');
+ const prof=(id)=>new Set(A(id).p.map(e=>e[0]));
+ ok(['sternocleidomastoid','splenius capitis','psoas major','iliacus','gluteus medius','serratus anterior'].every(k=>prof('muaythai').has(k))&&['deltoid','triceps brachii','serratus anterior'].every(k=>prof('boxing').has(k))&&!prof('boxing').has('psoas major')&&['gastrocnemius','soleus','tibialis anterior','biceps femoris'].every(k=>prof('running').has(k)),'profiles: Muay Thai = boxing + hip flexors, glute med, neck; running covers calves, tibialis, hamstrings');
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'aom-lint-'));
+ try{
+  fs.mkdirSync(path.join(tmp,'data'));fs.copyFileSync(path.join(ROOT,'tools','template.html'),path.join(tmp,'template.html'));fs.copyFileSync(path.join(ROOT,'tools','meta3.json'),path.join(tmp,'meta3.json'));
+  for(const f of fs.readdirSync(path.join(ROOT,'tools','data'))) fs.copyFileSync(path.join(ROOT,'tools','data',f),path.join(tmp,'data',f));
+  const lint=()=>cp.spawnSync('python',[path.join(ROOT,'tools','lint.py'),tmp],{encoding:'utf8'});
+  const r0=lint();
+  if(r0.error) ok(true,'lint check skipped (python not available)');
+  else{
+   ok(r0.status===0&&/activities/.test(r0.stdout),'lint.py accepts activities.txt ('+r0.stdout.trim()+')');
+   const af=path.join(tmp,'data','activities.txt'),orig=fs.readFileSync(af,'utf8');
+   const bad=(t,re,msg)=>{fs.writeFileSync(af,t);const r=lint();ok(r.status===1&&re.test(r.stdout),'lint.py rejects '+msg);};
+   bad(orig.replace('gastrocnemius:1,','no such muscle:1,'),/not in muscles\.txt/,'an unknown muscle key');
+   bad(orig.replace('deltoid:clavicular part:.65','deltoid:wrong part:.65'),/no part 'wrong part'/,'an unknown part');
+   bad(orig.replace('soleus:1,psoas','soleus:1.5,psoas'),/outside 0\.2-1/,'a weight above 1');
+   bad(orig.replace('Endurance|9.8','Cardio|9.8'),/unknown activity group/,'an unknown group');
+   bad(orig.replace('|easy:45\n','|rounds:45\n'),/rounds are for the Combat group/,'rounds outside combat sports');
+  }
+ }finally{fs.rmSync(tmp,{recursive:true,force:true});}
+ // ---- UI ----
+ const sel=(id,v)=>{q(id).value=v;ev(q(id),'change');};
+ const addSes=(a,k,m)=>{ if(q('#endForm').hidden) q('#endOpen').click(); sel('#endAct',a); if(k) sel('#endKind',k); if(m){ sel('#endMin',m); } q('#endAdd').click(); };
+ const sesOf=i=>days()[i].items.filter(p=>p.t==='e');
+ const bal=b=>q('#bal [data-b="'+b+'"]'),zoneMin=z=>+q('#bal .zleg [data-z="'+z+'"]').dataset.m;
+ const rowVal=n=>{const r=qa('#volsum tr').find(r=>r.cells[0].textContent.trim()===n);return r?parseFloat(r.cells[2].textContent):NaN;};
+ w.localStorage.removeItem('aom.hr.v1');
+ q('[data-tab="wk"]').click();clearAll();
+ ok(q('#endOpen').textContent==='+ Endurance session'&&q('#endForm').hidden&&!q('#ses').textContent,'"+ Endurance session" button, form closed, no sessions yet');
+ ok(bal('who').dataset.v==='0'&&bal('vo2').dataset.v==='0'&&/Add an endurance session/.test(bal('who').textContent)&&zoneMin(2)===0,'balance panel starts empty');
+ // easy run, 45 min, on Day 2
+ selDay(1);q('#endOpen').click();
+ ok(!q('#endForm').hidden&&q('#endAct').value==='running'&&q('#endKind').value==='easy'&&q('#endMin').value==='45'&&q('#endAdd').textContent==='Add to Day 2','form defaults: Running, Easy, 45 min, "Add to Day 2"');
+ ok([...q('#endKind').options].map(o=>o.value).join()==='easy,long,tempo,vo2,hiit','kinds for a normal activity: easy, long, tempo, vo2, hiit');
+ sel('#endAct','muaythai');
+ ok([...q('#endKind').options].map(o=>o.value).join()==='rounds,easy'&&q('#endKind').value==='rounds'&&q('#endMin').value==='90','Muay Thai offers rounds/easy and defaults to 90 min of rounds');
+ sel('#endAct','running');
+ q('#endAdd').click();
+ ok(JSON.stringify(sesOf(1))==='[{"t":"e","a":"running","k":"easy","min":45}]'&&days()[1].items.length===1,'session stored in aom.plan.v3 items as {t:"e",a,k,min}: '+JSON.stringify(sesOf(1)));
+ ok(q('#endForm').hidden&&/Added Running/.test(q('#dayMsg').textContent),'form closes after adding, message names the activity');
+ const pill=i=>dayBtn(i).querySelector('.pl.pe,.pl.pt,.pl.ph');
+ ok(pill(1)&&pill(1).textContent==='Run 45′ Z2'&&pill(1).classList.contains('pe')&&!dayBtn(1).classList.contains('rest')&&dayBtn(0).classList.contains('rest'),'Day 2 card shows a teal "Run 45′ Z2" pill; other days stay rest days');
+ ok(qa('#ses .srow').length===1&&q('#ses').textContent.includes('Easy')&&/Z2 · 60–70 % HRmax/.test(q('#ses').textContent),'session row shows the zone as % HRmax while no heart rate is set: '+q('#ses .sz').textContent);
+ ok(/45 min endurance on Day 2/.test(q('#ses').textContent)&&q('#plan').textContent.includes('rest day so far')===false,'row footer states the day total');
+ ok(bal('who').dataset.v==='45'&&bal('split').dataset.easy==='100'&&bal('vo2').dataset.v==='0'&&zoneMin(2)===45&&bal('str').dataset.sets==='0','balance: 45 min Zone 2 = 45 WHO-equivalent minutes (Z2 counts as moderate), 100 % easy, no VO2max-like session');
+ ok(/Below the WHO minimum/.test(bal('who').textContent)&&/Add exercises/.test(bal('str').textContent),'balance statuses: below 150, no strength yet');
+ ok(/Add exercises to see your weekly volume/.test(q('#volsum').textContent)&&q('#ovBadge').textContent==='45 min','not counted as strength: the weekly table stays empty; badge "'+q('#ovBadge').textContent+'"');
+ // strength unaffected by endurance
+ selDay(0);addEx('Back squat');
+ ok(rowVal('Quadriceps')===3&&bal('str').dataset.sets==='3'&&bal('who').dataset.v==='45'&&/^3 sets on Day 1/.test(q('#plan .fine').textContent.replace(/^1 exercise, /,'')),'strength table and gap filler inputs ignore endurance (Quadriceps 3 sets); WHO stays 45');
+ // VO2max run on Day 3
+ selDay(2);addSes('running','vo2');
+ const v=sesOf(2)[0];
+ ok(v&&v.k==='vo2'&&v.min===40&&v.n===4&&v.len===4&&v.rec===3,'VO2max default: 40 min, 4 x 4 min work, 3 min recoveries: '+JSON.stringify(v));
+ ok(pill(2).textContent==='Run 4×4′ Z5'&&pill(2).classList.contains('ph'),'Day 3 pill "Run 4×4′ Z5" in the hard (red) style');
+ ok(zoneMin(5)===16&&zoneMin(2)===45+24&&bal('who').dataset.v===String(45+24+2*16)&&bal('vo2').dataset.v==='1','VO2max run: 16 min Z5 count double (WHO eq = 45 + 24 + 2x16 = 101), 1 VO2max-like session');
+ ok(bal('split').dataset.easy==='81'&&bal('split').dataset.hard==='19'&&/Aim for 75–80 % easy|On target/.test(bal('split').textContent)&&bal('split').dataset.easy>=75,'intensity split 81 % easy / 19 % hard: '+bal('split').textContent);
+ // Muay Thai rounds on Day 4: 90 min, 8 x 3 min pad rounds, 1 min rest
+ selDay(3);addSes('muaythai');
+ const mt=sesOf(3)[0];
+ ok(mt&&mt.k==='rounds'&&mt.min===90&&mt.n===8&&mt.len===3&&mt.rec===1&&mt.sp===0,'Muay Thai default: 90 min, 8 rounds x 3 min, 1 min rest: '+JSON.stringify(mt));
+ ok(pill(3).textContent==='Thai 8×3′'&&pill(3).classList.contains('ph'),'pill "Thai 8×3′" (red)');
+ ok(zoneMin(4)===12&&zoneMin(5)===16+12&&bal('vo2').dataset.v==='2','rounds: 24 min of work are hard (12 in Z4, 12 in Z5), so the session counts as VO2max-like (2 sessions now)');
+ ok(/Technique and warm-up/.test(q('#ses').textContent)&&/Rest between rounds · <b>/.test(q('#ses').innerHTML)&&/Pad \/ bag rounds 8×3′ · <b>Z4–Z5/.test(q('#ses').innerHTML),'row lists technique, rest and round zones');
+ // boxing with few rounds: below 12 hard minutes -> not VO2max-like; then raise the rounds
+ selDay(4);addSes('boxing','rounds',30);
+ ok(sesOf(4)[0].n===4,'boxing 30 min defaults to 4 rounds');
+ q('#ses [data-sx="0"]').click();
+ ok(q('#ses .sdet')&&['n','sp','len','rec'].every(f=>q('#ses .sdet [data-sf="'+f+'"]')),'"Edit rounds" expands rounds / sparring / round length / rest inputs');
+ sel('#ses .sdet [data-sf="n"]','3');
+ ok(sesOf(4)[0].n===3&&bal('vo2').dataset.v==='2'&&q('#ses .sdet'),'3 x 3 min = 9 hard minutes: not VO2max-like (still 2), details stay open');
+ sel('#ses .sdet [data-sf="sp"]','1');
+ ok(sesOf(4)[0].sp===1&&bal('vo2').dataset.v==='3'&&pill(4).textContent==='Box 4×3′','one sparring round makes 12 hard minutes: VO2max-like (3), pill counts all rounds');
+ sel('#ses [data-sf="min"]','10');
+ ok(sesOf(4)[0].min===10&&/structure needs 15/.test(q('#ses').textContent),'minutes shorter than the rounds: row notes what the structure needs');
+ q('#ses [data-srm="0"]').click();
+ ok(sesOf(4).length===0&&bal('vo2').dataset.v==='2','removing the session updates the balance');
+ // card strip structure and persistence
+ ok(qa('#wstrip [data-day]').length===7&&qa('#wstrip b').length===7&&q('#wstrip').scrollWidth>=0,'seven day cards, one <b> name each');
+ ok(dayBtn(0).querySelector('.pl.ps').textContent==='3 sets'&&dayBtn(0).querySelector('.ld u').style.width!=='','Day 1 card: strength pill "3 sets" and a load bar');
+ // heart-rate zones
+ const zrow=z=>q('#hrZones tr[data-z="'+z+'"]').lastChild.textContent;
+ ok(q('#hrZones').children.length===5&&zrow(2)==='–'&&/% of max|Enter your max HR/.test(q('#hrNote').textContent),'zone table lists 5 zones, no bpm until max HR or age is set');
+ q('#hrSet').open=true;q('#hrAge').value='30';ev(q('#hrAge'),'change');
+ ok(q('#hrMax').placeholder==='187'&&zrow(2)==='112–131 bpm'&&zrow(5)==='168–187 bpm'&&JSON.stringify(JSON.parse(w.localStorage.getItem('aom.hr.v1')))==='{"max":null,"age":30,"rest":null}','age 30 -> max 187 (208 - 0.7 x 30); Z2 = 112–131 bpm, persisted in aom.hr.v1');
+ selDay(1);
+ ok(/Easy · Z2 · 112–131 bpm/.test(q('#ses .sz').textContent)||/Z2 · 112–131 bpm/.test(q('#ses .sz').textContent),'session rows show bpm: '+q('#ses .sz').textContent);
+ selDay(2);
+ ok(/Work 4×4′ · Z5 · 168–187 bpm/.test(q('#ses').textContent),'VO2 work interval: "Work 4×4′ · Z5 · 168–187 bpm"');
+ q('#hrRest').value='60';ev(q('#hrRest'),'change');
+ ok(zrow(2)==='136–149 bpm'&&zrow(5)==='174–187 bpm'&&/Karvonen/.test(q('#hrNote').textContent),'resting HR 60 switches to Karvonen: Z2 = 136–149 bpm (was 112–131)');
+ q('#hrMax').value='190';ev(q('#hrMax'),'change');
+ ok(q('#hrMax').value==='190'&&zrow(5)==='177–190 bpm'&&/Karvonen/.test(q('#hrNote').textContent),'an entered max HR (190) wins over the age estimate');
+ q('#hrRest').value='';ev(q('#hrRest'),'change');
+ ok(zrow(5)==='171–190 bpm'&&/Work 4×4′ · Z5 · 171–190 bpm/.test(q('#ses').textContent),'without resting HR: Z5 = 171–190 bpm');
+ q('#hrMax').value='20';ev(q('#hrMax'),'change');
+ ok(q('#hrMax').value===''&&zrow(2)==='112–131 bpm','an out-of-range max HR is ignored (falls back to the age estimate)');
+ q('#hrAge').value='';ev(q('#hrAge'),'change');q('#hrSet').open=false;
+ // recovery warnings (warnings only)
+ clearAll();
+ selDay(3);addEx('Back squat');
+ selDay(4);addSes('running','vo2');
+ const m1=dayBtn(4);
+ ok(m1.classList.contains('warn')&&m1.textContent.includes('⚠')&&/⚠ VO2max intervals: .*Quadriceps.* still recovering from Day 4/.test(q('#ses').textContent),'heavy legs on Day 4 + VO2max run on Day 5: warning on Day 5: '+q('#ses small.warn').textContent);
+ ok(!dayBtn(3).classList.contains('warn')&&/⚠ \d/.test(q('#ovBadge').textContent),'only Day 5 is flagged; the overview badge counts conflicts ('+q('#ovBadge').textContent+')');
+ sel('#ses [data-sf="k"]','easy');
+ ok(sesOf(4)[0].k==='easy'&&!dayBtn(4).classList.contains('warn')&&!q('#ses small.warn'),'the same run as a plain easy session: no warning');
+ sel('#ses [data-sf="k"]','tempo');
+ ok(sesOf(4)[0].k==='tempo'&&sesOf(4)[0].len===20&&!!q('#ses small.warn'),'tempo (Z3-4 work) is hard enough to warn again; tempo work defaults to 20 of 45 min');
+ sel('#ses [data-sf="k"]','vo2');
+ // a strength day after a hard endurance day is flagged on the strength row
+ selDay(5);addEx('Back squat');
+ ok(dayBtn(5).classList.contains('warn')&&/still recovering from Day 5/.test(q('#plan').textContent),'squats the day after the VO2max run: the strength row warns about Day 5');
+ q('#plan [data-rm="0"]').click();
+ // overview
+ selDay(4);q('#ovOpen').click();
+ ok(!q('#ov').hidden&&qa('#ovGrid tr.g').length===27&&qa('#ovGrid tr.er .eb').length===7&&qa('#ovGrid tr.sec th').map(t=>t.textContent).join()==='Upper push,Upper pull,Arms,Core,Lower body','overview: 27 group rows, a new Endurance row with 7 day cells, sections unchanged');
+ ok(q('#ovGrid tr.er .eb[data-d="4"]').dataset.m==='40'&&q('#ovGrid tr.er .eb[data-d="4"] .zb u')&&q('#ovGrid tr.er .eb[data-d="0"]').dataset.m==='0'&&q('#ovGrid tr.er .wb').dataset.w==='40','endurance row: minutes per day with a zone-mix bar; week total 40');
+ ok(q('#ovBal .bal')&&q('#ovBal [data-b="who"]').dataset.v==='56'&&q('#ovBal [data-b="vo2"]').dataset.v==='1'&&q('#ovBal .zleg [data-z="5"]').dataset.m==='16'&&q('#ovBal [data-b="str"]').dataset.sets==='3','balance cards and zone minutes also sit at the top of the overview');
+ const qc=q('#ovGrid tr.g[data-g="21"] .cb[data-d="4"]');
+ ok(qc.dataset.c==='1'&&qc.querySelector('.ef')&&+qc.dataset.n>=2&&qc.dataset.e==='0'&&/endurance/.test(qc.title),'Quadriceps / Day 5: conflict outline, teal endurance marker, not counted as strength sets (data-e 0, data-n '+qc.dataset.n+')');
+ ok(+q('#ovGrid tr.g[data-g="21"] .cb[data-d="5"]').dataset.f>0&&+q('#ovGrid tr.g[data-g="21"] .cb[data-d="5"]').dataset.n===0,'recovery trail on Day 6 includes the endurance carry-over (f '+q('#ovGrid tr.g[data-g="21"] .cb[data-d="5"]').dataset.f+')');
+ ok(/Endurance load/.test(q('#ovLeg').textContent)&&/Carried-over fatigue/.test(q('#ovLeg').textContent),'legend names the endurance marker');
+ q('#ovGrid tr.er .eb[data-d="4"]').click();
+ ok(/Day 5 · endurance/.test(q('#ovDet').textContent)&&/Running, vo2max intervals, 40 min/.test(q('#ovDet').textContent)&&q('#ovGrid tr.er .eb[data-d="4"]').classList.contains('sel'),'clicking an endurance cell lists its sessions: '+q('#ovDet').textContent);
+ q('#ovGrid tr.g[data-g="21"] .cb[data-d="4"]').click();
+ ok(/endurance: Running/.test(q('#ovDet').textContent)&&/⚠/.test(q('#ovDet').textContent)&&/Day 4/.test(q('#ovDet').textContent),'a muscle cell lists the endurance contribution and the conflict source: '+q('#ovDet').textContent.slice(0,200));
+ q('#ovClose').click();
+ // 3D body: selected-day heatmap paints endurance-loaded muscles teal, strength colours win
+ const tealRgb=new w.THREE.Color(0x19a7b8).convertSRGBToLinear();
+ const tealOf=key=>{let n=0;w.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind==='muscle'&&o.userData.key===key&&o.material.color&&Math.abs(o.material.color.r-tealRgb.r)<1e-6&&Math.abs(o.material.color.g-tealRgb.g)<1e-6)n++;});return n;};
+ selDay(4);q('#tVol').click();q('[data-vs="day"]').click();
+ ok(tealOf('gastrocnemius')>0&&tealOf('soleus')>0&&tealOf('gluteus maximus')>0&&tealOf('biceps')===0&&/Endurance load/.test(q('#volLegend').textContent),'volume heatmap, selected day: endurance-loaded muscles (calves, glutes) are teal; legend has "Endurance load"');
+ addEx('Back squat');
+ ok(tealOf('vastus lateralis')===0&&tealOf('gastrocnemius')>0,'with squats on that day too, quadriceps use the strength colours instead of teal');
+ q('#tVol').click();
+ // persistence: reload with the stored week (old v1.1 plan, new sessions, bad data)
+ const stored=JSON.parse(w.localStorage.getItem('aom.plan.v3'));
+ ok(stored.days[4].items.some(p=>p.t==='e'&&p.a==='running'&&p.k==='vo2'&&p.n===4&&p.len===4&&p.rec===3)&&stored.days[4].items.some(p=>p.n==='Back squat'),'stored Day 5: strength entry plus {t:"e",a:"running",k:"vo2",min:40,n:4,len:4,rec:3}');
+ const r2=boot({store:{'aom.plan.v3':JSON.stringify({days:[{name:'Push',items:[{n:'Barbell bench press',sets:5,v:['']}]},{name:'Run',items:[{t:'e',a:'running',k:'easy',min:45},{t:'e',a:'nonsense',k:'easy',min:30},{t:'e',a:'muaythai',k:'vo2',min:'x',n:99}]},{name:'',items:[{n:'Back squat',sets:3,v:['','']},{t:'e',a:'cycling',k:'tempo',min:60,len:90}]}]}),'aom.hr.v1':JSON.stringify({max:185,age:null,rest:55})}}),r2d=r2.document;
+ await waitFor(()=>!r2d.getElementById('loading'),60000,'endurance reload instance');
+ const rq=x=>r2d.querySelector(x),rqa=x=>[...r2d.querySelectorAll(x)];
+ ok(rq('#wstrip [data-day="0"]').textContent.startsWith('Push')&&rq('#wstrip [data-day="0"]').textContent.includes('5 sets')&&!rq('#wstrip [data-day="0"] .pl.pe'),'old-format day (strength only) loads unchanged');
+ rq('#wstrip [data-day="1"]').click();
+ ok(rqa('#ses .srow').length===2&&rq('#wstrip [data-day="1"]').textContent.includes('Run 45′ Z2')&&rq('#wstrip [data-day="1"]').textContent.includes('Thai 8×3′'),'sessions restored, unknown activity dropped, invalid kind/minutes fall back to the activity default (Muay Thai rounds, 90 min): '+rq('#wstrip [data-day="1"]').textContent);
+ ok(/Z2 · 136–149 bpm/.test(rq('#ses').textContent)||/Z2 · 13\d–1\d\d bpm/.test(rq('#ses').textContent),'stored heart-rate settings (max 185, resting 55) apply: '+rq('#ses .sz').textContent);
+ rq('#wstrip [data-day="2"]').click();
+ ok(rq('#plan').textContent.includes('Back squat')&&rqa('#ses .srow').length===1&&rq('#ses [data-sf="min"]').value==='60'&&rq('#wstrip [data-day="2"]').textContent.includes('Bike 60′ Z3–4'),'mixed day: strength row and a tempo ride; tempo work clamped to the session length');
+ // cleanup
+ w.localStorage.removeItem('aom.hr.v1');
+ clearAll();
 }
 (async()=>{
  // startup
@@ -859,6 +1027,7 @@ async function phoneRun(){
  ok(q('#btnLayers').getAttribute('aria-expanded')==='false'&&q('#popLayers').contains(q('#tBones'))&&q('#popLayers').contains(q('#opM')),'desktop: layer toggles and opacity sliders live in the Layers popover, closed by default');
  ok(qa('[data-view]').length===5&&q('#toolbar').contains(q('[data-view="front"]')),'desktop: view buttons are in the floating toolbar');
  await weekRun();
+ await endRun();
  await sugRun();
  await migrateRun();
  await searchRun();

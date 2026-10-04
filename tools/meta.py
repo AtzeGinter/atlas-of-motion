@@ -22,6 +22,17 @@ def load_aliases(db):  # data/aliases.txt: alias|key[:part][,key[:part]...] -> {
         for e in ks: assert e.partition(':')[0] in db,(a,e)
         al[a]=ks
     return al
+def load_acts(db):  # data/activities.txt: id|name|group|MET|profile "key[:part]:weight,..." ("-" = none)|short|kind:minutes -> [{id,n,g,met,p:[[key,part,w]],s,d:[kind,min]}]
+    out=[]
+    for l in open('data/activities.txt',encoding='utf-8'):
+        l=l.rstrip('\n')
+        if not l: continue
+        i,n,g,met,prof,s,d=l.split('|'); p=[]
+        if prof!='-':
+            for e in prof.split(','):
+                r,w=e.rsplit(':',1); k,_,part=r.partition(':'); assert k in db,(i,k); p.append([k,part,float(w)])
+        kd,mn=d.split(':'); out.append({'id':i,'n':n,'g':g,'met':float(met),'p':p,'s':s,'d':[kd,int(mn)]})
+    return out
 PARTPRE=r'^(abdominal|acromial|clavicular|spinal|sternocostal|descending|ascending|transverse|orbital|palpebral|deep|superficial|oblique|straight|inferior oblique|superior oblique|vertical intermediate) part of '
 HEADPRE=r'^(long|short|lateral|medial|humeral|ulnar|oblique|transverse|superior|inferior|superficial) head of '
 MERGE=[(r'^(first|second|third|fourth) lumbrical \(foot\)$','lumbricals (foot)'),
@@ -63,7 +74,9 @@ if __name__=='__main__':
     for a,ks in al.items():
         for e in ks:
             k,_,p=e.partition(':'); assert not p or p in pts.get(k,()),(a,e)
-    M['al']=al
+    M['al']=al; M['act']=load_acts(db)
+    for a in M['act']:
+        for k,p,w in a['p']: assert not p or p in pts.get(k,()),(a['id'],k,p)
     M['meshes']=out; M['db']=db; M['bdb']={b:B.info(b) for b in sorted(bnames)}
     json.dump(M,open('meta2.json','w',encoding='utf-8',newline='\n'),separators=(',',':'))
     from collections import Counter

@@ -12,7 +12,7 @@ An interactive 3D atlas of the human muscular system that runs entirely in the b
 - **Muscle view**: every exercise that trains the selected muscle, with involvement and specificity.
 - **Best exercises for a muscle**, sortable by effectiveness or specificity.
 - **Comparison mode**: two exercises side by side, coloured by which one works each muscle more.
-- **Equipment filter** and a **workout builder**: a seven-day training week with a week overview (sets per muscle group and day, plus a rough fatigue / recovery estimate that flags muscles trained again while still recovering), weekly sets per muscle, a volume heatmap and a gap filler that suggests what to add and on which day. The plan is stored in the browser's localStorage.
+- **Equipment filter** and a **workout builder**: a seven-day training week with a week overview (sets per muscle group and day, plus a rough fatigue / recovery estimate that flags muscles trained again while still recovering), weekly sets per muscle, a volume heatmap and a gap filler that suggests what to add and on which day. The week also takes **endurance sessions** (running, cycling, rowing, swimming, boxing, Muay Thai, football and more; easy, long, tempo, VO2max intervals, sprints or combat rounds) with **heart-rate zones** (max HR or age, optional Karvonen), a week balance panel (WHO minutes, 80/20 easy/hard split, VO2max-like sessions, minutes per zone) and recovery warnings that include endurance load. The plan is stored in the browser's localStorage.
 
 ## Run it
 
@@ -51,7 +51,7 @@ python meta.py && python exercises.py && python assemble.py
 
 Run `build.py` (needs the clone) only after changing the decimation settings (`LODS` in `build.py`) or the source meshes.
 
-Anatomy text lives in `tools/data/muscles.txt` (`key|group|action|origin|insertion|nerve`) and `tools/data/extra.txt`; bone text in `tools/bones.py`; exercises in `tools/exercises.py`.
+Anatomy text lives in `tools/data/muscles.txt` (`key|group|action|origin|insertion|nerve`) and `tools/data/extra.txt`; endurance activities and their muscle-load profiles in `tools/data/activities.txt`; bone text in `tools/bones.py`; exercises in `tools/exercises.py`.
 
 ## Accuracy and limitations
 
