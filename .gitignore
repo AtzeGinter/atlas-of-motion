@@ -1,0 +1,9 @@
+tools/BodyExplorer/
+tools/meta.json
+tools/meta2.json
+tools/meta3.json
+tools/geo.b64
+tools/preview.png
+__pycache__/
+tools/test/node_modules/
+*.zip

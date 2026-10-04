@@ -1,0 +1,188 @@
+frontalis|Face|Raises the eyebrows; wrinkles the forehead horizontally|Epicranial aponeurosis|Skin of the eyebrows and forehead|Facial nerve (CN VII), temporal branch
+corrugator supercilii|Face|Pulls the eyebrows down and together (frowning)|Medial end of the superciliary arch|Skin of the medial eyebrow|Facial nerve (CN VII), temporal branch
+procerus|Face|Pulls the medial eyebrows down; wrinkles skin over the bridge of the nose|Nasal bone and upper lateral nasal cartilage|Skin between the eyebrows|Facial nerve (CN VII)
+nasalis|Face|Compresses (transverse part) or flares (alar part) the nostrils|Maxilla beside the nose|Nasal cartilages and aponeurosis over the nasal bridge|Facial nerve (CN VII), buccal branch
+orbicularis oculi|Face|Closes the eyelids: palpebral part blinks gently, orbital part squeezes the eye shut|Medial orbital margin and medial palpebral ligament|Skin around the orbit; lateral palpebral raphe|Facial nerve (CN VII), temporal and zygomatic branches
+levator labii superioris|Face|Elevates and everts the upper lip|Infraorbital margin of the maxilla|Skin and muscle of the upper lip|Facial nerve (CN VII), buccal branch
+zygomaticus major|Face|Pulls the corner of the mouth up and out (smiling)|Zygomatic bone|Modiolus at the angle of the mouth|Facial nerve (CN VII), zygomatic and buccal branches
+zygomaticus minor|Face|Elevates the upper lip, deepening the nasolabial fold|Zygomatic bone|Lateral upper lip|Facial nerve (CN VII), buccal branch
+risorius|Face|Pulls the corner of the mouth sideways|Parotid fascia and fascia over the masseter|Modiolus at the angle of the mouth|Facial nerve (CN VII), buccal branch
+orbicularis oris|Face|Closes and purses the lips; shapes the lips for speech|Maxilla, mandible and the surrounding facial muscles|Skin and mucosa of the lips|Facial nerve (CN VII), buccal and marginal mandibular branches
+depressor anguli oris|Face|Pulls the corner of the mouth down (frowning)|Oblique line of the mandible|Modiolus at the angle of the mouth|Facial nerve (CN VII), marginal mandibular branch
+depressor labii inferioris|Face|Pulls the lower lip down and out|Oblique line of the mandible|Skin of the lower lip|Facial nerve (CN VII), marginal mandibular branch
+mentalis|Face|Elevates and protrudes the lower lip; wrinkles the chin|Incisive fossa of the mandible|Skin of the chin|Facial nerve (CN VII), marginal mandibular branch
+levator palpebrae superioris|Eye|Raises the upper eyelid|Lesser wing of the sphenoid, above the optic canal|Skin and tarsal plate of the upper eyelid|Oculomotor nerve (CN III); smooth-muscle part: sympathetic fibres
+superior rectus|Eye|Elevates the eye; also adducts and intorts it|Common tendinous ring|Superior sclera|Oculomotor nerve (CN III)
+inferior rectus|Eye|Depresses the eye; also adducts and extorts it|Common tendinous ring|Inferior sclera|Oculomotor nerve (CN III)
+medial rectus|Eye|Adducts the eye (turns it toward the nose)|Common tendinous ring|Medial sclera|Oculomotor nerve (CN III)
+lateral rectus|Eye|Abducts the eye (turns it outward)|Common tendinous ring|Lateral sclera|Abducens nerve (CN VI)
+superior oblique|Eye|Intorts the eye; depresses it most when it is turned inward|Body of the sphenoid|Posterosuperior sclera, after passing through the trochlea|Trochlear nerve (CN IV)
+inferior oblique|Eye|Extorts the eye; elevates it most when it is turned inward|Orbital floor of the maxilla|Posterolateral sclera|Oculomotor nerve (CN III)
+masseter|Jaw|Elevates the mandible (closes the jaw); superficial part assists protrusion|Zygomatic arch|Lateral surface of the ramus and angle of the mandible|Mandibular nerve (CN V3), masseteric branch
+temporalis|Jaw|Elevates the mandible; posterior fibres retract it|Temporal fossa and temporal fascia|Coronoid process and anterior ramus of the mandible|Mandibular nerve (CN V3), deep temporal nerves
+medial pterygoid|Jaw|Elevates and protrudes the mandible; side-to-side grinding|Medial surface of the lateral pterygoid plate; maxillary tuberosity|Medial surface of the ramus and angle of the mandible|Mandibular nerve (CN V3)
+lateral pterygoid|Jaw|Protrudes the mandible and opens the jaw; one side moves the jaw to the opposite side|Greater wing of the sphenoid (upper head); lateral pterygoid plate (lower head)|Neck of the mandible and articular disc of the TMJ|Mandibular nerve (CN V3)
+digastric|Throat|Depresses the mandible; elevates the hyoid during swallowing|Mastoid notch (posterior belly); digastric fossa of the mandible (anterior belly)|Intermediate tendon, held to the hyoid by a fibrous loop|Anterior belly: mylohyoid nerve (CN V3). Posterior belly: facial nerve (CN VII)
+mylohyoid|Throat|Forms the floor of the mouth; elevates the hyoid and tongue during swallowing|Mylohyoid line of the mandible|Body of the hyoid and midline raphe|Mylohyoid nerve (CN V3)
+geniohyoid|Throat|Pulls the hyoid forward and up; assists opening the jaw|Inferior mental spine of the mandible|Body of the hyoid|C1 fibres via the hypoglossal nerve
+stylohyoid|Throat|Elevates and retracts the hyoid during swallowing|Styloid process of the temporal bone|Body of the hyoid|Facial nerve (CN VII)
+sternohyoid|Throat|Depresses the hyoid after swallowing|Manubrium and medial clavicle|Body of the hyoid|Ansa cervicalis (C1–C3)
+sternothyroid|Throat|Depresses the larynx (thyroid cartilage)|Posterior surface of the manubrium|Oblique line of the thyroid cartilage|Ansa cervicalis (C1–C3)
+thyrohyoid|Throat|Depresses the hyoid or elevates the larynx|Oblique line of the thyroid cartilage|Body and greater horn of the hyoid|C1 fibres via the hypoglossal nerve
+omohyoid|Throat|Depresses and fixes the hyoid; tenses the cervical fascia|Superior border of the scapula|Body of the hyoid (via an intermediate tendon)|Ansa cervicalis (C1–C3)
+cricothyroid|Throat|Tilts the thyroid cartilage forward, tensing the vocal folds (raises pitch)|Anterolateral cricoid cartilage|Inferior border and horn of the thyroid cartilage|External branch of the superior laryngeal nerve (CN X)
+posterior crico-arytenoid|Throat|Abducts the vocal folds; the only muscle that opens the airway at the glottis|Posterior surface of the cricoid lamina|Muscular process of the arytenoid|Recurrent laryngeal nerve (CN X)
+lateral crico-arytenoid|Throat|Adducts the vocal folds (closes the glottis)|Arch of the cricoid cartilage|Muscular process of the arytenoid|Recurrent laryngeal nerve (CN X)
+transverse arytenoid|Throat|Pulls the arytenoids together, closing the back of the glottis|Posterior surface of one arytenoid|Posterior surface of the other arytenoid|Recurrent laryngeal nerve (CN X)
+oblique arytenoid|Throat|Pulls the arytenoids together; narrows the laryngeal inlet|Muscular process of one arytenoid|Apex of the opposite arytenoid|Recurrent laryngeal nerve (CN X)
+thyro-arytenoid|Throat|Shortens and relaxes the vocal folds (lowers pitch); vocalis part fine-tunes tension|Inner surface of the thyroid cartilage|Anterolateral arytenoid cartilage|Recurrent laryngeal nerve (CN X)
+levator veli palatini|Throat|Elevates the soft palate during swallowing and speech|Petrous temporal bone and cartilage of the auditory tube|Palatine aponeurosis|Pharyngeal plexus (CN X)
+tensor veli palatini|Throat|Tenses the soft palate; opens the auditory tube (equalises ear pressure)|Scaphoid fossa of the sphenoid and auditory tube cartilage|Palatine aponeurosis, after hooking around the pterygoid hamulus|Mandibular nerve (CN V3)
+sternocleidomastoid|Neck|One side: tilts the head to the same side and turns the face to the opposite side; both sides: flex the neck; assists forced inhalation|Manubrium and medial third of the clavicle|Mastoid process and superior nuchal line|Accessory nerve (CN XI); C2–C3 for sensation
+platysma|Neck|Tenses the skin of the neck; pulls the corners of the mouth down|Fascia over the upper pectoralis major and deltoid|Lower border of the mandible and skin of the lower face|Facial nerve (CN VII), cervical branch
+scalenus anterior|Neck|Elevates the first rib; flexes and tilts the neck to the same side|Transverse processes of C3–C6|Scalene tubercle of the first rib|Ventral rami of C4–C6
+scalenus medius|Neck|Elevates the first rib; tilts the neck to the same side|Transverse processes of C2–C7|Upper surface of the first rib|Ventral rami of C3–C8
+scalenus posterior|Neck|Elevates the second rib; tilts the neck to the same side|Transverse processes of C4–C6|Outer surface of the second rib|Ventral rami of C6–C8
+longus colli|Neck|Flexes the cervical spine; stabilises the neck against extension|Vertebral bodies and transverse processes T1–T3 and C3–C7|Anterior arch of the atlas, vertebral bodies and transverse processes C2–C6|Ventral rami of C2–C6
+longus capitis|Neck|Flexes the head and upper neck|Transverse processes of C3–C6|Basilar part of the occipital bone|Ventral rami of C1–C3
+rectus capitis anterior|Neck|Flexes the head at the atlanto-occipital joint|Lateral mass of the atlas|Basilar part of the occipital bone|Ventral rami of C1–C2
+rectus capitis lateralis|Neck|Tilts the head to the same side|Transverse process of the atlas|Jugular process of the occipital bone|Ventral rami of C1–C2
+rectus capitis posterior major|Neck|Extends the head and rotates it to the same side|Spinous process of the axis|Lateral inferior nuchal line|Suboccipital nerve (C1)
+rectus capitis posterior minor|Neck|Extends the head|Posterior tubercle of the atlas|Medial inferior nuchal line|Suboccipital nerve (C1)
+splenius capitis|Neck|Extends the head; one side rotates and tilts it to the same side|Nuchal ligament and spinous processes C7–T3|Mastoid process and lateral superior nuchal line|Dorsal rami of C2–C3
+splenius cervicis|Neck|Extends the neck; one side rotates it to the same side|Spinous processes T3–T6|Transverse processes of C1–C3|Dorsal rami of lower cervical nerves
+trapezius|Back|Descending part: elevates the scapula; transverse part: retracts it; ascending part: depresses it; together: upward rotation for overhead reach|Occipital bone, nuchal ligament, spinous processes C7–T12|Lateral clavicle, acromion and spine of the scapula|Accessory nerve (CN XI); C3–C4 for proprioception
+latissimus dorsi|Back|Extends, adducts and internally rotates the shoulder; assists trunk extension and forced exhalation|Spinous processes T7–L5, thoracolumbar fascia, iliac crest, lower 3–4 ribs|Floor of the intertubercular groove of the humerus|Thoracodorsal nerve (C6–C8)
+rhomboid major|Back|Retracts and downwardly rotates the scapula|Spinous processes T2–T5|Medial border of the scapula below the spine|Dorsal scapular nerve (C4–C5)
+rhomboid minor|Back|Retracts and downwardly rotates the scapula|Nuchal ligament and spinous processes C7–T1|Medial border of the scapula at the root of the spine|Dorsal scapular nerve (C4–C5)
+levator scapulae|Back|Elevates the scapula and rotates it downward; tilts the neck to the same side|Transverse processes of C1–C4|Superior angle of the scapula|Dorsal scapular nerve (C5) and C3–C4
+serratus posterior superior|Back|Elevates the upper ribs (accessory inspiration, role debated)|Nuchal ligament and spinous processes C7–T3|Ribs 2–5|Intercostal nerves T2–T5
+serratus posterior inferior|Back|Depresses the lower ribs (role debated)|Spinous processes T11–L2|Ribs 9–12|Ventral rami of T9–T12
+iliocostalis|Back|Extends the spine; one side bends it to the same side|Sacrum, iliac crest and ribs|Ribs and cervical transverse processes|Dorsal rami of spinal nerves
+longissimus|Back|Extends the spine and head; one side bends and rotates to the same side|Sacrum, lumbar spinous and transverse processes|Thoracic and cervical transverse processes, ribs, mastoid process|Dorsal rami of spinal nerves
+spinalis|Back|Extends the spine|Spinous processes of upper lumbar and lower thoracic vertebrae|Spinous processes of upper thoracic vertebrae|Dorsal rami of spinal nerves
+semispinalis|Back|Extends the thoracic spine, neck and head; rotates to the opposite side|Transverse processes C4–T12|Spinous processes of cervical and thoracic vertebrae; occipital bone (capitis)|Dorsal rami of spinal nerves
+multifidus|Back|Stabilises individual spinal segments; extends and rotates the spine|Sacrum, iliac spine, transverse processes of lumbar to cervical vertebrae|Spinous processes 2–4 levels above|Dorsal rami of spinal nerves
+rotatores|Back|Stabilise vertebrae; proprioception; assist rotation|Transverse processes|Lamina and spinous process 1–2 levels above|Dorsal rami of spinal nerves
+interspinales|Back|Extend the spine between adjacent spinous processes|Spinous process of one vertebra|Spinous process of the vertebra above|Dorsal rami of spinal nerves
+intertransversarii|Back|Bend the spine sideways between adjacent vertebrae|Transverse process of one vertebra|Transverse process of the vertebra above|Dorsal and ventral rami of spinal nerves
+levatores costarum|Back|Elevate the ribs; assist spinal extension and lateral flexion|Transverse processes C7–T11|Rib one (breves) or two (longi) levels below|Dorsal rami of C8–T11
+quadratus lumborum|Back|Bends the trunk to the same side; hikes the hip; fixes the 12th rib during breathing|Iliac crest and iliolumbar ligament|12th rib and transverse processes L1–L4|Ventral rami of T12–L4
+deltoid|Shoulder|Clavicular part: flexion and internal rotation; acromial part: abduction; spinal part: extension and external rotation of the shoulder|Lateral clavicle, acromion and spine of the scapula|Deltoid tuberosity of the humerus|Axillary nerve (C5–C6)
+supraspinatus|Shoulder|Starts abduction of the arm; holds the humeral head in the socket (rotator cuff)|Supraspinous fossa of the scapula|Superior facet of the greater tubercle|Suprascapular nerve (C5–C6)
+infraspinatus|Shoulder|Externally rotates the shoulder; stabilises the humeral head (rotator cuff)|Infraspinous fossa of the scapula|Middle facet of the greater tubercle|Suprascapular nerve (C5–C6)
+teres minor|Shoulder|Externally rotates the shoulder; stabilises the humeral head (rotator cuff)|Lateral border of the scapula|Inferior facet of the greater tubercle|Axillary nerve (C5–C6)
+subscapularis|Shoulder|Internally rotates the shoulder; stabilises the humeral head (rotator cuff)|Subscapular fossa|Lesser tubercle of the humerus|Upper and lower subscapular nerves (C5–C6)
+teres major|Shoulder|Internally rotates, adducts and extends the shoulder|Inferior angle of the scapula|Medial lip of the intertubercular groove|Lower subscapular nerve (C5–C7)
+pectoralis major|Chest|Adducts and internally rotates the shoulder; clavicular part flexes it; sternocostal part extends it from a raised position|Medial clavicle, sternum, costal cartilages 1–6, external oblique aponeurosis|Lateral lip of the intertubercular groove|Medial and lateral pectoral nerves (C5–T1)
+pectoralis minor|Chest|Pulls the scapula forward and down; lifts the ribs in forced inhalation|Ribs 3–5|Coracoid process|Medial pectoral nerve (C8–T1)
+subclavius|Chest|Anchors and depresses the clavicle|First rib and its cartilage|Underside of the clavicle|Nerve to subclavius (C5–C6)
+serratus anterior|Chest|Protracts and upwardly rotates the scapula; holds it against the ribs|Outer surfaces of ribs 1–8|Anterior medial border of the scapula|Long thoracic nerve (C5–C7)
+external intercostal|Chest|Elevates the ribs during inhalation|Lower border of a rib|Upper border of the rib below|Intercostal nerves
+internal intercostal|Chest|Depresses the ribs during forced exhalation|Upper border of a rib|Lower border of the rib above|Intercostal nerves
+innermost intercostal|Chest|Assists the internal intercostals|Upper border of a rib|Lower border of the rib above|Intercostal nerves
+transversus thoracis|Chest|Depresses the ribs (forced exhalation)|Inner surface of the lower sternum and xiphoid|Costal cartilages 2–6|Intercostal nerves
+diaphragm|Chest|Main muscle of inhalation: contracts and flattens to enlarge the chest cavity; aids abdominal pressure|Xiphoid, lower six costal cartilages, lumbar vertebrae (crura)|Central tendon|Phrenic nerve (C3–C5)
+rectus abdominis|Abdomen|Flexes the trunk; tilts the pelvis backward; compresses the abdomen|Pubic crest and symphysis|Xiphoid process and costal cartilages 5–7|Thoracoabdominal nerves (T7–T11), subcostal nerve (T12)
+external oblique|Abdomen|One side: rotates the trunk to the opposite side and bends it to the same side; both: flex the trunk and compress the abdomen|Outer surfaces of ribs 5–12|Iliac crest, linea alba and pubic tubercle|Thoracoabdominal nerves (T7–T11), subcostal nerve (T12)
+internal oblique|Abdomen|One side: rotates the trunk to the same side; both: flex the trunk and compress the abdomen|Thoracolumbar fascia, iliac crest, inguinal ligament|Ribs 10–12, linea alba, pubis via the conjoint tendon|Thoracoabdominal nerves, iliohypogastric and ilioinguinal nerves (T7–L1)
+transversus abdominis|Abdomen|Compresses the abdomen; stiffens the trunk before movement|Costal cartilages 7–12, thoracolumbar fascia, iliac crest, inguinal ligament|Linea alba and pubis via the conjoint tendon|Thoracoabdominal nerves, iliohypogastric and ilioinguinal nerves (T7–L1)
+levator ani|Pelvic floor|Supports the pelvic organs; maintains continence; resists rises in abdominal pressure|Pubis, tendinous arch of levator ani, ischial spine|Perineal body, anococcygeal ligament, coccyx|Nerve to levator ani (S4) and pudendal nerve
+coccygeus|Pelvic floor|Supports the pelvic floor; flexes the coccyx|Ischial spine and sacrospinous ligament|Lower sacrum and coccyx|Ventral rami of S4–S5
+external anal sphincter|Pelvic floor|Voluntarily closes the anal canal|Perineal body and anococcygeal ligament|Encircles the anal canal|Inferior rectal nerve (pudendal, S2–S4)
+biceps brachii|Upper arm|Supinates the forearm; flexes the elbow; weakly flexes the shoulder|Short head: coracoid process. Long head: supraglenoid tubercle|Radial tuberosity and bicipital aponeurosis|Musculocutaneous nerve (C5–C6)
+brachialis|Upper arm|Flexes the elbow in any forearm position (main elbow flexor)|Distal half of the anterior humerus|Coronoid process and tuberosity of the ulna|Musculocutaneous nerve (C5–C6), small radial branch
+coracobrachialis|Upper arm|Flexes and adducts the shoulder|Coracoid process|Medial shaft of the humerus|Musculocutaneous nerve (C5–C7)
+triceps brachii|Upper arm|Extends the elbow; long head assists shoulder extension and adduction|Long head: infraglenoid tubercle. Lateral and medial heads: posterior humerus|Olecranon of the ulna|Radial nerve (C6–C8)
+anconeus|Upper arm|Assists elbow extension; stabilises the elbow joint|Lateral epicondyle of the humerus|Lateral olecranon and upper posterior ulna|Radial nerve (C7–C8)
+brachioradialis|Forearm|Flexes the elbow, strongest with the thumb pointing up|Lateral supracondylar ridge of the humerus|Styloid process of the radius|Radial nerve (C5–C6)
+pronator teres|Forearm|Pronates the forearm; assists elbow flexion|Humeral head: medial epicondyle. Ulnar head: coronoid process|Middle lateral shaft of the radius|Median nerve (C6–C7)
+flexor carpi radialis|Forearm|Flexes and radially deviates the wrist|Medial epicondyle|Base of the 2nd (and 3rd) metacarpal|Median nerve (C6–C7)
+palmaris longus|Forearm|Flexes the wrist; tenses the palmar aponeurosis|Medial epicondyle|Palmar aponeurosis and flexor retinaculum|Median nerve (C7–C8)
+flexor carpi ulnaris|Forearm|Flexes and ulnar deviates the wrist|Humeral head: medial epicondyle. Ulnar head: olecranon and posterior ulna|Pisiform, hook of hamate, base of 5th metacarpal|Ulnar nerve (C7–T1)
+flexor digitorum superficialis|Forearm|Flexes the middle phalanges of fingers 2–5; assists wrist flexion|Medial epicondyle, coronoid process, anterior radius|Middle phalanges of fingers 2–5|Median nerve (C8–T1)
+flexor digitorum profundus|Forearm|Flexes the fingertips (distal phalanges of fingers 2–5); assists wrist flexion|Anterior and medial ulna, interosseous membrane|Distal phalanges of fingers 2–5|Median nerve (anterior interosseous) for fingers 2–3; ulnar nerve for fingers 4–5
+flexor pollicis longus|Forearm|Flexes the thumb tip|Anterior radius and interosseous membrane|Distal phalanx of the thumb|Anterior interosseous nerve (median, C8–T1)
+pronator quadratus|Forearm|Main pronator of the forearm; holds radius and ulna together|Distal anterior ulna|Distal anterior radius|Anterior interosseous nerve (median, C8–T1)
+extensor carpi radialis longus|Forearm|Extends and radially deviates the wrist|Lateral supracondylar ridge|Base of the 2nd metacarpal|Radial nerve (C6–C7)
+extensor carpi radialis brevis|Forearm|Extends and radially deviates the wrist|Lateral epicondyle|Base of the 3rd metacarpal|Radial nerve, deep branch (C7–C8)
+extensor digitorum|Forearm|Extends fingers 2–5 and the wrist|Lateral epicondyle|Extensor expansions of fingers 2–5|Posterior interosseous nerve (radial, C7–C8)
+extensor digiti minimi|Forearm|Extends the little finger|Lateral epicondyle|Extensor expansion of the little finger|Posterior interosseous nerve (radial, C7–C8)
+extensor carpi ulnaris|Forearm|Extends and ulnar deviates the wrist|Lateral epicondyle and posterior ulna|Base of the 5th metacarpal|Posterior interosseous nerve (radial, C7–C8)
+supinator|Forearm|Supinates the forearm|Lateral epicondyle, supinator crest of the ulna|Proximal lateral radius|Posterior interosseous nerve (radial, C5–C6)
+abductor pollicis longus|Forearm|Abducts and extends the thumb at the carpometacarpal joint|Posterior radius, ulna and interosseous membrane|Base of the 1st metacarpal|Posterior interosseous nerve (radial, C7–C8)
+extensor pollicis brevis|Forearm|Extends the thumb at the metacarpophalangeal joint|Posterior radius and interosseous membrane|Base of the proximal phalanx of the thumb|Posterior interosseous nerve (radial, C7–C8)
+extensor pollicis longus|Forearm|Extends the thumb tip; helps extend the whole thumb|Posterior ulna and interosseous membrane|Base of the distal phalanx of the thumb|Posterior interosseous nerve (radial, C7–C8)
+extensor indicis|Forearm|Extends the index finger independently|Posterior ulna and interosseous membrane|Extensor expansion of the index finger|Posterior interosseous nerve (radial, C7–C8)
+abductor pollicis brevis|Hand|Abducts the thumb (moves it away from the palm)|Flexor retinaculum, scaphoid and trapezium|Base of the proximal phalanx of the thumb|Recurrent branch of the median nerve (C8–T1)
+flexor pollicis brevis|Hand|Flexes the thumb at the metacarpophalangeal joint|Flexor retinaculum and trapezium (superficial head)|Base of the proximal phalanx of the thumb|Recurrent branch of the median nerve; deep head: ulnar nerve
+opponens pollicis|Hand|Rotates the thumb to oppose the fingertips|Flexor retinaculum and trapezium|Lateral shaft of the 1st metacarpal|Recurrent branch of the median nerve (C8–T1)
+adductor pollicis|Hand|Adducts the thumb toward the palm (pinch grip)|Oblique head: capitate and metacarpals 2–3. Transverse head: 3rd metacarpal|Base of the proximal phalanx of the thumb|Deep branch of the ulnar nerve (C8–T1)
+abductor digiti minimi (hand)|Hand|Abducts the little finger|Pisiform|Base of the proximal phalanx of the little finger|Deep branch of the ulnar nerve (C8–T1)
+flexor digiti minimi brevis (hand)|Hand|Flexes the little finger at the metacarpophalangeal joint|Hook of hamate and flexor retinaculum|Base of the proximal phalanx of the little finger|Deep branch of the ulnar nerve (C8–T1)
+opponens digiti minimi (hand)|Hand|Brings the little finger toward the thumb (cupping the palm)|Hook of hamate and flexor retinaculum|Medial shaft of the 5th metacarpal|Deep branch of the ulnar nerve (C8–T1)
+lumbricals (hand)|Hand|Flex the knuckles while extending the finger joints|Tendons of flexor digitorum profundus|Extensor expansions of fingers 2–5|Lateral two: median nerve. Medial two: ulnar nerve
+dorsal interossei (hand)|Hand|Spread the fingers (abduction); assist lumbricals|Adjacent sides of metacarpals 1–5|Proximal phalanges and extensor expansions of fingers 2–4|Deep branch of the ulnar nerve (C8–T1)
+palmar interossei (hand)|Hand|Bring the fingers together (adduction); assist lumbricals|Metacarpals 2, 4 and 5|Proximal phalanges and extensor expansions of the same fingers|Deep branch of the ulnar nerve (C8–T1)
+iliacus|Hip|Flexes the hip; with psoas major forms the iliopsoas|Iliac fossa|Lesser trochanter of the femur|Femoral nerve (L2–L3)
+psoas major|Hip|Flexes the hip; flexes and stabilises the lumbar spine|Vertebral bodies and transverse processes T12–L5|Lesser trochanter of the femur|Ventral rami of L1–L3
+gluteus maximus|Hip|Extends and externally rotates the hip; upper fibres abduct|Posterior ilium, sacrum, coccyx, thoracolumbar fascia|Gluteal tuberosity and iliotibial tract|Inferior gluteal nerve (L5–S2)
+gluteus medius|Hip|Abducts the hip; keeps the pelvis level on one leg; anterior fibres internally rotate|Outer ilium between the anterior and posterior gluteal lines|Greater trochanter|Superior gluteal nerve (L4–S1)
+gluteus minimus|Hip|Abducts and internally rotates the hip; stabilises the pelvis|Outer ilium between the anterior and inferior gluteal lines|Anterior greater trochanter|Superior gluteal nerve (L4–S1)
+tensor fasciae latae|Hip|Abducts, flexes and internally rotates the hip; tensions the iliotibial tract|Anterior superior iliac spine and iliac crest|Iliotibial tract|Superior gluteal nerve (L4–S1)
+piriformis|Hip|Externally rotates the extended hip; abducts the flexed hip|Anterior surface of the sacrum|Greater trochanter|Nerve to piriformis (S1–S2)
+gemellus superior|Hip|Externally rotates the hip|Ischial spine|Greater trochanter, with obturator internus tendon|Nerve to obturator internus (L5–S2)
+obturator internus|Hip|Externally rotates the hip; stabilises the femoral head|Inner surface of the obturator membrane and surrounding bone|Greater trochanter|Nerve to obturator internus (L5–S2)
+gemellus inferior|Hip|Externally rotates the hip|Ischial tuberosity|Greater trochanter, with obturator internus tendon|Nerve to quadratus femoris (L4–S1)
+quadratus femoris|Hip|Externally rotates the hip|Ischial tuberosity|Quadrate tubercle of the femur|Nerve to quadratus femoris (L4–S1)
+obturator externus|Hip|Externally rotates the hip; stabilises the femoral head|Outer surface of the obturator membrane|Trochanteric fossa of the femur|Obturator nerve (L3–L4)
+sartorius|Thigh|Flexes, abducts and externally rotates the hip; flexes the knee|Anterior superior iliac spine|Medial upper tibia (pes anserinus)|Femoral nerve (L2–L3)
+rectus femoris|Thigh|Extends the knee; flexes the hip|Anterior inferior iliac spine and above the acetabulum|Patella, then tibial tuberosity via the patellar ligament|Femoral nerve (L2–L4)
+vastus lateralis|Thigh|Extends the knee|Greater trochanter and lateral linea aspera|Patella, then tibial tuberosity|Femoral nerve (L2–L4)
+vastus medialis|Thigh|Extends the knee; lowest fibres stabilise the patella medially|Intertrochanteric line and medial linea aspera|Patella, then tibial tuberosity|Femoral nerve (L2–L4)
+vastus intermedius|Thigh|Extends the knee|Anterior and lateral femoral shaft|Patella, then tibial tuberosity|Femoral nerve (L2–L4)
+pectineus|Thigh|Adducts and flexes the hip|Pectineal line of the pubis|Pectineal line of the femur|Femoral nerve (L2–L3), sometimes obturator nerve
+adductor longus|Thigh|Adducts and flexes the hip|Body of the pubis|Middle third of the linea aspera|Obturator nerve (L2–L4)
+adductor brevis|Thigh|Adducts the hip|Body and inferior ramus of the pubis|Upper linea aspera|Obturator nerve (L2–L4)
+adductor magnus|Thigh|Adducts the hip; adductor part flexes, hamstring part extends the hip|Inferior pubic ramus, ischial ramus, ischial tuberosity|Linea aspera and adductor tubercle|Obturator nerve (adductor part); tibial nerve (hamstring part)
+adductor minimus|Thigh|Adducts and externally rotates the hip (upper part of adductor magnus)|Inferior pubic ramus|Upper linea aspera|Obturator nerve (L2–L4)
+gracilis|Thigh|Adducts the hip; flexes and internally rotates the knee|Body and inferior ramus of the pubis|Medial upper tibia (pes anserinus)|Obturator nerve (L2–L3)
+biceps femoris|Thigh|Flexes the knee; long head extends the hip; externally rotates the bent knee|Long head: ischial tuberosity. Short head: linea aspera|Head of the fibula|Long head: tibial nerve. Short head: common fibular nerve (L5–S2)
+semitendinosus|Thigh|Flexes the knee; extends the hip; internally rotates the bent knee|Ischial tuberosity|Medial upper tibia (pes anserinus)|Tibial part of the sciatic nerve (L5–S2)
+semimembranosus|Thigh|Flexes the knee; extends the hip; internally rotates the bent knee|Ischial tuberosity|Posterior medial tibial condyle|Tibial part of the sciatic nerve (L5–S2)
+tibialis anterior|Lower leg|Dorsiflexes the ankle; inverts the foot|Lateral condyle and upper lateral tibia|Medial cuneiform and base of the 1st metatarsal|Deep fibular nerve (L4–L5)
+extensor digitorum longus|Lower leg|Extends toes 2–5; dorsiflexes the ankle|Lateral tibial condyle, fibula, interosseous membrane|Middle and distal phalanges of toes 2–5|Deep fibular nerve (L5–S1)
+extensor hallucis longus|Lower leg|Extends the big toe; dorsiflexes the ankle|Middle anterior fibula and interosseous membrane|Distal phalanx of the big toe|Deep fibular nerve (L5–S1)
+fibularis tertius|Lower leg|Dorsiflexes the ankle; everts the foot|Lower anterior fibula|Base of the 5th metatarsal|Deep fibular nerve (L5–S1)
+fibularis longus|Lower leg|Everts the foot; plantarflexes the ankle; supports the arches|Head and upper lateral fibula|Medial cuneiform and base of the 1st metatarsal (under the foot)|Superficial fibular nerve (L5–S2)
+fibularis brevis|Lower leg|Everts the foot; plantarflexes the ankle|Lower lateral fibula|Tuberosity of the 5th metatarsal|Superficial fibular nerve (L5–S2)
+gastrocnemius|Lower leg|Plantarflexes the ankle; flexes the knee|Medial and lateral femoral condyles|Calcaneus via the calcaneal (Achilles) tendon|Tibial nerve (S1–S2)
+soleus|Lower leg|Plantarflexes the ankle; postural muscle; venous pump|Head of the fibula and soleal line of the tibia|Calcaneus via the calcaneal tendon|Tibial nerve (S1–S2)
+plantaris|Lower leg|Weakly assists plantarflexion and knee flexion|Lateral supracondylar line of the femur|Calcaneus|Tibial nerve (S1–S2)
+popliteus|Lower leg|Unlocks the extended knee by rotating the femur on the tibia|Lateral femoral condyle|Posterior tibia above the soleal line|Tibial nerve (L4–S1)
+flexor digitorum longus|Lower leg|Flexes toes 2–5; plantarflexes the ankle; supports the arch|Posterior tibia|Distal phalanges of toes 2–5|Tibial nerve (S2–S3)
+flexor hallucis longus|Lower leg|Flexes the big toe; plantarflexes the ankle; push-off in walking|Posterior fibula and interosseous membrane|Distal phalanx of the big toe|Tibial nerve (S2–S3)
+tibialis posterior|Lower leg|Inverts the foot; plantarflexes the ankle; main support of the medial arch|Posterior tibia, fibula and interosseous membrane|Navicular, cuneiforms, bases of metatarsals 2–4|Tibial nerve (L4–L5)
+extensor hallucis brevis|Foot|Extends the big toe|Dorsal calcaneus|Proximal phalanx of the big toe|Deep fibular nerve (L5–S1)
+abductor hallucis|Foot|Abducts and flexes the big toe; supports the medial arch|Medial calcaneal tuberosity and flexor retinaculum|Proximal phalanx of the big toe|Medial plantar nerve (S1–S2)
+flexor digitorum brevis|Foot|Flexes toes 2–5 at the middle joints|Medial calcaneal tuberosity and plantar aponeurosis|Middle phalanges of toes 2–5|Medial plantar nerve (S1–S2)
+abductor digiti minimi (foot)|Foot|Abducts and flexes the little toe|Calcaneal tuberosity|Proximal phalanx of the little toe|Lateral plantar nerve (S1–S3)
+flexor accessorius|Foot|Straightens the pull of flexor digitorum longus, helping it flex the toes (also called quadratus plantae)|Medial and lateral plantar calcaneus|Tendon of flexor digitorum longus|Lateral plantar nerve (S1–S3)
+lumbricals (foot)|Foot|Flex the toe knuckles while extending the toe joints|Tendons of flexor digitorum longus|Extensor expansions of toes 2–5|1st: medial plantar nerve. 2nd–4th: lateral plantar nerve
+flexor hallucis brevis|Foot|Flexes the big toe at the metatarsophalangeal joint|Cuboid and lateral cuneiform|Proximal phalanx of the big toe via the sesamoids|Medial plantar nerve (S1–S2)
+adductor hallucis|Foot|Adducts the big toe; supports the transverse arch|Oblique head: bases of metatarsals 2–4. Transverse head: plantar ligaments of toes 3–5|Proximal phalanx of the big toe|Lateral plantar nerve (S2–S3)
+flexor digiti minimi brevis (foot)|Foot|Flexes the little toe|Base of the 5th metatarsal|Proximal phalanx of the little toe|Lateral plantar nerve (S2–S3)
+opponens digiti minimi (foot)|Foot|Pulls the 5th metatarsal down and in (often considered part of flexor digiti minimi brevis)|Long plantar ligament|5th metatarsal|Lateral plantar nerve (S2–S3)
+plantar interossei (foot)|Foot|Bring toes 3–5 toward the 2nd toe (adduction); flex the toe knuckles|Medial sides of metatarsals 3–5|Proximal phalanges of toes 3–5|Lateral plantar nerve (S2–S3)
+calcaneal tendon|Connective tissue|The Achilles tendon: the thickest and strongest tendon, transmitting the pull of gastrocnemius and soleus to the heel|||
+iliotibial tract|Connective tissue|Thick band of fascia on the outer thigh; transmits force from gluteus maximus and tensor fasciae latae and stabilises the knee|||
+thoracolumbar fascia|Connective tissue|Layered fascia of the lower back that encloses the deep back muscles and links latissimus dorsi, gluteus maximus and the abdominal muscles into one force-transmitting system|||
+flexor retinaculum of wrist|Connective tissue|Fibrous band forming the roof of the carpal tunnel, through which the finger flexor tendons and the median nerve pass|||
+interosseous membrane of forearm|Connective tissue|Sheet of fibrous tissue joining radius and ulna; transfers load between them and anchors deep forearm muscles|||
+interosseous membrane of leg|Connective tissue|Sheet of fibrous tissue joining tibia and fibula; anchors deep leg muscles|||
+long plantar ligament|Connective tissue|The longest ligament of the sole; supports the lateral longitudinal arch|||
+intermediate tendon|Connective tissue|Tendon linking the two bellies of the digastric, held to the hyoid by a fibrous sling|||
+tendon of levator palpebrae superioris|Connective tissue|Aponeurosis through which levator palpebrae superioris lifts the upper eyelid|||
+tendinous arch of levator ani|Connective tissue|Thickening of the obturator fascia that serves as an origin of the levator ani|||
+median cricothyroid ligament|Connective tissue|Midline ligament between thyroid and cricoid cartilages; the site of an emergency cricothyrotomy|||
+arytenoid cartilage|Connective tissue|Paired laryngeal cartilages that pivot to open, close and tense the vocal folds|||

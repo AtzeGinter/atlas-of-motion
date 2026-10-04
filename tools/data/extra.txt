@@ -1,0 +1,40 @@
+trapezius|Shrugs, face pulls, rows, prone Y-raises|Upper fibres often overwork when the lower trapezius and serratus anterior are weak.
+latissimus dorsi|Pull-ups, lat pulldowns, straight-arm pulldowns|
+deltoid|Overhead press, lateral raises, rear-delt flyes|Axillary nerve injury, for example after a shoulder dislocation, weakens abduction.
+supraspinatus|External rotation work, scaption raises|The most commonly torn rotator cuff tendon; impingement under the acromion.
+infraspinatus|Side-lying and cable external rotations|
+pectoralis major|Bench press, push-ups, dips, cable flyes|
+serratus anterior|Push-up plus, wall slides, landmine press|Weakness or long thoracic nerve injury causes a winged scapula.
+diaphragm||Hiccups are involuntary spasms of the diaphragm.
+rectus abdominis|Crunches, hanging leg raises, ab rollouts|Tendinous intersections create the six-pack appearance.
+external oblique|Pallof press, side planks, cable woodchops|
+transversus abdominis|Dead bugs, hollow holds, bracing drills|
+biceps brachii|Supinated curls, chin-ups|A ruptured long-head tendon causes the Popeye deformity.
+brachialis|Hammer curls, reverse curls|
+triceps brachii|Dips, close-grip bench, overhead extensions, pushdowns|
+brachioradialis|Hammer curls, reverse curls|
+extensor carpi radialis brevis|Reverse wrist curls|Its origin is the usual site of tennis elbow (lateral epicondylitis).
+flexor digitorum superficialis|Grip training, dead hangs|
+pronator teres||Can compress the median nerve (pronator syndrome). Common flexor origin overuse causes golfer's elbow.
+flexor retinaculum of wrist||Compression of the median nerve under it is carpal tunnel syndrome.
+psoas major|Hanging knee raises, standing knee drives|
+gluteus maximus|Hip thrusts, squats, deadlifts, step-ups|
+gluteus medius|Side-lying abduction, banded side walks, single-leg work|Weakness shows as the Trendelenburg sign: the pelvis drops on the opposite side when walking.
+piriformis||The sciatic nerve passes beneath it; tightness may irritate the nerve (piriformis syndrome).
+sartorius||The longest muscle in the body.
+rectus femoris|Squats, leg extensions, lunges|The only quadriceps head that crosses the hip.
+vastus lateralis|Squats, leg press, leg extensions|Largest quadriceps head.
+vastus medialis|Deep squats, split squats, terminal knee extensions|
+adductor longus|Copenhagen plank, sumo squats, cable adduction|Most commonly strained muscle in groin injuries.
+biceps femoris|Nordic curls, Romanian deadlifts, leg curls|The most frequently strained hamstring in sprinting.
+semitendinosus|Nordic curls, Romanian deadlifts, leg curls|Its tendon is a common graft for ACL reconstruction.
+semimembranosus|Nordic curls, Romanian deadlifts, leg curls|
+gastrocnemius|Standing calf raises, jumping, sprinting|Works best with the knee straight because it crosses the knee.
+soleus|Seated calf raises|Does most of the plantarflexion work when the knee is bent.
+tibialis anterior|Tibialis raises, heel walks|Weakness or deep fibular nerve damage causes foot drop.
+tibialis posterior||Dysfunction leads to adult-acquired flatfoot.
+calcaneal tendon||Ruptures typically occur 2–6 cm above the heel during explosive push-off.
+iliotibial tract||Friction or compression at the lateral knee causes IT band syndrome, common in runners.
+masseter||Strongest muscle by force relative to size; clenching and bruxism overload it.
+sternocleidomastoid|Resisted neck flexion and rotation|Shortening on one side causes torticollis (wry neck).
+posterior crico-arytenoid||Bilateral paralysis can close the airway.

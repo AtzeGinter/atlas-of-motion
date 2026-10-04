@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Myology: 3D atlas of the human muscular system</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e9eef1; --panel:#f7f9fa; --ink:#15212a; --muted:#5b6b76; --line:#d3dce2;
+  --accent:#1f6f78; --accent-soft:#d6e9eb; --chip:#e6ecef; --vp-a:#f3f6f8; --vp-b:#d3dce2;
+  --amber:#d98a1c; --shadow:0 10px 30px rgba(21,33,42,.14);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d171e; --panel:#121f28; --ink:#e2eaee; --muted:#8fa1ac; --line:#22343f;
+    --accent:#56b4bd; --accent-soft:#163339; --chip:#192a34; --vp-a:#1c2e38; --vp-b:#0a1218;
+    --amber:#f0a93c; --shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d171e; --panel:#121f28; --ink:#e2eaee; --muted:#8fa1ac; --line:#22343f;
+  --accent:#56b4bd; --accent-soft:#163339; --chip:#192a34; --vp-a:#1c2e38; --vp-b:#0a1218;
+  --amber:#f0a93c; --shadow:0 10px 30px rgba(0,0,0,.45);
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%;}
+*,*::before,*::after{box-sizing:border-box;}
+body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;}
+button,input{font:inherit;color:inherit;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+.app{display:grid;grid-template-columns:330px minmax(0,1fr);height:100%;}
+aside{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:22px 18px 28px;display:flex;flex-direction:column;gap:22px;}
+.brand h1{margin:0;font:600 30px/1.05 "Source Serif 4",Georgia,serif;letter-spacing:-.015em;}
+.brand p{margin:6px 0 0;color:var(--muted);font-size:13px;max-width:34ch;}
+.sec h2{margin:0 0 8px;font-size:13px;font-weight:600;color:var(--muted);}
+
+.toggle{display:flex;align-items:center;justify-content:space-between;padding:6px 0;cursor:pointer;gap:12px;}
+.toggle input{appearance:none;width:36px;height:20px;border-radius:20px;background:var(--line);position:relative;cursor:pointer;transition:background .15s;flex:none;margin:0;}
+.toggle input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--panel);transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.25);}
+.toggle input:checked{background:var(--accent);}
+.toggle input:checked::after{transform:translateX(16px);}
+.toggle small{display:block;color:var(--muted);font-size:12px;}
+.slider{display:grid;grid-template-columns:118px 1fr 40px;align-items:center;gap:8px;padding-top:6px;}
+.slider input{accent-color:var(--accent);width:100%;}
+.slider output{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-size:12.5px;}
+
+.seg{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.seg button{background:none;border:0;border-right:1px solid var(--line);padding:7px 0;cursor:pointer;font-size:12.5px;}
+.seg button:last-child{border-right:0;}
+.seg button:hover{background:var(--chip);}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{border:1px solid var(--line);background:none;border-radius:999px;padding:4px 10px;font-size:12.5px;cursor:pointer;}
+.chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);}
+.chip-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;}
+.chip-row h2{margin:0;}
+.linkbtn{background:none;border:0;color:var(--accent);cursor:pointer;font-size:12.5px;padding:0 0 0 10px;}
+.linkbtn:disabled{color:var(--muted);cursor:default;opacity:.6;}
+
+.search{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;margin-bottom:6px;}
+.list details{border-bottom:1px solid var(--line);}
+.list summary{cursor:pointer;padding:7px 2px;font-weight:600;font-size:13px;display:flex;justify-content:space-between;list-style:none;}
+.list summary::-webkit-details-marker{display:none;}
+.list summary span{color:var(--muted);font-weight:400;}
+.list summary::before{content:"+";width:14px;color:var(--muted);}
+.list details[open] summary::before{content:"−";}
+.list summary b{flex:1;font-weight:600;}
+.items{padding:0 0 8px;}
+.row{display:flex;align-items:center;gap:2px;padding-left:10px;}
+.row input{flex:none;margin:0 4px 0 0;width:15px;height:15px;accent-color:var(--accent);cursor:pointer;}
+.item{display:block;width:100%;text-align:left;background:none;border:0;border-radius:6px;padding:4px 8px;cursor:pointer;}
+.item::first-letter{text-transform:uppercase;}
+.item:hover{background:var(--chip);}
+.item.active{background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent);}
+.item.off{opacity:.42;}
+.foot{margin-top:auto;color:var(--muted);font-size:11.5px;border-top:1px solid var(--line);padding-top:14px;line-height:1.5;}
+.foot a{color:inherit;}
+
+.vp{position:relative;overflow:hidden;background:radial-gradient(ellipse 70% 80% at 50% 42%,var(--vp-a),var(--vp-b));}
+.vp canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab;}
+.vp canvas:active{cursor:grabbing;}
+.hint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:12.5px;color:var(--muted);white-space:nowrap;pointer-events:none;transition:opacity .3s;}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--panel);padding:4px 9px;border-radius:6px;font-size:12.5px;white-space:nowrap;display:none;z-index:3;}
+.tip::first-letter{text-transform:uppercase;}
+.loading{position:absolute;inset:0;display:grid;place-items:center;z-index:5;background:inherit;}
+.loading div{text-align:center;color:var(--muted);}
+.loading strong{display:block;font:600 22px/1.2 "Source Serif 4",Georgia,serif;color:var(--ink);margin-bottom:6px;}
+
+.card{position:absolute;top:16px;right:16px;width:360px;max-width:calc(100% - 32px);max-height:calc(100% - 32px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px 20px;display:none;z-index:2;}
+.card.show{display:block;}
+.card .top{display:flex;justify-content:space-between;align-items:center;}
+.tag{font-size:12px;color:var(--accent);font-weight:600;}
+.close{background:none;border:0;font-size:22px;line-height:1;cursor:pointer;color:var(--muted);padding:2px 4px;}
+.card h2{margin:4px 0 0;font:600 24px/1.15 "Source Serif 4",Georgia,serif;letter-spacing:-.01em;}
+.card h2::first-letter{text-transform:uppercase;}
+.sub{margin:3px 0 0;font:italic 400 15px/1.35 "Source Serif 4",Georgia,serif;color:var(--muted);}
+.sub::first-letter{text-transform:uppercase;}
+.card h3{margin:16px 0 6px;font-size:12.5px;font-weight:600;color:var(--muted);}
+.card ul{margin:0;padding-left:18px;}
+.card li{margin:2px 0;}
+.card p{margin:0;}
+.card dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:16px 0 0;}
+.card dt{color:var(--muted);font-size:12.5px;padding-top:1px;}
+.card dd{margin:0;}
+.note{border-left:3px solid var(--amber);padding:2px 0 2px 10px;}
+.actions{display:flex;gap:8px;margin-top:18px;}
+.btn{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;}
+.btn:hover{border-color:var(--accent);}
+
+
+.tabs{display:grid;grid-template-columns:1fr 1fr 1fr;background:var(--chip);border-radius:9px;padding:3px;gap:3px;}
+.tabs button{border:0;background:none;border-radius:7px;padding:7px 0;cursor:pointer;font-weight:600;font-size:13px;color:var(--muted);}
+.tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12);}
+.pane{display:flex;flex-direction:column;gap:22px;}
+.pane[hidden]{display:none;}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:14px;font-size:12.5px;color:var(--muted);}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none;}
+.l3{background:#d62f1f;}.l2{background:#f08a3c;}.l1{background:#f3d27a;}.l0{background:#a3aeb4;opacity:.6;}
+.mchip{border:1px solid var(--line);background:none;border-radius:999px;padding:3px 10px 3px 6px;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+.mchip:hover{border-color:var(--accent);}
+.mchip small{color:var(--muted);}
+.mchip::first-letter{text-transform:uppercase;}
+.ext{width:100%;border-collapse:collapse;font-size:13px;margin-top:2px;}
+.ext th{text-align:left;font-weight:500;color:var(--muted);font-size:11.5px;padding:0 6px 4px 0;border-bottom:1px solid var(--line);}
+.ext td{padding:6px 6px 6px 0;border-bottom:1px solid var(--line);vertical-align:top;}
+.ext td:last-child,.ext th:last-child{padding-right:0;white-space:nowrap;}
+.ext small{display:block;color:var(--muted);font-size:11.5px;}
+.exlink{background:none;border:0;padding:0;color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px;cursor:pointer;text-align:left;}
+.exlink:hover{text-decoration-color:var(--accent);}
+.lv{display:inline-flex;gap:3px;vertical-align:middle;margin-right:5px;}
+.lv i{width:7px;height:7px;border-radius:50%;background:var(--line);}
+.lv i.l3{background:#d62f1f;}.lv i.l2{background:#f08a3c;}.lv i.l1{background:#e9c25a;}
+.bar{display:inline-block;width:42px;height:6px;background:var(--line);border-radius:3px;vertical-align:middle;margin-right:6px;overflow:hidden;}
+.bar i{display:block;height:100%;background:var(--accent);}
+.fine{color:var(--muted);font-size:12px;margin-top:8px!important;}
+.role{margin-top:12px!important;padding:8px 10px;border-radius:8px;background:var(--chip);display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;}
+select.search{appearance:auto;}
+.seg2{grid-template-columns:1fr 1fr;margin-bottom:8px;}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink);font-weight:600;}
+.best{margin:0;padding:0;list-style:none;counter-reset:b;}
+.best li{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px;counter-increment:b;}
+.best li::before{content:counter(b);width:16px;color:var(--muted);font-size:12px;}
+.best li .exlink{flex:1;}
+.best li small{color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;}
+.banner{margin:0;padding:10px 12px;border-radius:9px;background:var(--accent-soft);border:1px solid var(--accent);font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.banner[hidden]{display:none;}
+.prow{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);}
+.prow small{display:block;color:var(--muted);font-size:11.5px;}
+.step{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.step button{background:none;border:0;width:26px;height:26px;cursor:pointer;font-size:15px;}
+.step button:hover{background:var(--chip);}
+.step span{min-width:44px;text-align:center;font-size:12.5px;font-variant-numeric:tabular-nums;}
+.x{background:none;border:0;color:var(--muted);cursor:pointer;font-size:18px;padding:0 2px;}
+.addres{display:flex;flex-direction:column;}
+.addres button{text-align:left;background:none;border:0;border-radius:6px;padding:5px 8px;cursor:pointer;}
+.addres button:hover{background:var(--chip);}
+.addres button small{color:var(--muted);}
+.empty{color:var(--muted);font-size:13px;margin:4px 0 10px;}
+.vrow{display:grid;grid-template-columns:70px 1fr;align-items:center;gap:8px;margin-top:8px;font-size:12.5px;color:var(--muted);}
+.vseg{display:flex;flex-wrap:wrap;gap:4px;}
+.vseg button{border:1px solid var(--line);background:none;border-radius:999px;padding:3px 9px;font-size:12px;cursor:pointer;color:var(--ink);}
+.vseg button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);}
+.vsum{width:100%;border-collapse:collapse;font-size:13px;}
+.vsum td{padding:5px 6px 5px 0;border-bottom:1px solid var(--line);}
+.vsum td:nth-child(2){width:38%;}
+.vsum td:last-child{text-align:right;white-space:nowrap;color:var(--muted);font-size:12px;padding-right:0;}
+.vbar{height:7px;border-radius:4px;background:var(--line);overflow:hidden;}
+.vbar i{display:block;height:100%;}
+.v0{background:#f6e3a1;}.v1{background:#f3a14b;}.v2{background:#d6402b;}.v3{background:#7e1d57;}
+.ca2{background:#2f6fd0;}.ca1{background:#93bdf2;}.ceq{background:#b49ae0;}.cb1{background:#f6b27a;}.cb2{background:#e0601e;}
+.cmpt{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;}
+.cmpt th{text-align:left;font-weight:500;color:var(--muted);font-size:11.5px;padding:0 6px 4px 0;border-bottom:1px solid var(--line);}
+.cmpt td{padding:5px 6px 5px 0;border-bottom:1px solid var(--line);}
+.cmpt td:first-child{display:flex;align-items:center;gap:6px;}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr;grid-template-rows:58% 42%;}
+  .vp{order:1;}
+  aside{order:2;border-right:0;border-top:1px solid var(--line);padding:16px 16px 22px;}
+  .brand h1{font-size:24px;}
+  .card{top:auto;bottom:10px;left:10px;right:10px;width:auto;max-width:none;max-height:72%;}
+  .hint{display:none;}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <h1>Myology</h1>
+      <p>A 3D atlas of the human muscular system built from MRI-derived anatomical meshes. Click any structure to see what it does, or pick an exercise to see what it trains.</p>
+    </div>
+
+    <div class="sec">
+      <h2>Layers</h2>
+      <label class="toggle"><span>Skeleton</span><input type="checkbox" id="tBones" checked></label>
+      <label class="toggle"><span>Muscles</span><input type="checkbox" id="tMuscles" checked></label>
+      <label class="toggle"><span>Tendons and fascia<small>Hide to see the deep back muscles</small></span><input type="checkbox" id="tTendons" checked></label>
+      <label class="toggle"><span>Isolate selection<small>Fade everything else</small></span><input type="checkbox" id="tIso"></label>
+      <div class="slider"><label for="opM">Muscle opacity</label><input type="range" id="opM" min="5" max="100" value="100"><output id="opMo">100%</output></div>
+      <div class="slider"><label for="opB">Bone opacity</label><input type="range" id="opB" min="5" max="100" value="100"><output id="opBo">100%</output></div>
+    </div>
+
+    <div class="sec">
+      <h2>View</h2>
+      <div class="seg" role="group" aria-label="Camera view">
+        <button data-view="front">Front</button><button data-view="back">Back</button><button data-view="left">Left</button><button data-view="right">Right</button><button data-view="reset">Reset</button>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button role="tab" data-tab="anat" aria-selected="true">Anatomy</button>
+      <button role="tab" data-tab="ex" aria-selected="false">Exercises</button>
+      <button role="tab" data-tab="wk" aria-selected="false">Workout</button>
+    </div>
+
+    <div class="pane" id="paneAnat">
+    <div class="sec">
+      <div class="chip-row"><h2>Regions</h2><span><button class="linkbtn" id="gAll">All</button><button class="linkbtn" id="gNone">None</button></span></div>
+      <div class="chips" id="groups"></div>
+    </div>
+
+    <div class="sec">
+      <div class="chip-row"><h2>Index</h2><button class="linkbtn" id="unhide" disabled>Show hidden (0)</button></div>
+      <input class="search" id="q" type="search" placeholder="Search muscles and bones" aria-label="Search muscles and bones">
+      <div class="list" id="list"></div>
+    </div>
+    </div>
+
+    <div class="pane" id="paneEx" hidden>
+    <p class="banner" id="cmpBanner" hidden><span id="cmpText"></span><button class="linkbtn" id="cmpCancel">Cancel</button></p>
+    <div class="sec">
+      <div class="chip-row"><h2>Your equipment</h2><span><button class="linkbtn" id="eqAll">All</button></span></div>
+      <div class="chips" id="eqchips"></div>
+    </div>
+    <div class="sec">
+      <h2>Best exercises for a muscle</h2>
+      <select class="search" id="bestM" aria-label="Muscle"></select>
+      <div class="seg seg2" role="group" aria-label="Sort by"><button data-sort="eff" aria-pressed="true">Most effective</button><button data-sort="spec" aria-pressed="false">Most specific</button></div>
+      <ol class="best" id="best"></ol>
+    </div>
+    <div class="sec">
+      <div class="chip-row"><h2>Strength exercises</h2><button class="linkbtn" id="exClear" disabled>Clear</button></div>
+      <input class="search" id="qe" type="search" placeholder="Search exercise, equipment or muscle" aria-label="Search exercises">
+      <div class="list" id="exlist"></div>
+    </div>
+    </div>
+
+    <div class="pane" id="paneWk" hidden>
+    <div class="sec">
+      <div class="chip-row"><h2>Your training week</h2><button class="linkbtn" id="wkClear">Clear</button></div>
+      <div id="plan"></div>
+      <input class="search" id="qa" type="search" placeholder="Add an exercise" aria-label="Add an exercise" style="margin-top:10px">
+      <div class="addres" id="addres"></div>
+    </div>
+    <div class="sec">
+      <label class="toggle"><span>Show weekly volume on the body</span><input type="checkbox" id="tVol"></label>
+      <div class="legend"><span><i class="sw v0"></i>Under 4</span><span><i class="sw v1"></i>4–9</span><span><i class="sw v2"></i>10–20</span><span><i class="sw v3"></i>Over 20</span><span><i class="sw l0"></i>None</span></div>
+    </div>
+    <div class="sec">
+      <h2>Weekly sets per muscle</h2>
+      <div id="volsum"></div>
+      <p class="fine">Sets where a muscle is a prime mover count fully, synergist sets count half, stabiliser work is not counted. Roughly 10–20 hard sets per muscle per week is a common hypertrophy target; fewer still builds strength, more is not automatically better. Your plan is saved in this browser only.</p>
+    </div>
+    </div>
+
+    <div class="foot" id="foot"></div>
+  </aside>
+
+  <main class="vp" id="vp">
+    <div class="loading" id="loading"><div><strong>Building the body</strong><span id="loadMsg">Unpacking meshes</span></div></div>
+    <div class="tip" id="tip"></div>
+    <div class="hint" id="hint">Drag to rotate, scroll to zoom, right-drag to pan, click to inspect, H to hide</div>
+    <div class="card" id="card" aria-live="polite"></div>
+  </main>
+</div>
+
+<script id="geo" type="application/octet-stream">__GEO__</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(async function(){
+"use strict";
+const $=s=>document.querySelector(s);
+const META=__META__;
+const DB=META.db, BDB=META.bdb;
+const MGROUPS=["Face","Eye","Jaw","Neck","Throat","Back","Shoulder","Chest","Abdomen","Pelvic floor","Upper arm","Forearm","Hand","Hip","Thigh","Lower leg","Foot"];
+const BGROUPS=["Skull","Spine","Thorax","Arm","Hand","Pelvis & leg","Foot"];
+const TISSUE="Connective tissue";
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+
+/* ---------- renderer ---------- */
+const vp=$("#vp");
+let renderer;
+try{ renderer=new THREE.WebGLRenderer({antialias:true,alpha:true}); }
+catch(e){ $("#loadMsg").textContent="WebGL is not available in this browser."; return; }
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.setClearColor(0x000000,0);
+vp.insertBefore(renderer.domElement,vp.firstChild);
+const canvas=renderer.domElement;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(30,1,0.01,30);
+scene.add(new THREE.HemisphereLight(0xfff6ec,0x26343d,0.75));
+const key=new THREE.DirectionalLight(0xffffff,0.8); key.position.set(1.4,2.6,2.4); scene.add(key);
+const rim=new THREE.DirectionalLight(0xc4d6ff,0.55); rim.position.set(-2,1.8,-2.6); scene.add(rim);
+const fill=new THREE.DirectionalLight(0xffffff,0.3); fill.position.set(-1.6,0.4,2); scene.add(fill);
+const lin=h=>new THREE.Color(h).convertSRGBToLinear();
+
+/* floor shadow */
+(function(){
+  const c=document.createElement("canvas"); c.width=c.height=128; const g=c.getContext("2d");
+  const grd=g.createRadialGradient(64,64,0,64,64,64); grd.addColorStop(0,"rgba(0,0,0,0.32)"); grd.addColorStop(1,"rgba(0,0,0,0)");
+  g.fillStyle=grd; g.fillRect(0,0,128,128);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(0.8,0.55),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));
+  m.rotation.x=-Math.PI/2; m.position.set(0,0.001,0); scene.add(m);
+})();
+
+/* ---------- materials ---------- */
+function stdMat(color,extra){return new THREE.MeshStandardMaterial(Object.assign({color:color,roughness:0.6,metalness:0,side:THREE.DoubleSide},extra||{}));}
+const keyMats={};
+function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0)/4294967295;}
+function keyMat(k){
+  if(keyMats[k]) return keyMats[k];
+  const r=hash(k), c=new THREE.Color();
+  if(DB[k].g===TISSUE) c.setHSL(0.11+r*0.03,0.25,0.78+r*0.06);
+  else c.setHSL(0.99+r*0.03-(r>0.33?0.03:0),0.55+r*0.12,0.34+((r*7)%1)*0.1);
+  return keyMats[k]=stdMat(c.convertSRGBToLinear(),{roughness:DB[k].g===TISSUE?0.45:0.58});
+}
+const M_SEL=stdMat(lin(0x3cc6d6),{emissive:lin(0x0a3238),roughness:0.45});
+const HM={3:stdMat(lin(0xd62f1f),{emissive:lin(0x2a0400),roughness:0.5}),2:stdMat(lin(0xf08a3c),{emissive:lin(0x1e0c00),roughness:0.5}),1:stdMat(lin(0xf3d27a),{roughness:0.55})};
+const CM={a2:stdMat(lin(0x2f6fd0),{roughness:0.5}),a1:stdMat(lin(0x93bdf2),{roughness:0.55}),eq:stdMat(lin(0xb49ae0),{roughness:0.55}),b1:stdMat(lin(0xf6b27a),{roughness:0.55}),b2:stdMat(lin(0xe0601e),{roughness:0.5})};
+const VM=[stdMat(lin(0xf6e3a1),{roughness:0.55}),stdMat(lin(0xf3a14b),{roughness:0.55}),stdMat(lin(0xd6402b),{roughness:0.5}),stdMat(lin(0x7e1d57),{roughness:0.5})];
+const M_GREY=stdMat(lin(0xa3aeb4),{transparent:true,opacity:0.16,depthWrite:false});
+const M_HOV=stdMat(lin(0xe0605a),{emissive:lin(0x30100c)});
+const M_FADE=stdMat(lin(0x9aa7ae),{transparent:true,opacity:0.06,depthWrite:false});
+const B_MAT=stdMat(lin(0xe7e0cf),{roughness:0.75});
+const B_SEL=stdMat(lin(0x5fc7d1),{emissive:lin(0x0b2a2e),roughness:0.5});
+const B_HOV=stdMat(lin(0xf3ead6),{emissive:lin(0x1c2a30),roughness:0.75});
+const B_FADE=stdMat(lin(0xe7e0cf),{transparent:true,opacity:0.12,depthWrite:false});
+const FADED=new Set([M_FADE,B_FADE,M_GREY]);
+
+/* ---------- decode geometry ---------- */
+const nextFrame=()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));
+await nextFrame();
+let u16;
+try{
+  const s=document.getElementById("geo").textContent.trim(), n=s.length;
+  const bin=atob(s); const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  if(typeof DecompressionStream==="undefined") throw new Error("This browser cannot decompress the model (DecompressionStream missing). Try a current Chrome, Edge, Firefox or Safari.");
+  const ab=await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+  u16=new Uint16Array(ab);
+}catch(e){ $("#loadMsg").textContent=e.message||"Could not unpack the model."; return; }
+
+const lo=META.lo, sp=META.span;
+const muscleMeshes=[], boneMeshes=[], byKey={}, byBone={};
+const body=new THREE.Group(); scene.add(body);
+let p=0;
+META.meshes.forEach(function(row,idx){
+  const kind=row[0], k=row[1], side=row[2], part=row[3], nv=row[4], nf=row[5];
+  const pos=new Float32Array(nv*3);
+  for(let c=0;c<3;c++){let prev=0;const l=lo[c],s=sp[c]/65535;for(let i=0;i<nv;i++){const z=u16[p++];prev=(prev+((z>>>1)^-(z&1)))&0xFFFF;pos[i*3+c]=l+prev*s;}}
+  const ind=new Uint16Array(nf*3);
+  {let prev=0;for(let i=0;i<nf*3;i++){const z=u16[p++];prev=(prev+((z>>>1)^-(z&1)))&0xFFFF;ind[i]=prev;}}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute("position",new THREE.BufferAttribute(pos,3));
+  g.setIndex(new THREE.BufferAttribute(ind,1));
+  g.computeVertexNormals(); g.computeBoundingSphere(); g.computeBoundingBox();
+  const mesh=new THREE.Mesh(g,kind==="m"?keyMat(k):B_MAT);
+  mesh.matrixAutoUpdate=false;
+  if(kind==="m"){
+    const grp=DB[k].g;
+    mesh.userData={kind:"muscle",key:k,side:side,part:part,group:grp,tissue:grp===TISSUE};
+    muscleMeshes.push(mesh); (byKey[k]=byKey[k]||[]).push(mesh);
+  } else {
+    mesh.userData={kind:"bone",key:k,side:side,group:BDB[k][0]};
+    boneMeshes.push(mesh); (byBone[k]=byBone[k]||[]).push(mesh);
+  }
+  body.add(mesh);
+});
+u16=null;
+
+/* ---------- exercises ---------- */
+const EX=META.ex, W={3:1,2:0.45,1:0.15}, ROLE={3:"Prime mover",2:"Synergist",1:"Stabiliser"}, VOLF={3:1,2:0.5,1:0};
+const EXI={}; EX.forEach((e,i)=>EXI[e.n]=i);
+const partsOf=k=>[...new Set((byKey[k]||[]).map(m=>m.userData.part).filter(Boolean))];
+const allParts=k=>partsOf(k).length;
+const partNote=(k,pr)=>(pr.length&&pr.length<allParts(k))?pr.join(', '):'';
+function effTargets(i,vars){
+  let t=EX[i].t.map(r=>r.slice());
+  const v=EX[i].v; if(!v||!vars) return t;
+  v.forEach((g,gi)=>{
+    const opt=g[1][vars[gi]||0]; if(!opt) return;
+    opt[1].forEach(o=>{const k=o[0],p=o[1],l=o[2];
+      if(p){
+        const whole=t.find(r=>r[0]===k&&!r[1]);
+        if(whole){t=t.filter(r=>r!==whole); partsOf(k).forEach(pp=>{if(!t.some(r=>r[0]===k&&r[1]===pp)) t.push([k,pp,whole[2]]);});}
+        t=t.filter(r=>!(r[0]===k&&r[1]===p)); if(l>0) t.push([k,p,l]);
+      } else { t=t.filter(r=>r[0]!==k); if(l>0) t.push([k,"",l]); }
+    });
+  });
+  return t;
+}
+function perOf(t){
+  const per={}; t.forEach(r=>{const o=per[r[0]]||(per[r[0]]={l:0,parts:[]}); o.l=Math.max(o.l,r[2]); if(r[1]&&o.parts.indexOf(r[1])<0) o.parts.push(r[1]);});
+  let tot=0; Object.keys(per).forEach(k=>tot+=W[per[k].l]); return {per:per,tot:tot};
+}
+const varText=(i,v)=>(EX[i].v&&v)?EX[i].v.map((g,gi)=>v[gi]?g[1][v[gi]][0]:"").filter(Boolean).join(", "):"";
+const EXK={};
+EX.forEach((e,i)=>{const r=perOf(e.t); e.per=r.per; e.tot=r.tot;
+  Object.keys(r.per).forEach(k=>(EXK[k]=EXK[k]||[]).push({i:i,l:r.per[k].l,parts:r.per[k].parts,s:W[r.per[k].l]/r.tot}));});
+Object.keys(EXK).forEach(k=>EXK[k].sort((a,b)=>b.l-a.l||b.s-a.s));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+const EQCATS=["Barbell","Dumbbells","Kettlebell","Cable","Machine","Bodyweight","Band","Other"];
+let eqOn=new Set(store.get("myology.eq.v1",EQCATS).filter(c=>EQCATS.indexOf(c)>=0));
+const eqOK=i=>EX[i].eq.some(c=>eqOn.has(c));
+const eqFiltered=()=>eqOn.size<EQCATS.length;
+let plan=store.get("myology.plan.v1",[]).filter(p=>p&&EXI[p.n]!==undefined&&p.sets>0);
+let selEx=null, exVars={}, cmp=null, cmpPick=false, volOn=false, view="sel", mode=null, heat=null, heatTip=null;
+
+/* ---------- state ---------- */
+const state={bones:true,muscles:true,tendons:true,isolate:false,opM:1,opB:1,groups:new Set(MGROUPS)};
+const hidden=new Set();
+let sel=null, hoverKey=null, dirty=true;
+const keyId=(kind,k)=>kind+":"+k;
+
+function setOpacity(mat,o){
+  const tr=o<0.999;
+  if(mat.transparent!==tr){mat.transparent=tr; mat.needsUpdate=true;}
+  mat.opacity=o; mat.depthWrite=o>0.6;
+}
+function applyVisuals(){
+  Object.keys(keyMats).forEach(k=>setOpacity(keyMats[k],state.opM));
+  setOpacity(B_MAT,state.opB);
+  const selId=sel?keyId(sel.kind,sel.key):null;
+  muscleMeshes.forEach(m=>{
+    const d=m.userData, id=keyId("muscle",d.key), isSel=id===selId;
+    const layer=d.tissue?state.tendons:state.muscles;
+    const grpOn=d.tissue||state.groups.has(d.group);
+    const hm=heat?heat.get(m):null;
+    m.visible=isSel||(!!hm&&state.muscles)||(layer&&grpOn&&!hidden.has(id));
+    m.material=isSel?M_SEL:(heat?(hm||M_GREY):(hoverKey===id?M_HOV:((state.isolate&&sel)?M_FADE:keyMat(d.key))));
+  });
+  boneMeshes.forEach(m=>{
+    const d=m.userData, id=keyId("bone",d.key), isSel=id===selId;
+    m.visible=isSel||(state.bones&&!hidden.has(id));
+    m.material=isSel?B_SEL:(hoverKey===id?B_HOV:((state.isolate&&sel)?B_FADE:B_MAT));
+  });
+  dirty=true;
+}
+
+/* ---------- picking ---------- */
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2();
+function pick(cx,cy){
+  const r=canvas.getBoundingClientRect();
+  ndc.set(((cx-r.left)/r.width)*2-1,-((cy-r.top)/r.height)*2+1);
+  camera.updateMatrixWorld(); ray.setFromCamera(ndc,camera);
+  const objs=[];
+  for(const m of muscleMeshes) if(m.visible&&!FADED.has(m.material)&&m.material.opacity>0.15) objs.push(m);
+  for(const m of boneMeshes) if(m.visible&&!FADED.has(m.material)&&m.material.opacity>0.15) objs.push(m);
+  const hit=ray.intersectObjects(objs,false)[0];
+  return hit?hit.object:null;
+}
+
+/* ---------- camera ---------- */
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function baseRadius(){const a=camera.aspect||1; return 3.6*Math.pow(Math.max(1,0.62/a),0.85);}
+const orbit={theta:0,phi:1.48,r:3.6,ty:0.88}, goal={theta:0,phi:1.48,r:3.6,ty:0.88};
+const nearestAngle=(cur,t)=>t+2*Math.PI*Math.round((cur-t)/(2*Math.PI));
+function setView(v){
+  const map={front:0,back:Math.PI,left:Math.PI/2,right:-Math.PI/2};
+  if(v==="reset"){goal.theta=nearestAngle(orbit.theta,0);goal.phi=1.48;goal.r=baseRadius();goal.ty=0.88;return;}
+  goal.theta=nearestAngle(orbit.theta,map[v]); goal.phi=1.5;
+}
+function bodyZ(y){let zs=0,n=0;for(const m of muscleMeshes){const b=m.geometry.boundingBox; if(b.min.y<=y&&b.max.y>=y&&Math.abs((b.min.x+b.max.x)/2)<0.2){zs+=(b.min.z+b.max.z)/2;n++;}} return n?zs/n:0;}
+function faceTowards(ms){
+  let s=0; const c=new THREE.Vector3();
+  ms.forEach(m=>{m.geometry.boundingBox.getCenter(c); s+=c.z-bodyZ(c.y);});
+  s/=Math.max(1,ms.length);
+  if(s<-0.008) goal.theta=nearestAngle(orbit.theta,Math.PI); else if(s>0.008) goal.theta=nearestAngle(orbit.theta,0);
+}
+function meshesOf(kind,k){return kind==="muscle"?byKey[k]:byBone[k];}
+function focusOn(kind,k){
+  const ms=meshesOf(kind,k); if(!ms||!ms.length) return;
+  const box=new THREE.Box3(); ms.forEach(m=>box.union(m.geometry.boundingBox));
+  const c=box.getCenter(new THREE.Vector3()), size=box.getSize(new THREE.Vector3());
+  // which side of the body is this on? compare with the body's depth centre at the same height
+  let zs=0,n=0;
+  for(const m of muscleMeshes){const b=m.geometry.boundingBox; if(b.min.y<=c.y&&b.max.y>=c.y&&Math.abs((b.min.x+b.max.x)/2)<0.2){zs+=(b.min.z+b.max.z)/2;n++;}}
+  const zc=n?zs/n:0;
+  if(kind==="muscle"||size.x<0.3){
+    if(c.z<zc-0.015) goal.theta=nearestAngle(orbit.theta,Math.PI);
+    else if(c.z>zc+0.015) goal.theta=nearestAngle(orbit.theta,0);
+  }
+  goal.phi=1.5; goal.ty=clamp(c.y,0.05,1.7);
+  goal.r=clamp(Math.max(size.y,size.x*0.75)*3.2+0.35,0.45,baseRadius());
+}
+
+const ptrs=new Map(); let downPos=null, moved=false, pinch=null;
+canvas.addEventListener("pointerdown",e=>{
+  canvas.setPointerCapture(e.pointerId);
+  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===1){downPos={x:e.clientX,y:e.clientY};moved=false;}
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,r:goal.r,my:(a.y+b.y)/2,ty:goal.ty};moved=true;}
+  hideTip(); $("#hint").style.opacity="0";
+});
+canvas.addEventListener("pointermove",e=>{
+  if(!ptrs.has(e.pointerId)){ if(e.pointerType==="mouse") queueHover(e); return; }
+  const q=ptrs.get(e.pointerId), dx=e.clientX-q.x, dy=e.clientY-q.y; q.x=e.clientX; q.y=e.clientY;
+  if(downPos&&Math.hypot(e.clientX-downPos.x,e.clientY-downPos.y)>5) moved=true;
+  if(ptrs.size===1){
+    if(e.buttons===2||e.shiftKey) goal.ty=clamp(goal.ty+dy*0.0021*goal.r/3,0.02,1.75);
+    else{goal.theta-=dx*0.009; goal.phi=clamp(goal.phi-dy*0.009,0.15,Math.PI-0.15);}
+  } else if(ptrs.size===2&&pinch){
+    const [a,b]=[...ptrs.values()], d=Math.hypot(a.x-b.x,a.y-b.y)||1;
+    goal.r=clamp(pinch.r*pinch.d/d,0.3,6.5);
+    goal.ty=clamp(pinch.ty+((a.y+b.y)/2-pinch.my)*0.003*goal.r/3,0.02,1.75);
+  }
+});
+function release(e){
+  if(!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId);
+  if(ptrs.size<2) pinch=null;
+  if(ptrs.size===0){
+    if(e.type==="pointerup"&&!moved&&downPos&&e.button!==2){
+      const o=pick(e.clientX,e.clientY), h=o&&o.userData;
+      if(h) select(h.kind,h.key,false,h); else if(sel) select(null);
+    }
+    downPos=null;
+  }
+}
+canvas.addEventListener("pointerup",release);
+canvas.addEventListener("pointercancel",release);
+canvas.addEventListener("contextmenu",e=>e.preventDefault());
+canvas.addEventListener("wheel",e=>{e.preventDefault();goal.r=clamp(goal.r*Math.exp(e.deltaY*0.0012),0.3,6.5);},{passive:false});
+canvas.addEventListener("pointerleave",()=>{if(hoverKey){hoverKey=null;applyVisuals();}hideTip();});
+
+const tip=$("#tip"); let hoverEv=null, hoverRAF=0;
+function hideTip(){tip.style.display="none";}
+function queueHover(e){
+  hoverEv=e; if(hoverRAF) return;
+  hoverRAF=requestAnimationFrame(()=>{
+    hoverRAF=0; const o=pick(hoverEv.clientX,hoverEv.clientY), h=o&&o.userData, id=h?keyId(h.kind,h.key):null;
+    if(id!==hoverKey){hoverKey=id; applyVisuals(); canvas.style.cursor=h?"pointer":"";}
+    if(h){const r=vp.getBoundingClientRect(); tip.textContent=h.key+(h.part?" ("+h.part+")":"")+(heatTip&&heatTip.get(o)?", "+heatTip.get(o):""); tip.style.display="block";
+      tip.style.left=Math.min(hoverEv.clientX-r.left+14,r.width-tip.offsetWidth-8)+"px"; tip.style.top=(hoverEv.clientY-r.top+14)+"px";}
+    else hideTip();
+  });
+}
+
+function resize(){
+  const w=vp.clientWidth,h=vp.clientHeight; if(!w||!h) return;
+  renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); dirty=true;
+}
+new ResizeObserver(resize).observe(vp); resize();
+orbit.r=goal.r=baseRadius();
+(function tick(){
+  const k=0.16; let moving=false;
+  for(const f of ["theta","phi","r","ty"]){const d=goal[f]-orbit[f]; if(Math.abs(d)>1e-5){orbit[f]+=d*k; moving=true;} else orbit[f]=goal[f];}
+  if(moving||dirty){
+    const s=Math.sin(orbit.phi);
+    camera.position.set(orbit.r*s*Math.sin(orbit.theta),orbit.ty+orbit.r*Math.cos(orbit.phi),orbit.r*s*Math.cos(orbit.theta));
+    camera.lookAt(0,orbit.ty,0);
+    renderer.render(scene,camera); dirty=false;
+  }
+  requestAnimationFrame(tick);
+})();
+
+/* ---------- UI ---------- */
+const card=$("#card"), list=$("#list");
+function sideText(s){return s==="L"?"left":(s==="R"?"right":"");}
+const lvDots=l=>'<span class="lv">'+[1,2,3].map(n=>'<i'+(n<=l?' class="l'+l+'"':'')+'></i>').join("")+'</span>';
+const fmt=s=>(Math.round(s*10)/10).toString();
+function renderExCard(){
+  const e=EX[selEx], v=exVars[selEx]||[], r=perOf(effTargets(selEx,v)); let h="";
+  h+='<div class="top"><span class="tag">'+e.c+', '+e.e.toLowerCase()+'</span><button class="close" data-act="exclose" aria-label="Close">×</button></div>';
+  h+='<h2>'+e.n+'</h2>';
+  if(e.v) h+=e.v.map((g,gi)=>'<div class="vrow"><span>'+g[0]+'</span><div class="vseg">'+g[1].map((o,oi)=>'<button data-var="'+gi+':'+oi+'" aria-pressed="'+((v[gi]||0)===oi)+'">'+o[0]+'</button>').join("")+'</div></div>').join("");
+  h+='<h3>How to</h3><p>'+e.q+'</p>';
+  h+='<div class="legend"><span><i class="sw l3"></i>Prime mover</span><span><i class="sw l2"></i>Synergist</span><span><i class="sw l1"></i>Stabiliser</span><span><i class="sw l0"></i>Not involved</span></div>';
+  [3,2,1].forEach(l=>{
+    const ks=Object.keys(r.per).filter(k=>r.per[k].l===l); if(!ks.length) return;
+    h+='<h3>'+ROLE[l]+'s</h3><div class="chips">'+ks.map(k=>{const pn=partNote(k,r.per[k].parts);
+      return '<button class="mchip" data-key="'+k+'"><i class="sw l'+l+'"></i>'+k+(pn?' <small>('+pn+')</small>':'')+' <small>'+Math.round(W[l]/r.tot*100)+'%</small></button>';}).join("")+'</div>';
+  });
+  const n=plan.filter(p=>p.n===e.n).reduce((a,p)=>a+p.sets,0);
+  h+='<div class="actions"><button class="btn" data-act="add">'+(n?'Add again ('+n+' sets planned)':'Add to my week')+'</button><button class="btn" data-act="cmp">Compare with…</button></div>';
+  if(cmpPick) h+='<p class="banner" style="margin-top:12px">Now pick a second exercise from the Exercises list.</p>';
+  h+='<p class="fine">Percent = estimated share of the total muscular work. Ratings are approximations from EMG research and coaching practice; grip, stance, range of motion and technique shift them.</p>';
+  card.innerHTML=h; card.classList.add("show"); card.scrollTop=0;
+}
+function renderCmpCard(){
+  const A=cmp[0],B=cmp[1], pa=perOf(effTargets(A.i,A.v)).per, pb=perOf(effTargets(B.i,B.v)).per;
+  const keys=[...new Set(Object.keys(pa).concat(Object.keys(pb)))];
+  const wa=k=>pa[k]?W[pa[k].l]:0, wb=k=>pb[k]?W[pb[k].l]:0;
+  keys.sort((x,y)=>(wb(x)-wa(x))-(wb(y)-wa(y))||(wa(y)+wb(y))-(wa(x)+wb(x)));
+  const cls=k=>{const d=wa(k)-wb(k); return Math.abs(d)<0.05?"ceq":(d>0?(d>=0.5?"ca2":"ca1"):(-d>=0.5?"cb2":"cb1"));};
+  const nm=X=>EX[X.i].n+(varText(X.i,X.v)?' <small>('+varText(X.i,X.v)+')</small>':'');
+  const cell=p=>p?lvDots(p.l)+ROLE[p.l].replace("Prime mover","Prime"):'<span style="color:var(--muted)">–</span>';
+  let h='<div class="top"><span class="tag">Comparison</span><button class="close" data-act="cmpend" aria-label="End comparison">×</button></div>';
+  h+='<h2 style="font-size:20px"><span style="color:#2f6fd0">A</span> '+nm(A)+'</h2><h2 style="font-size:20px;margin-top:2px"><span style="color:#e0601e">B</span> '+nm(B)+'</h2>';
+  h+='<div class="legend"><span><i class="sw ca2"></i>Much more in A</span><span><i class="sw ca1"></i>More in A</span><span><i class="sw ceq"></i>Similar</span><span><i class="sw cb1"></i>More in B</span><span><i class="sw cb2"></i>Much more in B</span></div>';
+  h+='<table class="cmpt"><thead><tr><th>Muscle</th><th>A</th><th>B</th></tr></thead><tbody>'+keys.map(k=>'<tr><td><i class="sw '+cls(k)+'"></i><button class="exlink" data-key="'+k+'">'+cap(k)+'</button></td><td>'+cell(pa[k])+'</td><td>'+cell(pb[k])+'</td></tr>').join("")+'</tbody></table>';
+  h+='<div class="actions"><button class="btn" data-act="swap">Swap A and B</button><button class="btn" data-act="cmpend">End comparison</button></div>';
+  card.innerHTML=h; card.classList.add("show"); card.scrollTop=0;
+}
+function renderCard(clicked){
+  if(view==="cmp"&&cmp) return renderCmpCard();
+  if(view==="ex"&&selEx!==null) return renderExCard();
+  if(!sel){ if(cmp){view="cmp";return renderCmpCard();} if(selEx!==null){view="ex";return renderExCard();} card.classList.remove("show");card.innerHTML="";return;}
+  let h="";
+  const isHidden=hidden.has(keyId(sel.kind,sel.key));
+  if(sel.kind==="muscle"){
+    const d=DB[sel.key], parts=[...new Set(byKey[sel.key].map(m=>m.userData.part).filter(Boolean))];
+    let sub="";
+    if(clicked){const bits=[clicked.side?sideText(clicked.side)+" side":"",clicked.part].filter(Boolean); if(bits.length) sub="Clicked: "+bits.join(", ");}
+    else if(parts.length) sub="Parts in model: "+parts.join(", ");
+    h+='<div class="top"><span class="tag">'+d.g+'</span><button class="close" aria-label="Close">×</button></div>';
+    h+='<h2>'+sel.key+'</h2>'+(sub?'<p class="sub">'+sub+'</p>':'');
+    if(mode==="ex"&&selEx!==null){const r=perOf(effTargets(selEx,exVars[selEx])).per[sel.key];
+      h+='<p class="role"><span>'+(r?ROLE[r.l]+' in '+EX[selEx].n:'Not involved in '+EX[selEx].n)+'</span><button class="linkbtn" data-act="back">Back</button></p>';}
+    else if(mode==="cmp"&&cmp){const ra=perOf(effTargets(cmp[0].i,cmp[0].v)).per[sel.key], rb=perOf(effTargets(cmp[1].i,cmp[1].v)).per[sel.key];
+      h+='<p class="role"><span>A: '+(ra?ROLE[ra.l].toLowerCase():'not involved')+'. B: '+(rb?ROLE[rb.l].toLowerCase():'not involved')+'.</span><button class="linkbtn" data-act="back">Back</button></p>';}
+    else if(mode==="vol"){const v=volOfKey(sel.key,"");
+      h+='<p class="role"><span>Your week: '+fmt(v)+' sets ('+volStatus(v).toLowerCase()+')</span></p>';}
+    if(d.g===TISSUE){ h+='<h3>What it is</h3><p>'+d.a.join("; ")+'</p>'; }
+    else{
+      h+='<h3>Function</h3><ul>'+d.a.map(a=>'<li>'+cap(a)+'</li>').join("")+'</ul>';
+      h+='<dl><dt>Origin</dt><dd>'+d.o+'</dd><dt>Insertion</dt><dd>'+d.i+'</dd><dt>Nerve</dt><dd>'+d.n+'</dd></dl>';
+      const xs=(EXK[sel.key]||[]).filter(x=>eqOK(x.i));
+      if(xs.length){
+        h+='<h3>Exercises that train it ('+xs.length+(eqFiltered()?', filtered by your equipment':'')+')</h3><table class="ext"><thead><tr><th>Exercise</th><th>Involvement</th><th>Specificity</th></tr></thead><tbody>'+
+          xs.map(x=>{const pc=Math.round(x.s*100);return '<tr><td><button class="exlink" data-ex="'+x.i+'">'+EX[x.i].n+'</button>'+(partNote(sel.key,x.parts)?'<small>'+partNote(sel.key,x.parts)+'</small>':'')+'</td><td>'+lvDots(x.l)+ROLE[x.l].replace("Prime mover","Prime")+'</td><td><span class="bar"><i style="width:'+Math.min(100,pc*2.5)+'%"></i></span>'+pc+'%</td></tr>';}).join("")+
+          '</tbody></table><p class="fine">Involvement: how hard this muscle works in the exercise. Specificity: its estimated share of all the muscular work, so higher means the exercise isolates it more.</p>';
+      } else if(EXK[sel.key]) h+='<h3>Exercises that train it</h3><p class="empty">None with your selected equipment.</p>';
+      else if(d.t) h+='<h3>Exercises</h3><p>'+d.t+'</p>';
+    }
+    if(d.x) h+='<h3>Note</h3><p class="note">'+d.x+'</p>';
+  } else {
+    const b=BDB[sel.key];
+    h+='<div class="top"><span class="tag">Bone, '+b[0].toLowerCase()+'</span><button class="close" aria-label="Close">×</button></div>';
+    h+='<h2>'+sel.key+'</h2>'+(clicked&&clicked.side?'<p class="sub">Clicked: '+sideText(clicked.side)+' side</p>':'');
+    h+='<h3>About</h3><p>'+b[1]+'</p>';
+  }
+  h+='<div class="actions"><button class="btn" data-act="focus">Zoom to it</button><button class="btn" data-act="hide">'+(isHidden?'Show it':'Hide it (H)')+'</button></div>';
+  card.innerHTML=h; card.classList.add("show"); card.scrollTop=0;
+}
+card.addEventListener("click",e=>{
+  const t=e.target.closest("button"); if(!t) return;
+  const act=t.dataset.act;
+  if(act==="exclose") return clearEx();
+  if(act==="cmpend"){cmp=null; return selEx!==null?selectEx(selEx):clearEx();}
+  if(act==="swap"){cmp=[cmp[1],cmp[0]]; setMode("cmp"); return renderCard();}
+  if(act==="cmp"){cmpPick=true; syncBanner(); openTab("ex"); return renderCard();}
+  if(act==="add"){addToPlan(selEx,exVars[selEx]); return renderCard();}
+  if(act==="back"){sel=null;view=mode==="cmp"?"cmp":"ex";applyVisuals();renderCard();syncList();return;}
+  if(t.dataset.var){const a=t.dataset.var.split(":"); const v=(exVars[selEx]=(exVars[selEx]||[]).slice()); v[+a[0]]=+a[1]; setMode("ex"); return renderCard();}
+  if(t.dataset.ex!==undefined) return selectEx(+t.dataset.ex);
+  if(t.dataset.key) return select("muscle",t.dataset.key,true);
+  if(t.classList.contains("close")) return select(null);
+  if(t.dataset.act==="focus"&&sel) focusOn(sel.kind,sel.key);
+  if(t.dataset.act==="hide"&&sel) toggleHide();
+});
+function toggleHide(){
+  if(!sel) return; const id=keyId(sel.kind,sel.key);
+  if(hidden.has(id)){hidden.delete(id); renderCard(); applyVisuals(); syncList(); syncUnhide(); return;}
+  hidden.add(id); select(null); syncUnhide();
+}
+function syncUnhide(){const b=$("#unhide"); b.textContent="Show hidden ("+hidden.size+")"; b.disabled=!hidden.size;}
+$("#unhide").onclick=()=>{hidden.clear(); syncUnhide(); applyVisuals(); syncList(); if(sel) renderCard();};
+
+function select(kind,k,focus,clicked){
+  sel=kind?{kind:kind,key:k}:null; view=sel?"sel":(cmp?"cmp":"ex");
+  if(sel&&kind==="muscle"){const d=DB[k]; if(d.g===TISSUE&&!state.tendons){state.tendons=true;$("#tTendons").checked=true;} else if(d.g!==TISSUE&&!state.muscles){state.muscles=true;$("#tMuscles").checked=true;}}
+  if(sel&&kind==="bone"&&!state.bones){state.bones=true;$("#tBones").checked=true;}
+  applyVisuals(); renderCard(clicked); syncList();
+  if(focus&&sel) focusOn(kind,k);
+}
+
+function meshLevels(tg){const mp=new Map(); tg.forEach(r=>(byKey[r[0]]||[]).forEach(m=>{if(!r[1]||m.userData.part===r[1]) mp.set(m,Math.max(mp.get(m)||0,r[2]));})); return mp;}
+function volumeByMesh(){const mp=new Map(); plan.forEach(p=>{meshLevels(effTargets(EXI[p.n],p.v)).forEach((l,m)=>mp.set(m,(mp.get(m)||0)+p.sets*VOLF[l]));}); return mp;}
+let volCache=null;
+function volOfKey(k,part){ if(!volCache) volCache=volumeByMesh(); let v=0; (byKey[k]||[]).forEach(m=>{if(!part||m.userData.part===part) v=Math.max(v,volCache.get(m)||0);}); return v; }
+const volBand=s=>s<4?0:(s<10?1:(s<=20?2:3));
+const volStatus=s=>s<=0?"Not trained":(s<4?"Low":(s<10?"Moderate":(s<=20?"In target range":"High")));
+function setMode(m){
+  mode=m; heat=null; heatTip=null;
+  if(m==="ex"){ const lv=meshLevels(effTargets(selEx,exVars[selEx])); heat=new Map(); heatTip=new Map(); lv.forEach((l,ms)=>{heat.set(ms,HM[l]); heatTip.set(ms,ROLE[l].toLowerCase());}); }
+  else if(m==="cmp"){ const a=meshLevels(effTargets(cmp[0].i,cmp[0].v)), b=meshLevels(effTargets(cmp[1].i,cmp[1].v)); heat=new Map(); heatTip=new Map();
+    new Set([...a.keys(),...b.keys()]).forEach(ms=>{const d=(W[a.get(ms)]||0)-(W[b.get(ms)]||0); let mt,tp;
+      if(Math.abs(d)<0.05){mt=CM.eq;tp="similar in A and B";} else if(d>0){mt=d>=0.5?CM.a2:CM.a1;tp="more in A";} else {mt=-d>=0.5?CM.b2:CM.b1;tp="more in B";}
+      heat.set(ms,mt); heatTip.set(ms,tp);}); }
+  else if(m==="vol"){ volCache=volumeByMesh(); heat=new Map(); heatTip=new Map(); volCache.forEach((s,ms)=>{if(s>0){heat.set(ms,VM[volBand(s)]); heatTip.set(ms,fmt(s)+" weekly sets");}}); }
+  applyVisuals(); syncModeUI();
+}
+function syncModeUI(){ $("#exClear").disabled=selEx===null&&!cmp; $("#tVol").checked=volOn; syncBanner(); }
+function syncBanner(){ const b=$("#cmpBanner"); b.hidden=!cmpPick; if(cmpPick&&selEx!==null) $("#cmpText").textContent="Pick a second exercise to compare with "+EX[selEx].n+"."; }
+$("#cmpCancel").onclick=()=>{cmpPick=false; syncBanner(); if(view==="ex") renderCard();};
+function selectEx(i){
+  if(cmpPick&&selEx!==null&&i!==selEx){
+    cmpPick=false; cmp=[{i:selEx,v:(exVars[selEx]||[]).slice()},{i:i,v:(exVars[i]||[]).slice()}]; sel=null; view="cmp";
+    setMode("cmp"); renderCard(); syncList(); syncExList(); return;
+  }
+  cmpPick=false; cmp=null; selEx=i; sel=null; view="ex";
+  if(!state.muscles){state.muscles=true;$("#tMuscles").checked=true;}
+  setMode("ex");
+  faceTowards([...heat.keys()].filter(m=>heat.get(m)===HM[3]));
+  goal.phi=1.5; goal.r=baseRadius(); goal.ty=0.88;
+  renderCard(); syncList(); syncExList();
+}
+function clearEx(){selEx=null;cmp=null;cmpPick=false;view="sel";setMode(volOn?"vol":null);renderCard();syncList();syncExList();}
+$("#exClear").onclick=clearEx;
+const EXCATS=["Chest & shoulders","Back","Arms","Legs","Hinge","Full body","Core","Grip & carry","Neck"];
+function buildExList(){
+  const q=$("#qe").value.trim().toLowerCase(); let h="";
+  const hay=e=>(e.n+" "+e.c+" "+e.e+" "+Object.keys(e.per).join(" ")).toLowerCase();
+  EXCATS.forEach((c,ci)=>{
+    const ids=EX.map((e,i)=>i).filter(i=>EX[i].c===c&&eqOK(i)&&(!q||hay(EX[i]).indexOf(q)>=0)).sort((a,b)=>EX[a].n.localeCompare(EX[b].n));
+    if(!ids.length) return;
+    h+='<details'+(q||ci<2?' open':'')+'><summary><b>'+c+'</b><span>'+ids.length+'</span></summary><div class="items">'+
+      ids.map(i=>'<button class="item" data-ex="'+i+'" style="padding-left:16px">'+EX[i].n+'</button>').join("")+'</div></details>';
+  });
+  $("#exlist").innerHTML=h||'<p class="empty">No match. Try a muscle such as "glute", equipment such as "cable", or enable more equipment.</p>';
+  syncExList();
+}
+function syncExList(){$("#exlist").querySelectorAll(".item").forEach(b=>b.classList.toggle("active",+b.dataset.ex===selEx||(!!cmp&&(cmp[0].i===+b.dataset.ex||cmp[1].i===+b.dataset.ex))));}
+$("#exlist").addEventListener("click",e=>{const t=e.target.closest(".item"); if(t) (+t.dataset.ex===selEx&&!cmpPick&&!cmp?clearEx():selectEx(+t.dataset.ex));});
+$("#qe").addEventListener("input",buildExList);
+function openTab(name){
+  document.querySelectorAll("[data-tab]").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab===name));
+  $("#paneAnat").hidden=name!=="anat"; $("#paneEx").hidden=name!=="ex"; $("#paneWk").hidden=name!=="wk";
+}
+document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>openTab(b.dataset.tab));
+
+/* equipment */
+function buildEq(){ $("#eqchips").innerHTML=EQCATS.map(c=>'<button class="chip" data-eq="'+c+'" aria-pressed="'+eqOn.has(c)+'">'+c+'</button>').join(""); }
+function eqChanged(){ store.set("myology.eq.v1",[...eqOn]); buildEq(); buildExList(); buildBest(); buildAdd(); if(sel&&view==="sel") renderCard(); }
+$("#eqchips").addEventListener("click",e=>{const c=e.target.closest("[data-eq]"); if(!c) return; const k=c.dataset.eq; eqOn.has(k)?eqOn.delete(k):eqOn.add(k); eqChanged();});
+$("#eqAll").onclick=()=>{eqOn=new Set(EQCATS); eqChanged();};
+
+/* best exercises for a muscle */
+let bestSort="eff";
+(function(){
+  const ks=Object.keys(EXK); let h="";
+  MGROUPS.forEach(g=>{const xs=ks.filter(k=>DB[k].g===g).sort(); if(xs.length) h+='<optgroup label="'+g+'">'+xs.map(k=>'<option value="'+k+'">'+cap(k)+'</option>').join("")+'</optgroup>';});
+  $("#bestM").innerHTML=h; $("#bestM").value="gluteus maximus";
+})();
+function buildBest(){
+  const k=$("#bestM").value; let xs=(EXK[k]||[]).filter(x=>eqOK(x.i));
+  if(bestSort==="spec") xs=xs.filter(x=>x.l>=2).slice().sort((a,b)=>b.s-a.s||b.l-a.l);
+  xs=xs.slice(0,8);
+  $("#best").innerHTML=xs.length?xs.map(x=>'<li><button class="exlink" data-ex="'+x.i+'">'+EX[x.i].n+'</button>'+lvDots(x.l)+'<small>'+Math.round(x.s*100)+'%</small></li>').join(""):'<li class="empty">No exercises with your equipment.</li>';
+}
+$("#bestM").onchange=buildBest;
+document.querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{bestSort=b.dataset.sort; document.querySelectorAll("[data-sort]").forEach(x=>x.setAttribute("aria-pressed",x===b)); buildBest();});
+$("#best").addEventListener("click",e=>{const t=e.target.closest("[data-ex]"); if(t) selectEx(+t.dataset.ex);});
+
+/* workout builder */
+const SUMMARY=[["Upper chest","pectoralis major","clavicular part"],["Mid and lower chest","pectoralis major","sternocostal part"],["Front delts","deltoid","clavicular part"],["Side delts","deltoid","acromial part"],["Rear delts","deltoid","spinal part"],["Upper traps","trapezius","descending part"],["Mid traps","trapezius","transverse part"],["Rhomboids","rhomboid major",""],["Lats","latissimus dorsi",""],["Rotator cuff (infraspinatus)","infraspinatus",""],["Biceps","biceps brachii",""],["Brachialis","brachialis",""],["Triceps","triceps brachii",""],["Forearm flexors","flexor digitorum superficialis",""],["Forearm extensors","extensor carpi radialis brevis",""],["Abs","rectus abdominis",""],["Obliques","external oblique",""],["Lower back","iliocostalis",""],["Glutes","gluteus maximus",""],["Glute medius","gluteus medius",""],["Hip flexors","psoas major",""],["Quadriceps","vastus lateralis",""],["Hamstrings","semitendinosus",""],["Adductors","adductor magnus",""],["Calves (gastrocnemius)","gastrocnemius",""],["Soleus","soleus",""],["Tibialis anterior","tibialis anterior",""]];
+function savePlan(){ store.set("myology.plan.v1",plan); }
+function addToPlan(i,v){ plan.push({n:EX[i].n,sets:3,v:(v||[]).slice()}); planChanged(); }
+function planChanged(){ savePlan(); volCache=null; renderPlan(); renderVolSum(); if(mode==="vol") setMode("vol"); }
+function renderPlan(){
+  const tot=plan.reduce((a,p)=>a+p.sets,0);
+  $("#plan").innerHTML=plan.length?plan.map((p,ix)=>{const i=EXI[p.n], vt=varText(i,p.v);
+    return '<div class="prow"><div><button class="exlink" data-open="'+ix+'">'+p.n+'</button>'+(vt?'<small>'+vt+'</small>':'')+'</div><div class="step"><button data-dec="'+ix+'" aria-label="Fewer sets">−</button><span>'+p.sets+' sets</span><button data-inc="'+ix+'" aria-label="More sets">+</button></div><button class="x" data-rm="'+ix+'" aria-label="Remove">×</button></div>';}).join("")+
+    '<p class="fine">'+plan.length+' exercises, '+tot+' sets per week.</p>'
+    :'<p class="empty">No exercises yet. Add them below or with "Add to my week" on any exercise.</p>';
+  $("#wkClear").disabled=!plan.length;
+}
+$("#plan").addEventListener("click",e=>{
+  const t=e.target.closest("button"); if(!t) return; const d=t.dataset;
+  if(d.inc!==undefined){plan[+d.inc].sets=Math.min(30,plan[+d.inc].sets+1); planChanged();}
+  else if(d.dec!==undefined){const p=plan[+d.dec]; p.sets--; if(p.sets<=0) plan.splice(+d.dec,1); planChanged();}
+  else if(d.rm!==undefined){plan.splice(+d.rm,1); planChanged();}
+  else if(d.open!==undefined){const p=plan[+d.open], i=EXI[p.n]; exVars[i]=p.v.slice(); selectEx(i);}
+});
+$("#wkClear").onclick=()=>{ if(!plan.length) return; plan=[]; planChanged(); };
+function buildAdd(){
+  const q=$("#qa").value.trim().toLowerCase();
+  if(!q){$("#addres").innerHTML=""; return;}
+  const ids=EX.map((e,i)=>i).filter(i=>eqOK(i)&&(EX[i].n+" "+Object.keys(EX[i].per).join(" ")).toLowerCase().indexOf(q)>=0).slice(0,7);
+  $("#addres").innerHTML=ids.length?ids.map(i=>'<button data-add="'+i+'">+ '+EX[i].n+' <small>'+EX[i].e.toLowerCase()+'</small></button>').join(""):'<p class="empty">No match with your equipment.</p>';
+}
+$("#qa").addEventListener("input",buildAdd);
+$("#addres").addEventListener("click",e=>{const t=e.target.closest("[data-add]"); if(!t) return; addToPlan(+t.dataset.add,exVars[+t.dataset.add]); $("#qa").value=""; buildAdd(); $("#qa").focus();});
+function renderVolSum(){
+  if(!plan.length){$("#volsum").innerHTML='<p class="empty">Add exercises to see your weekly volume.</p>'; return;}
+  const rows=SUMMARY.map(r=>[r[0],r[1],volOfKey(r[1],r[2])]);
+  $("#volsum").innerHTML='<table class="vsum"><tbody>'+rows.map(r=>{const s=r[2], b=volBand(s);
+    return '<tr><td><button class="exlink" data-key="'+r[1]+'">'+r[0]+'</button></td><td><div class="vbar">'+(s>0?'<i class="v'+b+'" style="width:'+Math.min(100,s/25*100)+'%"></i>':'')+'</div></td><td>'+fmt(s)+' · '+volStatus(s)+'</td></tr>';}).join("")+'</tbody></table>';
+}
+$("#volsum").addEventListener("click",e=>{const t=e.target.closest("[data-key]"); if(t) select("muscle",t.dataset.key,true);});
+$("#tVol").onchange=e=>{ volOn=e.target.checked; if(volOn){selEx=null;cmp=null;cmpPick=false; if(view!=="sel") view="sel"; setMode("vol"); renderCard(); syncExList();} else if(mode==="vol") setMode(null); };
+
+function buildList(){
+  const q=$("#q").value.trim().toLowerCase(), open=!!q;
+  let h="";
+  const sec=(title,items,kind)=>{ if(!items.length) return "";
+    return '<details'+(open?' open':'')+'><summary><b>'+title+'</b><span>'+items.length+'</span></summary><div class="items">'+
+      items.map(k=>'<div class="row"><input type="checkbox" class="vis" data-kind="'+kind+'" data-key="'+k+'" aria-label="Show '+k+'"><button class="item" data-kind="'+kind+'" data-key="'+k+'">'+k+'</button></div>').join("")+'</div></details>'; };
+  const mkeys=Object.keys(DB).filter(k=>byKey[k]&&k.indexOf(q)>=0).sort();
+  MGROUPS.concat([TISSUE]).forEach(g=>{h+=sec(g,mkeys.filter(k=>DB[k].g===g),"muscle");});
+  const bkeys=Object.keys(BDB).filter(k=>k.indexOf(q)>=0).sort();
+  BGROUPS.forEach(g=>{h+=sec("Bones: "+g.toLowerCase(),bkeys.filter(k=>BDB[k][0]===g),"bone");});
+  list.innerHTML=h||'<p style="color:var(--muted);margin:6px 2px">No match. Try a shorter name, for example "flexor" or "rib".</p>';
+  syncList();
+}
+function syncList(){
+  list.querySelectorAll(".vis").forEach(c=>{c.checked=!hidden.has(keyId(c.dataset.kind,c.dataset.key));});
+  list.querySelectorAll(".item").forEach(b=>{
+    const kind=b.dataset.kind,k=b.dataset.key,id=keyId(kind,k);
+    b.classList.toggle("active",!!sel&&keyId(sel.kind,sel.key)===id);
+    let off=hidden.has(id);
+    if(kind==="muscle"){const g=DB[k].g; off=off||(g===TISSUE?!state.tendons:(!state.muscles||!state.groups.has(g)));}
+    else off=off||!state.bones;
+    b.classList.toggle("off",off);
+  });
+}
+list.addEventListener("click",e=>{const t=e.target.closest(".item"); if(t) select(t.dataset.kind,t.dataset.key,true);});
+list.addEventListener("change",e=>{
+  const c=e.target.closest(".vis"); if(!c) return;
+  const id=keyId(c.dataset.kind,c.dataset.key);
+  if(c.checked) hidden.delete(id); else{ hidden.add(id); if(sel&&keyId(sel.kind,sel.key)===id){sel=null;renderCard();} }
+  if(c.checked){ if(c.dataset.kind==="bone"&&!state.bones){state.bones=true;$("#tBones").checked=true;}
+    if(c.dataset.kind==="muscle"){const g=DB[c.dataset.key].g; if(g===TISSUE){if(!state.tendons){state.tendons=true;$("#tTendons").checked=true;}} else { if(!state.muscles){state.muscles=true;$("#tMuscles").checked=true;} if(!state.groups.has(g)){state.groups.add(g);syncGroups();}}}}
+  applyVisuals(); syncUnhide(); syncList();
+});
+$("#q").addEventListener("input",buildList);
+
+const gWrap=$("#groups");
+gWrap.innerHTML=MGROUPS.map(g=>'<button class="chip" aria-pressed="true" data-g="'+g+'">'+g+'</button>').join("");
+function syncGroups(){gWrap.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",state.groups.has(c.dataset.g)));applyVisuals();syncList();}
+gWrap.addEventListener("click",e=>{const c=e.target.closest(".chip"); if(!c) return; const g=c.dataset.g; state.groups.has(g)?state.groups.delete(g):state.groups.add(g); syncGroups();});
+$("#gAll").onclick=()=>{state.groups=new Set(MGROUPS);syncGroups();};
+$("#gNone").onclick=()=>{state.groups=new Set();syncGroups();};
+
+$("#tBones").onchange=e=>{state.bones=e.target.checked;applyVisuals();syncList();};
+$("#tMuscles").onchange=e=>{state.muscles=e.target.checked;applyVisuals();syncList();};
+$("#tTendons").onchange=e=>{state.tendons=e.target.checked;applyVisuals();syncList();};
+$("#tIso").onchange=e=>{state.isolate=e.target.checked;applyVisuals();};
+$("#opM").oninput=e=>{state.opM=e.target.value/100;$("#opMo").textContent=e.target.value+"%";applyVisuals();};
+$("#opB").oninput=e=>{state.opB=e.target.value/100;$("#opBo").textContent=e.target.value+"%";applyVisuals();};
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>setView(b.dataset.view));
+document.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT"&&e.target.type!=="checkbox"&&e.target.type!=="range") return;
+  if(e.key==="Escape"){ if(cmpPick){cmpPick=false;syncBanner();if(view==="ex")renderCard();} else if(sel) select(null); else if(cmp||selEx!==null) clearEx(); }
+  if((e.key==="h"||e.key==="H")&&sel) toggleHide();
+});
+
+const nMus=Object.keys(DB).filter(k=>DB[k].g!==TISSUE).length;
+$("#foot").innerHTML=nMus+" muscles in "+muscleMeshes.length+" meshes, "+Object.keys(BDB).length+" bone types in "+boneMeshes.length+" meshes. "+
+ "Meshes from <a href='https://lifesciencedb.jp/bp3d/' target='_blank' rel='noopener'>BodyParts3D</a> (© The Database Center for Life Science, CC BY-SA 2.1 JP) and "+
+ "<a href='https://www.z-anatomy.com/' target='_blank' rel='noopener'>Z-Anatomy</a> (CC BY-SA 4.0), as aligned in Johan Bellander's BodyExplorer, further decimated here. "+
+ "The mesh data on this page is shared under CC BY-SA 4.0. For learning, not for clinical use.";
+buildList(); buildEq(); buildExList(); buildBest(); renderPlan(); renderVolSum(); syncModeUI(); applyVisuals();
+$("#loading").remove();
+})();
+</script>
+</body>
+</html>
