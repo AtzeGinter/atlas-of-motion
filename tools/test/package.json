@@ -1,5 +1,5 @@
 {
-  "name": "myology-smoke-test",
+  "name": "atlas-of-motion-smoke-test",
   "private": true,
   "engines": { "node": ">=18" },
   "scripts": { "test": "node smoke.js" },

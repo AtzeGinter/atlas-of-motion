@@ -1,6 +1,6 @@
-# Myology: upcoming tasks
+# Atlas of Motion: upcoming tasks
 
-Status as of 2026-10-04. The project is currently only `myology-repo.zip` + `CLAUDE.md` in this folder (not unpacked, not a git repo).
+Status as of 2026-10-04. Project renamed from "Myology" to **Atlas of Motion** (repo `atlas-of-motion`). Local git repo on `main`, not yet pushed.
 
 Legend: **S/M/L** = rough size. **Agent** = suggested executor (`sonnet` for well-scoped coding, `opus` for design/judgement-heavy work, `you` = needs a human). ★ = my own idea (not in CLAUDE.md roadmap).
 
@@ -21,7 +21,7 @@ Legend: **S/M/L** = rough size. **Agent** = suggested executor (`sonnet` for wel
 
 | # | Task | Size | Agent |
 |---|------|------|-------|
-| 1.1 | ★ **Plan storage fragility.** Plan entries store variation *indices* (`v:[1,0]`) and exercise *names*. Reordering options in `VARS` or renaming an exercise silently changes or drops plan entries. Store option names, migrate `myology.plan.v1` → `v2`. Also guard `p.v` being undefined (`p.v.slice()` throws in the `data-open` handler). | S | sonnet |
+| 1.1 | ★ **Plan storage fragility.** Plan entries store variation *indices* (`v:[1,0]`) and exercise *names*. Reordering options in `VARS` or renaming an exercise silently changes or drops plan entries. Store option names, migrate `myology.plan.v1` → `aom.plan.v2` (and `myology.eq.v1` → `aom.eq.v1`, dropping the old project name from storage keys). Also guard `p.v` being undefined (`p.v.slice()` throws in the `data-open` handler). | S | sonnet |
 | 1.2 | ★ Volume toggle stays checked when an exercise is selected (`volOn` remains true while `mode==="ex"`). Decide on behaviour and make the UI consistent. | S | sonnet |
 | 1.3 | ★ Weekly summary rows use a single representative muscle (Quadriceps = vastus lateralis only, Hamstrings = semitendinosus only, Lower back = iliocostalis). Use the max/avg over the whole group so rectus femoris-only or biceps-femoris-biased work shows up. | S | sonnet |
 | 1.4 | ★ Data lint script: field count per line in `muscles.txt`/`extra.txt`, duplicate keys, duplicate exercise names, every `EQ`/category value valid, `EXCATS` in template == categories in `exercises.py`. Run in CI. | S | sonnet |

@@ -1,4 +1,4 @@
-# CLAUDE.md: Myology
+# CLAUDE.md: Atlas of Motion
 
 Browser-based 3D atlas of the human muscular system plus a strength-exercise database, exercise comparison and a weekly workout planner. Static site, no backend, no build framework. Target deployment: GitHub Pages.
 
@@ -133,7 +133,7 @@ selected structure (`M_SEL`) → heat mode material (`HM` levels, `CM` compariso
 `renderCard()` dispatches to `renderCmpCard()`, `renderExCard()` or the muscle/bone card. Click handling is delegated on `#card` via `data-act`, `data-ex`, `data-key`, `data-var`. Sidebar tabs: Anatomy (`buildList`, region chips, per-structure checkboxes), Exercises (`buildEq`, `buildBest`, `buildExList`, comparison banner), Workout (`renderPlan`, `buildAdd`, `renderVolSum`, `#tVol`).
 
 ### Persistence
-localStorage keys `myology.plan.v1` and `myology.eq.v1`, wrapped in try/catch. Bump the version suffix if the format changes.
+localStorage keys (still named after the old project name) `myology.plan.v1` and `myology.eq.v1`, wrapped in try/catch. Bump the version suffix if the format changes.
 
 ## Testing
 

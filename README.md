@@ -1,8 +1,8 @@
-# Myology
+# Atlas of Motion
 
 An interactive 3D atlas of the human muscular system that runs entirely in the browser. Click any muscle or bone to see what it does, pick a strength exercise to see which muscles it trains, and plan a training week with a per-muscle volume check.
 
-**Live:** `https://<your-username>.github.io/myology/` (after enabling GitHub Pages, see below)
+**Live:** `https://<your-username>.github.io/atlas-of-motion/` (after enabling GitHub Pages, see below)
 
 ## Features
 

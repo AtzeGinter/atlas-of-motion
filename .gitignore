@@ -7,3 +7,4 @@ tools/preview.png
 __pycache__/
 tools/test/node_modules/
 *.zip
+.claude/
