@@ -22,33 +22,35 @@ self.addEventListener("activate", e => {
 
 const INDEX = new URL("./index.html", self.location).href;
 
-async function navigate(e) {
-  const cache = await caches.open(SHELL);
-  const net = fetch(e.request.url, { cache: "no-cache", credentials: "same-origin" }).then(res => {
-    if (res.ok && !res.redirected) e.waitUntil(cache.put(INDEX, res.clone()));
-    return res;
-  });
-  const cached = () => cache.match(INDEX);
-  try {
-    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("slow")), NAV_TIMEOUT_MS));
-    const res = await Promise.race([net, timeout]);
-    if (res.ok && !res.redirected) return res;
-    return (await cached()) || res;
-  } catch (err) {
-    net.catch(() => {});   // a late network answer still refreshes the cache for next time
-    const c = await cached();
-    if (c) return c;
-    return net;            // nothing cached yet: wait for the network after all
-  }
+function navigate(e) {
+  // network first; the copy for offline use is stored via a waitUntil registered synchronously (Safari rejects late waitUntil calls)
+  const net = fetch(e.request.url, { cache: "no-cache", credentials: "same-origin" });
+  e.waitUntil(net.then(res => res.ok && !res.redirected ? caches.open(SHELL).then(c => c.put(INDEX, res.clone())) : null).catch(() => {}));
+  const cached = () => caches.open(SHELL).then(c => c.match(INDEX));
+  return (async () => {
+    try {
+      const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error("slow")), NAV_TIMEOUT_MS));
+      const res = await Promise.race([net, timeout]);
+      if (res.ok && !res.redirected) return res;
+      return (await cached()) || res;
+    } catch (err) {
+      const c = await cached();
+      return c || net;     // nothing cached yet: wait for the network after all
+    }
+  })();
 }
 
-async function geo(e) {
-  const cache = await caches.open(GEO);
-  const hit = await cache.match(e.request);
-  if (hit) return hit;
-  const res = await fetch(e.request);
-  if (res.ok && res.status === 200) e.waitUntil(cache.put(e.request, res.clone()).catch(() => {}));
-  return res;
+function geo(e) {
+  // cache first (files are content-hashed via ?v=); a miss is fetched and stored on first use
+  const p = (async () => {
+    const cache = await caches.open(GEO);
+    const hit = await cache.match(e.request);
+    if (hit) return { res: hit };
+    const res = await fetch(e.request);
+    return { res, save: res.ok && res.status === 200 ? cache.put(e.request, res.clone()).catch(() => {}) : null };
+  })();
+  e.waitUntil(p.then(x => x.save).catch(() => {}));
+  return p.then(x => x.res);   // a failure surfaces as a network error; the page then retries with &direct=1
 }
 
 self.addEventListener("fetch", e => {
@@ -56,6 +58,7 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+  if (url.searchParams.has("direct")) return;   // explicit bypass: let the browser fetch it itself
   if (req.mode === "navigate") { e.respondWith(navigate(e)); return; }
   if (/\/geo\/[^/]+\.bin$/.test(url.pathname)) { e.respondWith(geo(e)); return; }
   e.respondWith(caches.open(SHELL).then(c => c.match(req)).then(hit => hit || fetch(req)));

@@ -464,7 +464,10 @@ async function fetchLod(lv,onProg,signal){
   const L=LOD[lv];
   if(location.protocol==="file:") throw new Error("Open this page through a web server (GitHub Pages, or `python -m http.server` in this folder): browsers do not let file:// pages load the model.");
   if(typeof DecompressionStream==="undefined") throw new Error("This browser cannot decompress the model (DecompressionStream missing). Try a current Chrome, Edge, Firefox or Safari.");
-  let r; try{ r=await fetch(L.file,{signal:signal}); }catch(e){ if(e&&e.name==="AbortError") throw e; throw new Error("Network error: could not download the model ("+L.file+"). Check your connection and reload."); }
+  const sw=navigator.serviceWorker&&navigator.serviceWorker.controller; let r;
+  // if the service worker cannot deliver the file, retry once past it (&direct=1 is ignored by sw.js and goes straight to the network)
+  for(const u of sw?[L.file,L.file+"&direct=1"]:[L.file]){ try{ r=await fetch(u,{signal:signal}); if(r.ok) break; }catch(e){ if(e&&e.name==="AbortError") throw e; r=null; } }
+  if(!r) throw new Error("Network error: could not download the model ("+L.file+"). Check your connection and reload.");
   if(!r.ok) throw new Error("Could not download the model: "+L.file+" returned "+r.status+".");
   const chunks=[];
   try{
@@ -673,11 +676,11 @@ let sheetNom=0, sheetPx=0, topInset=0; // topInset: strip under the floating too
 const visFrac=n=>{const H=vp.clientHeight||1; return clamp((H-n-topInset)/H,0.4,1);};
 function baseRadius(){const a=camera.aspect||1; return 3.6*Math.pow(Math.max(1,0.62/a),0.85)/visFrac(sheetNom);}
 const rMax=()=>Math.max(6.5,baseRadius()*1.25);
-const orbit={theta:0,phi:1.48,r:3.6,ty:0.88}, goal={theta:0,phi:1.48,r:3.6,ty:0.88};
+const orbit={theta:0,phi:1.48,r:3.6,tx:0,ty:0.88,tz:0}, goal={theta:0,phi:1.48,r:3.6,tx:0,ty:0.88,tz:0}; // camera orbits around the target (tx,ty,tz)
 const nearestAngle=(cur,t)=>t+2*Math.PI*Math.round((cur-t)/(2*Math.PI));
 function setView(v){
   const map={front:0,back:Math.PI,left:Math.PI/2,right:-Math.PI/2};
-  if(v==="reset"){goal.theta=nearestAngle(orbit.theta,0);goal.phi=1.48;goal.r=baseRadius();goal.ty=0.88;return;}
+  if(v==="reset"){goal.theta=nearestAngle(orbit.theta,0);goal.phi=1.48;goal.r=baseRadius();setTarget(0,0.88,0);return;}
   goal.theta=nearestAngle(orbit.theta,map[v]); goal.phi=1.5;
 }
 function bodyZ(y){let zs=0,n=0;for(const m of muscleMeshes){const b=m.geometry.boundingBox; if(b.min.y<=y&&b.max.y>=y&&Math.abs((b.min.x+b.max.x)/2)<0.2){zs+=(b.min.z+b.max.z)/2;n++;}} return n?zs/n:0;}
@@ -688,8 +691,15 @@ function faceTowards(ms){
   if(s<-0.008) goal.theta=nearestAngle(orbit.theta,Math.PI); else if(s>0.008) goal.theta=nearestAngle(orbit.theta,0);
 }
 function meshesOf(kind,k){return kind==="muscle"?byKey[k]:byBone[k];}
-function focusOn(kind,k){
-  const ms=meshesOf(kind,k); if(!ms||!ms.length) return;
+const TB={x:0.6,y0:0.02,y1:1.8,z:0.45}; // pan/pivot limits around the body
+function setTarget(x,y,z){goal.tx=clamp(x,-TB.x,TB.x); goal.ty=clamp(y,TB.y0,TB.y1); goal.tz=clamp(z,-TB.z,TB.z);}
+// paired structures: the side that was clicked, else the side nearer the camera (subject's left when viewed straight on)
+function nearSide(){return camera.position.x-orbit.tx>=-1e-6?"L":"R";}
+function sideMeshes(kind,k,side){const ms=meshesOf(kind,k)||[]; const s=side===undefined?nearSide():side; const f=s?ms.filter(m=>m.userData.side===s):ms; return f.length?f:ms;}
+function boxOf(ms){const box=new THREE.Box3(); ms.forEach(m=>box.union(m.geometry.boundingBox)); return box;}
+function pivotOn(kind,k,side){ const ms=sideMeshes(kind,k,side); if(!ms.length) return; const c=boxOf(ms).getCenter(new THREE.Vector3()); setTarget(c.x,c.y,c.z); }
+function focusOn(kind,k,side){
+  const ms=sideMeshes(kind,k,side); if(!ms||!ms.length) return;
   const box=new THREE.Box3(); ms.forEach(m=>box.union(m.geometry.boundingBox));
   const c=box.getCenter(new THREE.Vector3()), size=box.getSize(new THREE.Vector3());
   // which side of the body is this on? compare with the body's depth centre at the same height
@@ -698,16 +708,22 @@ function focusOn(kind,k){
     if(c.z<zc-0.015) goal.theta=nearestAngle(orbit.theta,Math.PI);
     else if(c.z>zc+0.015) goal.theta=nearestAngle(orbit.theta,0);
   }
-  goal.phi=1.5; goal.ty=clamp(c.y,0.05,1.7);
+  goal.phi=1.5; setTarget(c.x,c.y,c.z);
   goal.r=clamp(Math.max(size.y,size.x*0.75)*3.2+0.35,0.45,baseRadius());
 }
 
 const ptrs=new Map(); let downPos=null, moved=false, pinch=null, dragThr=5, lastTap=null;
+const _r=new THREE.Vector3(), _u=new THREE.Vector3();
+function panBy(dx,dy){ // move the orbit target in the camera plane by a screen delta in px
+  const H=vp.clientHeight||1, wpp=2*orbit.r*Math.tan(camera.fov*Math.PI/360)/H;
+  camera.updateMatrixWorld(); _r.setFromMatrixColumn(camera.matrixWorld,0); _u.setFromMatrixColumn(camera.matrixWorld,1);
+  setTarget(goal.tx+(-_r.x*dx+_u.x*dy)*wpp, goal.ty+(-_r.y*dx+_u.y*dy)*wpp, goal.tz+(-_r.z*dx+_u.z*dy)*wpp);
+}
 canvas.addEventListener("pointerdown",e=>{
   try{canvas.setPointerCapture(e.pointerId);}catch(_){}
   ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size===1){downPos={x:e.clientX,y:e.clientY};moved=false;dragThr=e.pointerType==="touch"?10:5;}
-  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,r:goal.r,my:(a.y+b.y)/2,ty:goal.ty};moved=true;}
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)||1,r:goal.r,mx:(a.x+b.x)/2,my:(a.y+b.y)/2};moved=true;}
   hideTip(); $("#hint").style.opacity="0";
 });
 canvas.addEventListener("pointermove",e=>{
@@ -715,12 +731,12 @@ canvas.addEventListener("pointermove",e=>{
   const q=ptrs.get(e.pointerId), dx=e.clientX-q.x, dy=e.clientY-q.y; q.x=e.clientX; q.y=e.clientY;
   if(downPos&&Math.hypot(e.clientX-downPos.x,e.clientY-downPos.y)>dragThr) moved=true;
   if(ptrs.size===1){
-    if(e.buttons===2||e.shiftKey) goal.ty=clamp(goal.ty+dy*0.0021*goal.r/3,0.02,1.75);
+    if(e.buttons===2||e.buttons===4||e.shiftKey) panBy(dx,dy);
     else{goal.theta-=dx*0.009; goal.phi=clamp(goal.phi-dy*0.009,0.15,Math.PI-0.15);}
   } else if(ptrs.size===2&&pinch){
     const [a,b]=[...ptrs.values()], d=Math.hypot(a.x-b.x,a.y-b.y)||1;
     goal.r=clamp(pinch.r*pinch.d/d,0.3,rMax());
-    goal.ty=clamp(pinch.ty+((a.y+b.y)/2-pinch.my)*0.003*goal.r/3,0.02,1.75);
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2; panBy(mx-pinch.mx,my-pinch.my); pinch.mx=mx; pinch.my=my; // two-finger drag pans
   }
 });
 function release(e){
@@ -732,7 +748,7 @@ function release(e){
       const touch=e.pointerType==="touch", now=performance.now();
       if(touch&&lastTap&&sel&&now-lastTap.t<350&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<30&&keyId(sel.kind,sel.key)===lastTap.id){
         // double-tap on the structure just selected: zoom to it (re-picking would hit the moved model after the sheet opened)
-        lastTap=null; focusOn(sel.kind,sel.key); downPos=null; return;
+        lastTap=null; focusOn(sel.kind,sel.key,sel.side); downPos=null; return;
       }
       const o=pick(e.clientX,e.clientY), h=o&&o.userData;
       if(h) select(h.kind,h.key,false,h); else if(sel) select(null);
@@ -878,11 +894,11 @@ sheetNom=isPhone()?sheetH(sheet):0; $("#hint").textContent=isCoarse()?HINT_TOUCH
 orbit.r=goal.r=baseRadius();
 (function tick(){
   const k=0.16; let moving=false;
-  for(const f of ["theta","phi","r","ty"]){const d=goal[f]-orbit[f]; if(Math.abs(d)>1e-5){orbit[f]+=d*k; moving=true;} else orbit[f]=goal[f];}
+  for(const f of ["theta","phi","r","tx","ty","tz"]){const d=goal[f]-orbit[f]; if(Math.abs(d)>1e-5){orbit[f]+=d*k; moving=true;} else orbit[f]=goal[f];}
   if(moving||dirty){
     const s=Math.sin(orbit.phi);
-    camera.position.set(orbit.r*s*Math.sin(orbit.theta),orbit.ty+orbit.r*Math.cos(orbit.phi),orbit.r*s*Math.cos(orbit.theta));
-    camera.lookAt(0,orbit.ty,0);
+    camera.position.set(orbit.tx+orbit.r*s*Math.sin(orbit.theta),orbit.ty+orbit.r*Math.cos(orbit.phi),orbit.tz+orbit.r*s*Math.cos(orbit.theta));
+    camera.lookAt(orbit.tx,orbit.ty,orbit.tz);
     renderer.render(scene,camera); dirty=false;
   }
   requestAnimationFrame(tick);
@@ -983,7 +999,7 @@ card.addEventListener("click",e=>{
   if(t.dataset.ex!==undefined) return openEx(t.dataset);
   if(t.dataset.key) return select("muscle",t.dataset.key,true);
   if(t.classList.contains("close")) return select(null);
-  if(t.dataset.act==="focus"&&sel) focusOn(sel.kind,sel.key);
+  if(t.dataset.act==="focus"&&sel) focusOn(sel.kind,sel.key,sel.side);
   if(t.dataset.act==="hide"&&sel) toggleHide();
 });
 function toggleHide(){
@@ -996,11 +1012,11 @@ $("#unhide").onclick=()=>{hidden.clear(); syncUnhide(); applyVisuals(); syncList
 
 function select(kind,k,focus,clicked){
   cardAway=false;
-  sel=kind?{kind:kind,key:k}:null; view=sel?"sel":(cmp?"cmp":"ex");
+  sel=kind?{kind:kind,key:k,side:clicked&&clicked.side?clicked.side:(focus?undefined:nearSide())}:null; view=sel?"sel":(cmp?"cmp":"ex");
   if(sel&&kind==="muscle"){const d=DB[k]; if(d.g===TISSUE&&!state.tendons){state.tendons=true;$("#tTendons").checked=true;} else if(d.g!==TISSUE&&!state.muscles){state.muscles=true;$("#tMuscles").checked=true;}}
   if(sel&&kind==="bone"&&!state.bones){state.bones=true;$("#tBones").checked=true;}
   applyVisuals(); renderCard(clicked); syncList(); if(sel) revealCard();
-  if(focus&&sel) focusOn(kind,k);
+  if(focus&&sel) focusOn(kind,k,sel.side); else if(sel) pivotOn(kind,k,sel.side); // the camera now orbits around the selection
 }
 
 function meshLevels(tg){const mp=new Map(); tg.forEach(r=>(byKey[r[0]]||[]).forEach(m=>{if(!r[1]||m.userData.part===r[1]) mp.set(m,Math.max(mp.get(m)||0,r[2]));})); return mp;}
@@ -1056,7 +1072,7 @@ function selectEx(i){
   if(!state.muscles){state.muscles=true;$("#tMuscles").checked=true;}
   setMode("ex");
   faceTowards([...heat.keys()].filter(m=>heat.get(m)===HM[3]));
-  goal.phi=1.5; goal.r=baseRadius(); goal.ty=0.88;
+  goal.phi=1.5; goal.r=baseRadius(); setTarget(0,0.88,0);
   renderCard(); syncList(); syncExList(); revealCard();
 }
 function openEx(d){ const i=+d.ex; if(d.v!==undefined) exVars[i]=d.v?d.v.split(",").map(Number):[]; selectEx(i); } // ranked entries carry data-v: open that exact variation (empty = defaults)

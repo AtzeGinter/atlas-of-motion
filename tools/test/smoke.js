@@ -20,11 +20,11 @@ function boot(opts){
  vc.on('error',(...a)=>errs.push('console.error: '+a.join(' ')));vc.on('jsdomError',e=>errs.push('jsdomError: '+(e.stack||e.message)));
  const dom=new JSDOM(html0,{runScripts:'outside-only',pretendToBeVisual:true,url:opts.url||'https://example.test/',virtualConsole:vc});const w=dom.window;const THREE=require('three');
  w.addEventListener('error',e=>errs.push('uncaught: '+(e.message||e.error)));
- class FR{constructor(){this.domElement=w.document.createElement('canvas');}setPixelRatio(r){w.__dpr=r;}setClearColor(){}setSize(){}render(s){w.__scene=s;}}
+ class FR{constructor(){this.domElement=w.document.createElement('canvas');}setPixelRatio(r){w.__dpr=r;}setClearColor(){}setSize(){}render(s,c){w.__scene=s;w.__cam=c;}}
  w.THREE=Object.assign({},THREE,{WebGLRenderer:FR});w.ResizeObserver=class{observe(){}};
  // geometry is no longer embedded: serve geo/<level>.bin from the repo root, like a web server would
  w.__fetched=[];w.__failFetch=!!opts.failFetch;
- w.fetch=async(u,o)=>{u=String(u).split('?')[0];w.__fetched.push(u);if(w.__failFetch)throw new TypeError('Failed to fetch');return new Response(fs.readFileSync(path.join(ROOT,u)));};
+ w.fetch=async(u,o)=>{const full=String(u);u=full.split('?')[0];w.__fetched.push(u);if(w.__failFetch||(w.__swFail&&!/[?&]direct=1/.test(full)))throw new TypeError('Failed to fetch');return new Response(fs.readFileSync(path.join(ROOT,u)));};
  w.DecompressionStream=DecompressionStream;w.Response=Response;w.Blob=Blob;
  w.HTMLCanvasElement.prototype.getContext=function(){return {createRadialGradient(){return{addColorStop(){}}},fillRect(){}}};
  Object.defineProperty(w.HTMLElement.prototype,'clientWidth',{get(){return 1000}});Object.defineProperty(w.HTMLElement.prototype,'clientHeight',{get(){return 800}});
@@ -102,6 +102,35 @@ async function lodRun(){
  await waitFor(()=>q('#lodNote').textContent!=='',5000,'error note');
  ok(/Network error/.test(q('#lodNote').textContent)&&lodOn(d)==='medium'&&idxCount(w)===L.medium.faces*3&&ls('aom.lod.v1')==='"medium"','failed switch: error note shown, Medium stays active');
  w.__failFetch=false;
+ // a service worker that cannot deliver the file: the switch retries once past it with &direct=1
+ Object.defineProperty(w.navigator,'serviceWorker',{value:{controller:{}},configurable:true});w.__swFail=true;w.__fetched=[];
+ lodBtn(d,'low').click();
+ await waitFor(()=>lodOn(d)==='low',15000,'Low via the direct retry');
+ ok(lodOn(d)==='low'&&w.__fetched.length===2&&q('#lodNote').textContent==='','service worker fails: the switch retries past it (&direct=1) and succeeds');
+ w.__swFail=false;delete w.navigator.serviceWorker;
+ lodBtn(d,'medium').click();await waitFor(()=>lodOn(d)==='medium'&&!lodBtn(d,'medium').classList.contains('busy'),30000,'back to Medium');
+}
+// ---- camera: orbit pivot follows the selection; screen-space panning ----
+async function camRun(){
+ const T=w.THREE, cam=()=>w.__cam, settle=()=>sleep(1500);
+ const fwd=()=>{const c=cam();c.updateMatrixWorld();return new T.Vector3(0,0,-1).applyQuaternion(c.quaternion);};
+ const distToRay=p=>{const c=cam(),f=fwd(),v=p.clone().sub(c.position);return v.sub(f.multiplyScalar(v.dot(f))).length();};
+ const centre=(k,side)=>{const b=new T.Box3();w.__scene.traverse(o=>{if(o.isMesh&&o.userData.key===k&&(!side||o.userData.side===side))b.union(o.geometry.boundingBox);});return b.getCenter(new T.Vector3());};
+ q('[data-tab="anat"]').click();q('#q').value='biceps brachii';ev(q('#q'),'input');
+ qa('#list .item').find(b=>b.dataset.key==='biceps brachii').click();await settle();
+ const dL=distToRay(centre('biceps brachii','L')),dR=distToRay(centre('biceps brachii','R')),dB=distToRay(centre('biceps brachii'));
+ ok(Math.min(dL,dR)<0.03,'selecting a paired muscle moves the orbit pivot onto one side of it (camera looks at it, '+Math.min(dL,dR).toFixed(3)+' m off)');
+ // a pick on the 3D model: pivot goes to the clicked side
+ q('#card .close').click();
+ const p0=cam().position.clone(),f0=fwd();
+ const pe=(t,o)=>{const e=new w.Event(t,{bubbles:true});Object.assign(e,{pointerId:7,pointerType:'mouse',clientX:500,clientY:400,button:2,buttons:2},o||{});q('canvas').dispatchEvent(e);};
+ pe('pointerdown');pe('pointermove',{clientX:600,clientY:400});pe('pointermove',{clientX:700,clientY:350});pe('pointerup',{clientX:700,clientY:350,buttons:0});
+ await settle();
+ const p1=cam().position.clone(),f1=fwd(),mv=p1.clone().sub(p0);
+ ok(mv.length()>0.05&&f0.angleTo(f1)<0.01,'right-drag pans: camera moves '+mv.length().toFixed(2)+' m without rotating');
+ ok(Math.abs(mv.clone().normalize().dot(f0))<0.05,'panning stays in the screen plane (no zoom component)');
+ q('[data-view="reset"]').click();await settle();
+ ok(distToRay(new T.Vector3(0,0.88,0))<0.01,'Reset view returns the pivot to the body centre');
 }
 // ---- colloquial-name search + typo tolerance ----
 async function searchRun(){
@@ -537,6 +566,7 @@ async function phoneRun(){
  await searchRun();
  await variationRun();
  await linkRun();
+ await camRun();
  await lodRun();
  await otherRuns();
  await phoneRun();

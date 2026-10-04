@@ -119,7 +119,7 @@ Single `async` IIFE, no modules, no framework. Three.js **r128** UMD self-hosted
 Segmented control `#segLod` (Low/Medium/High with sizes, `data-lod`, `data-faces`, `aria-pressed`) in the Layers popover. `setLod(level)`: fetch + decode the new file (the pressed button shows a progress fill, `aria-busy`), then swap `mesh.geometry` on every mesh in `allMeshes` (old one disposed); materials, `userData`, visibility, selection and heat mode are untouched; then `applyVisuals()`. Last request wins (`lodReq` counter + `AbortController`); a failed switch keeps the current level and writes the error into `#lodNote`. Choosing High on a phone/coarse pointer shows a large-download note. The choice is persisted only when the user picks a level.
 
 ### Camera and rendering
-- Custom orbit (`orbit` current, `goal` target; theta/phi/r/ty) with pointer events, pinch, wheel; damped in `tick()`.
+- Custom orbit (`orbit` current, `goal` target; theta/phi/r and the pivot tx/ty/tz) with pointer events, pinch, wheel; damped in `tick()`. Selecting a structure moves the pivot to it (`pivotOn`; paired structures use the clicked side, else the side nearer the camera via `nearSide`); `focusOn` also zooms; Reset returns the pivot to (0, 0.88, 0). `setTarget` clamps the pivot to the body box `TB`. Panning (`panBy`, screen plane): right/middle/shift-drag, two-finger drag on touch.
 - Render on demand: `tick()` renders only if the camera is moving or `dirty` is set. Anything that changes visuals must go through `applyVisuals()` (sets `dirty`).
 - `focusOn(kind,key)`, `faceTowards(meshes)` and `bodyZ(y)` decide front/back view and zoom.
 
@@ -165,6 +165,8 @@ Index (`#q`), exercise (`#qe`) and planner-add (`#qa`) searches first do the old
 
 ### Persistence
 localStorage, all wrapped in try/catch. `aom.lod.v1`: `"low"|"medium"|"high"` (written only on an explicit choice; anything else is ignored). `aom.plan.v2`: `[{n:exerciseName, sets, v:[optionName per variation group]}]` (`""` or missing = default option; unknown names fall back to the default, entries for exercises that no longer exist are dropped). `aom.eq.v1`: array of enabled equipment categories. `aom.goal.v1`: `{g:"maintain"|"strength"|"hyp8"|"hyp10"|"custom",lo,hi}` (written on change only; presets take lo/hi from `GOALS`, invalid custom ranges fall back to the default). In memory `plan[].v` and `exVars` are option-index arrays; conversion happens only in `loadPlan()`/`savePlan()` (`varNames`/`varIdx`), so reordering `VARS` options is safe but renaming one resets it to the default. Legacy keys `myology.plan.v1` (variation indices, validated against the current `EX[i].v`) and `myology.eq.v1` are migrated on first load and then removed. Bump the version suffix if the format changes.
+
+Service worker: `geo()` registers its cache write with a synchronous `waitUntil` (Safari rejects late calls); requests with `&direct=1` bypass the worker. `fetchLod` retries once with `&direct=1` when a controlled fetch fails, so a broken worker cannot block loading or the quality switch.
 
 ## Testing
 
