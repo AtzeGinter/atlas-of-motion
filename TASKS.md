@@ -10,7 +10,7 @@ Legend: **S/M/L** = rough size. **Agent** = suggested executor (`sonnet` for wel
 
 | # | Task | Size | Agent |
 |---|------|------|-------|
-| 0.1 | ✅ Unpacked + local git repo done. **Open:**  `myology-repo.zip` into this folder (flatten `myology/`), `git init`, first commit, create GitHub repo, enable Pages. Replace `<your-username>` placeholder in README. | S | you + sonnet |
+| 0.1 | ✅ Unpacked + local git repo (`main`) done. **Open:** create the GitHub repo, push, enable Pages, replace `<your-username>` placeholder in README. | S | you + sonnet |
 | 0.2 | ✅ **Done 2026-10-04.** ★ **Fix Windows encoding in the pipeline.** All `open()` calls in `build.py`, `meta.py`, `exercises.py`, `assemble.py` use the platform default (cp1252 here). `muscles.txt` has 177 non-ASCII chars (–, °, ä…) → mojibake like `â€“` in the built app. Add `encoding="utf-8"` everywhere (or run with `python -X utf8`). | S | sonnet |
 | 0.3 | ★ **Node is v16 here; the smoke test needs ≥18** (jsdom 24, global `DecompressionStream`/`Response`/`Blob`). Upgrade Node to LTS (22) and add `"engines": {"node": ">=18"}` to `tools/test/package.json`. | S | you |
 | 0.4 | ✅ **Done 2026-10-04.** ★ **Make the smoke test actually fail.** `smoke.js` only prints and always `process.exit(0)`; THROW/ERR lines don't fail the run. Add asserts (expected card text, counts, localStorage content), non-zero exit on error, and replace the fixed 8 s `setTimeout` with polling for `#loading` removal. | M | sonnet |
