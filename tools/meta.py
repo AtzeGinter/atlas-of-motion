@@ -13,6 +13,15 @@ def load_db():
         if t: db[k]['t']=t
         if note: db[k]['x']=note
     return db
+def load_aliases(db):  # data/aliases.txt: alias|key[:part][,key[:part]...] -> {alias:[entry,...]}
+    al={}
+    for l in open('data/aliases.txt',encoding='utf-8'):
+        l=l.rstrip('\n')
+        if not l: continue
+        a,ks=l.split('|'); ks=ks.split(',')
+        for e in ks: assert e.partition(':')[0] in db,(a,e)
+        al[a]=ks
+    return al
 PARTPRE=r'^(abdominal|acromial|clavicular|spinal|sternocostal|descending|ascending|transverse|orbital|palpebral|deep|superficial|oblique|straight|inferior oblique|superior oblique|vertical intermediate) part of '
 HEADPRE=r'^(long|short|lateral|medial|humeral|ulnar|oblique|transverse|superior|inferior|superficial) head of '
 MERGE=[(r'^(first|second|third|fourth) lumbrical \(foot\)$','lumbricals (foot)'),
@@ -48,6 +57,13 @@ if __name__=='__main__':
         else:
             c=c.replace(' of foot',' (foot)'); out.append([kind,c,side,'']); bnames.add(c)
     print('missing',missing)
+    al=load_aliases(db); pts={}
+    for o in out:
+        if o[0]=='m' and o[3]: pts.setdefault(o[1],set()).add(o[3])
+    for a,ks in al.items():
+        for e in ks:
+            k,_,p=e.partition(':'); assert not p or p in pts.get(k,()),(a,e)
+    M['al']=al
     M['meshes']=out; M['db']=db; M['bdb']={b:B.info(b) for b in sorted(bnames)}
     json.dump(M,open('meta2.json','w',encoding='utf-8',newline='\n'),separators=(',',':'))
     from collections import Counter

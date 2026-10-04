@@ -130,7 +130,7 @@ aside{background:var(--panel);border-right:1px solid var(--line);overflow:hidden
 .card dt{color:var(--muted);font-size:12.5px;padding-top:1px;}
 .card dd{margin:0;}
 .note{border-left:3px solid var(--amber);padding:2px 0 2px 10px;}
-.actions{display:flex;gap:8px;margin-top:18px;}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;}
 .btn{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;}
 .btn:hover{border-color:var(--accent);}
 
@@ -541,8 +541,58 @@ const varNames=(i,v)=>(EX[i].v||[]).map((g,gi)=>{const o=(v&&v[gi]>0)?g[1][v[gi]
 const varIdx=(i,nm,legacy)=>(EX[i].v||[]).map((g,gi)=>{const x=nm&&nm[gi]; const ix=legacy?(Number.isInteger(x)&&g[1][x]?x:0):g[1].findIndex(o=>o[0]===x&&x!==""); return ix>0?ix:0;});
 const EXK={};
 EX.forEach((e,i)=>{const r=perOf(e.t); e.per=r.per; e.tot=r.tot;
-  Object.keys(r.per).forEach(k=>(EXK[k]=EXK[k]||[]).push({i:i,l:r.per[k].l,parts:r.per[k].parts,s:W[r.per[k].l]/r.tot}));});
+  Object.keys(r.per).forEach(k=>(EXK[k]=EXK[k]||[]).push({i:i,v:null,l:r.per[k].l,parts:r.per[k].parts,s:W[r.per[k].l]/r.tot}));});
+// variations as separate entries: for each single non-default option (other groups left at default), add an entry for every muscle it makes better than the base exercise
+// (higher level, higher specificity, or a visible part emphasis such as "short head" that the base lacks); equal or worse variants are not listed. Combinations across groups are not enumerated.
+EX.forEach((e,i)=>{ if(!e.v) return;
+  e.v.forEach((g,gi)=>g[1].forEach((o,oi)=>{ if(!oi) return;
+    const v=e.v.map(()=>0); v[gi]=oi; const t=effTargets(i,v), r=perOf(t);
+    Object.keys(r.per).forEach(k=>{ const p=r.per[k], s=W[p.l]/r.tot, b=e.per[k], bs=b?W[b.l]/e.tot:0;
+      const top=t.filter(x=>x[0]===k&&x[2]===p.l), tp=top.some(x=>!x[1])?[]:[...new Set(top.map(x=>x[1]))], pn=partNote(k,tp); // parts at the muscle's top level only
+      if(!b||p.l>b.l||Math.round(s*100)>Math.round(bs*100)||(pn&&pn!==partNote(k,b.parts)))
+        (EXK[k]=EXK[k]||[]).push({i:i,v:v,l:p.l,parts:tp,s:s}); });
+  })); });
 Object.keys(EXK).forEach(k=>EXK[k].sort((a,b)=>b.l-a.l||b.s-a.s));
+const exLabel=x=>EX[x.i].n+(x.v?' ('+varText(x.i,x.v)+')':'');
+/* ---------- search: colloquial names + typo tolerance ---------- */
+// ALIAS: lower-case gym name -> [{k:muscle key, p:part or ""}] (data/aliases.txt via META.al; entries "key" or "key:part")
+const ALIAS={}; Object.keys(META.al||{}).forEach(a=>ALIAS[a]=META.al[a].map(e=>{const j=e.indexOf(":"); return j<0?{k:e,p:""}:{k:e.slice(0,j),p:e.slice(j+1)};}));
+const wordsOf=s=>s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+// edit distance with adjacent transposition (optimal string alignment), true when <= max
+function near(a,b,max){
+  const n=a.length, m=b.length; if(Math.abs(n-m)>max) return false;
+  let p2=null, p1=[]; for(let j=0;j<=m;j++) p1[j]=j;
+  for(let i=1;i<=n;i++){ const c=[i]; let lo=i;
+    for(let j=1;j<=m;j++){ const x=a.charCodeAt(i-1)===b.charCodeAt(j-1)?0:1;
+      let d=Math.min(p1[j]+1,c[j-1]+1,p1[j-1]+x); if(i>1&&j>1&&x&&a.charCodeAt(i-1)===b.charCodeAt(j-2)&&a.charCodeAt(i-2)===b.charCodeAt(j-1)) d=Math.min(d,p2[j-2]+1);
+      c[j]=d; if(d<lo) lo=d; }
+    if(lo>max) return false; p2=p1; p1=c; }
+  return p1[m]<=max;
+}
+const fuzzMax=t=>t.length>=8?2:1;
+// every query word (>=4 chars) is a substring of, or within 1-2 edits of, some word of the haystack; shorter words must be a substring
+function fuzzyHay(hay,toks){ const ws=wordsOf(hay); return toks.every(t=>ws.some(w=>w.indexOf(t)>=0||(t.length>=4&&near(t,w,fuzzMax(t))))); }
+// alias hits for a query: exact = the query equals or starts an alias; fuzzy = it is within a typo of an alias (or one of its words). Returns [{k,p}]
+function aliasHits(q,fuzzy){
+  const out=[], toks=q.split(/\s+/).filter(Boolean);
+  Object.keys(ALIAS).forEach(a=>{
+    const hit=fuzzy?(toks.length===1&&q.length>=4&&(near(q,a,fuzzMax(q))||wordsOf(a).some(w=>near(q,w,fuzzMax(q))))):(q.length>=2&&a.indexOf(q)===0);
+    if(hit) out.push.apply(out,ALIAS[a]); });
+  return out;
+}
+const aliasKeys=hits=>new Set(hits.map(h=>h.k));
+// do the exercise's base targets hit an alias muscle (and its part, when the alias names one)?
+const exHits=(i,hits)=>hits.length&&EX[i].t.some(r=>hits.some(h=>h.k===r[0]&&(!h.p||r[1]===h.p)));
+// filter exercise ids by a lower-case query against a haystack function: substring or alias first, typo-tolerant fallback only when nothing matches
+function exSearch(ids,q,hay){
+  if(!q) return ids;
+  const al=aliasHits(q,false), r=ids.filter(i=>hay(i).indexOf(q)>=0||exHits(i,al));
+  if(r.length||q.length<4) return r;
+  const fa=aliasHits(q,true), toks=q.split(/\s+/).filter(Boolean);
+  return ids.filter(i=>exHits(i,fa)||fuzzyHay(hay(i),toks));
+}
+// data-ex + data-v attributes for a ranked entry (data-v present = open with exactly this variation, "" = defaults)
+const exAttr=x=>'data-ex="'+x.i+'" data-v="'+(x.v?x.v.join(","):"")+'"';
 const PLAN_KEY="aom.plan.v2", EQ_KEY="aom.eq.v1", OLD_PLAN="myology.plan.v1", OLD_EQ="myology.eq.v1";
 const EQCATS=["Barbell","Dumbbells","Kettlebell","Cable","Machine","Bodyweight","Band","Other"];
 function loadEq(){
@@ -847,7 +897,7 @@ function renderExCard(){
       return '<button class="mchip" data-key="'+k+'"><i class="sw l'+l+'"></i>'+k+(pn?' <small>('+pn+')</small>':'')+' <small>'+Math.round(W[l]/r.tot*100)+'%</small></button>';}).join("")+'</div>';
   });
   const n=plan.filter(p=>p.n===e.n).reduce((a,p)=>a+p.sets,0);
-  h+='<div class="actions"><button class="btn" data-act="add">'+(n?'Add again ('+n+' sets planned)':'Add to my week')+'</button><button class="btn" data-act="cmp">Compare with…</button></div>';
+  h+='<div class="actions"><button class="btn" data-act="add">'+(n?'Add again ('+n+' sets planned)':'Add to my week')+'</button><button class="btn" data-act="cmp">Compare with…</button><button class="btn" data-act="copy">Copy link</button></div>';
   if(cmpPick) h+='<p class="banner" style="margin-top:12px">Now pick a second exercise from the Exercises list.</p>';
   h+='<p class="fine">Percent = estimated share of the total muscular work. Ratings are approximations from EMG research and coaching practice; grip, stance, range of motion and technique shift them.</p>';
   card.innerHTML=h; card.classList.add("show"); card.scrollTop=0;
@@ -864,10 +914,10 @@ function renderCmpCard(){
   h+='<h2 style="font-size:20px"><span style="color:#2f6fd0">A</span> '+nm(A)+'</h2><h2 style="font-size:20px;margin-top:2px"><span style="color:#e0601e">B</span> '+nm(B)+'</h2>';
   h+='<div class="legend"><span><i class="sw ca2"></i>Much more in A</span><span><i class="sw ca1"></i>More in A</span><span><i class="sw ceq"></i>Similar</span><span><i class="sw cb1"></i>More in B</span><span><i class="sw cb2"></i>Much more in B</span></div>';
   h+='<table class="cmpt"><thead><tr><th>Muscle</th><th>A</th><th>B</th></tr></thead><tbody>'+keys.map(k=>'<tr><td><i class="sw '+cls(k)+'"></i><button class="exlink" data-key="'+k+'">'+cap(k)+'</button></td><td>'+cell(pa[k])+'</td><td>'+cell(pb[k])+'</td></tr>').join("")+'</tbody></table>';
-  h+='<div class="actions"><button class="btn" data-act="swap">Swap A and B</button><button class="btn" data-act="cmpend">End comparison</button></div>';
+  h+='<div class="actions"><button class="btn" data-act="swap">Swap A and B</button><button class="btn" data-act="cmpend">End comparison</button><button class="btn" data-act="copy">Copy link</button></div>';
   card.innerHTML=h; card.classList.add("show"); card.scrollTop=0;
 }
-function renderCard(clicked){ renderCard0(clicked); syncCardUI(); }
+function renderCard(clicked){ renderCard0(clicked); syncCardUI(); syncHash(); }
 function renderCard0(clicked){
   if(view==="cmp"&&cmp) return renderCmpCard();
   if(view==="ex"&&selEx!==null) return renderExCard();
@@ -894,7 +944,7 @@ function renderCard0(clicked){
       const xs=(EXK[sel.key]||[]).filter(x=>eqOK(x.i));
       if(xs.length){
         h+='<h3>Exercises that train it ('+xs.length+(eqFiltered()?', filtered by your equipment':'')+')</h3><table class="ext"><thead><tr><th>Exercise</th><th>Involvement</th><th>Specificity</th></tr></thead><tbody>'+
-          xs.map(x=>{const pc=Math.round(x.s*100);return '<tr><td><button class="exlink" data-ex="'+x.i+'">'+EX[x.i].n+'</button>'+(partNote(sel.key,x.parts)?'<small>'+partNote(sel.key,x.parts)+'</small>':'')+'</td><td>'+lvDots(x.l)+ROLE[x.l].replace("Prime mover","Prime")+'</td><td><span class="bar"><i style="width:'+Math.min(100,pc*2.5)+'%"></i></span>'+pc+'%</td></tr>';}).join("")+
+          xs.map(x=>{const pc=Math.round(x.s*100);return '<tr><td><button class="exlink" '+exAttr(x)+'>'+exLabel(x)+'</button>'+(partNote(sel.key,x.parts)?'<small>'+partNote(sel.key,x.parts)+'</small>':'')+'</td><td>'+lvDots(x.l)+ROLE[x.l].replace("Prime mover","Prime")+'</td><td><span class="bar"><i style="width:'+Math.min(100,pc*2.5)+'%"></i></span>'+pc+'%</td></tr>';}).join("")+
           '</tbody></table><p class="fine">Involvement: how hard this muscle works in the exercise. Specificity: its estimated share of all the muscular work, so higher means the exercise isolates it more.</p>';
       } else if(EXK[sel.key]) h+='<h3>Exercises that train it</h3><p class="empty">None with your selected equipment.</p>';
       else if(d.t) h+='<h3>Exercises</h3><p>'+d.t+'</p>';
@@ -906,13 +956,14 @@ function renderCard0(clicked){
     h+='<h2>'+sel.key+'</h2>'+(clicked&&clicked.side?'<p class="sub">Clicked: '+sideText(clicked.side)+' side</p>':'');
     h+='<h3>About</h3><p>'+b[1]+'</p>';
   }
-  h+='<div class="actions"><button class="btn" data-act="focus">Zoom to it</button><button class="btn" data-act="hide">'+(isHidden?'Show it':'Hide it (H)')+'</button></div>';
+  h+='<div class="actions"><button class="btn" data-act="focus">Zoom to it</button><button class="btn" data-act="hide">'+(isHidden?'Show it':'Hide it (H)')+'</button><button class="btn" data-act="copy">Copy link</button></div>';
   card.innerHTML=h; card.classList.add("show"); card.scrollTop=0;
 }
 card.addEventListener("click",e=>{
   const t=e.target.closest("button");
   if(!t){ if(card.classList.contains("mini")){ cardAway=false; syncCardUI(); } return; }
   const act=t.dataset.act;
+  if(act==="copy") return copyLink(t);
   if(act==="exclose") return clearEx();
   if(act==="cmpend"){cmp=null; return selEx!==null?selectEx(selEx):clearEx();}
   if(act==="swap"){cmp=[cmp[1],cmp[0]]; setMode("cmp"); return renderCard();}
@@ -920,7 +971,7 @@ card.addEventListener("click",e=>{
   if(act==="add"){addToPlan(selEx,exVars[selEx]); return renderCard();}
   if(act==="back"){sel=null;view=mode==="cmp"?"cmp":"ex";applyVisuals();renderCard();syncList();return;}
   if(t.dataset.var){const a=t.dataset.var.split(":"); const v=(exVars[selEx]=(exVars[selEx]||[]).slice()); v[+a[0]]=+a[1]; setMode("ex"); return renderCard();}
-  if(t.dataset.ex!==undefined) return selectEx(+t.dataset.ex);
+  if(t.dataset.ex!==undefined) return openEx(t.dataset);
   if(t.dataset.key) return select("muscle",t.dataset.key,true);
   if(t.classList.contains("close")) return select(null);
   if(t.dataset.act==="focus"&&sel) focusOn(sel.kind,sel.key);
@@ -999,14 +1050,15 @@ function selectEx(i){
   goal.phi=1.5; goal.r=baseRadius(); goal.ty=0.88;
   renderCard(); syncList(); syncExList(); revealCard();
 }
+function openEx(d){ const i=+d.ex; if(d.v!==undefined) exVars[i]=d.v?d.v.split(",").map(Number):[]; selectEx(i); } // ranked entries carry data-v: open that exact variation (empty = defaults)
 function clearEx(){selEx=null;cmp=null;cmpPick=false;view="sel";setMode(null);renderCard();syncList();syncExList();}
 $("#exClear").onclick=clearEx;
 const EXCATS=["Chest & shoulders","Back","Arms","Legs","Hinge","Full body","Core","Grip & carry","Neck"];
 function buildExList(){
   const q=$("#qe").value.trim().toLowerCase(); let h="";
-  const hay=e=>(e.n+" "+e.c+" "+e.e+" "+Object.keys(e.per).join(" ")).toLowerCase();
+  const hay=e=>(e.n+" "+e.c+" "+e.e+" "+Object.keys(e.per).join(" ")).toLowerCase(), allEx=EX.map((e,i)=>i);
   EXCATS.forEach((c,ci)=>{
-    const ids=EX.map((e,i)=>i).filter(i=>EX[i].c===c&&eqOK(i)&&(!q||hay(EX[i]).indexOf(q)>=0)).sort((a,b)=>EX[a].n.localeCompare(EX[b].n));
+    const ids=exSearch(allEx.filter(i=>EX[i].c===c&&eqOK(i)),q,i=>hay(EX[i])).sort((a,b)=>EX[a].n.localeCompare(EX[b].n));
     if(!ids.length) return;
     h+='<details'+(q||ci<2?' open':'')+'><summary><b>'+c+'</b><span>'+ids.length+'</span></summary><div class="items">'+
       ids.map(i=>'<button class="item" data-ex="'+i+'" style="padding-left:16px">'+EX[i].n+'</button>').join("")+'</div></details>';
@@ -1017,9 +1069,12 @@ function buildExList(){
 function syncExList(){$("#exlist").querySelectorAll(".item").forEach(b=>b.classList.toggle("active",+b.dataset.ex===selEx||(!!cmp&&(cmp[0].i===+b.dataset.ex||cmp[1].i===+b.dataset.ex))));}
 $("#exlist").addEventListener("click",e=>{const t=e.target.closest(".item"); if(t) (+t.dataset.ex===selEx&&!cmpPick&&!cmp?clearEx():selectEx(+t.dataset.ex));});
 $("#qe").addEventListener("input",buildExList);
+let curTab="anat";
 function openTab(name){
+  curTab=name;
   document.querySelectorAll("[data-tab]").forEach(x=>x.setAttribute("aria-selected",x.dataset.tab===name));
   $("#paneAnat").hidden=name!=="anat"; $("#paneEx").hidden=name!=="ex"; $("#paneWk").hidden=name!=="wk";
+  syncHash();
 }
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ openTab(b.dataset.tab); if(isPhone()){ cardAway=true; peekToHalf(); syncCardUI(); } });
 
@@ -1040,11 +1095,11 @@ function buildBest(){
   const k=$("#bestM").value; let xs=(EXK[k]||[]).filter(x=>eqOK(x.i));
   if(bestSort==="spec") xs=xs.filter(x=>x.l>=2).slice().sort((a,b)=>b.s-a.s||b.l-a.l);
   xs=xs.slice(0,8);
-  $("#best").innerHTML=xs.length?xs.map(x=>'<li><button class="exlink" data-ex="'+x.i+'">'+EX[x.i].n+'</button>'+lvDots(x.l)+'<small>'+Math.round(x.s*100)+'%</small></li>').join(""):'<li class="empty">No exercises with your equipment.</li>';
+  $("#best").innerHTML=xs.length?xs.map(x=>'<li><button class="exlink" '+exAttr(x)+'>'+exLabel(x)+'</button>'+lvDots(x.l)+'<small>'+Math.round(x.s*100)+'%</small></li>').join(""):'<li class="empty">No exercises with your equipment.</li>';
 }
 $("#bestM").onchange=buildBest;
 document.querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{bestSort=b.dataset.sort; document.querySelectorAll("[data-sort]").forEach(x=>x.setAttribute("aria-pressed",x===b)); buildBest();});
-$("#best").addEventListener("click",e=>{const t=e.target.closest("[data-ex]"); if(t) selectEx(+t.dataset.ex);});
+$("#best").addEventListener("click",e=>{const t=e.target.closest("[data-ex]"); if(t) openEx(t.dataset);});
 
 /* workout builder */
 // row = [label, "key[|part],key[|part],...", gap-filler weight (default 1; .33 = minor group: gets indirect work, usually trained last)]: weekly sets = max over the listed members; clicking the row selects the first key. Hip flexors omit rectus femoris (a quad exercise would otherwise count as hip-flexor work)
@@ -1071,7 +1126,7 @@ $("#wkClear").onclick=()=>{ if(!plan.length) return; plan=[]; planChanged(); };
 function buildAdd(){
   const q=$("#qa").value.trim().toLowerCase();
   if(!q){$("#addres").innerHTML=""; return;}
-  const ids=EX.map((e,i)=>i).filter(i=>eqOK(i)&&(EX[i].n+" "+Object.keys(EX[i].per).join(" ")).toLowerCase().indexOf(q)>=0).slice(0,7);
+  const ids=exSearch(EX.map((e,i)=>i).filter(eqOK),q,i=>(EX[i].n+" "+Object.keys(EX[i].per).join(" ")).toLowerCase()).slice(0,7);
   $("#addres").innerHTML=ids.length?ids.map(i=>'<button data-add="'+i+'">+ '+EX[i].n+' <small>'+EX[i].e.toLowerCase()+'</small></button>').join(""):'<p class="empty">No match with your equipment.</p>';
 }
 $("#qa").addEventListener("input",buildAdd);
@@ -1130,9 +1185,13 @@ function buildList(){
   const sec=(title,items,kind)=>{ if(!items.length) return "";
     return '<details'+(open?' open':'')+'><summary><b>'+title+'</b><span>'+items.length+'</span></summary><div class="items">'+
       items.map(k=>'<div class="row"><input type="checkbox" class="vis" data-kind="'+kind+'" data-key="'+k+'" aria-label="Show '+k+'"><button class="item" data-kind="'+kind+'" data-key="'+k+'">'+k+'</button></div>').join("")+'</div></details>'; };
-  const mkeys=Object.keys(DB).filter(k=>byKey[k]&&k.indexOf(q)>=0).sort();
+  let al=q?aliasKeys(aliasHits(q,false)):null;
+  let mkeys=Object.keys(DB).filter(k=>byKey[k]&&(k.indexOf(q)>=0||(al&&al.has(k)))).sort();
+  let bkeys=Object.keys(BDB).filter(k=>k.indexOf(q)>=0).sort();
+  if(q.length>=4&&!mkeys.length&&!bkeys.length){ // typo fallback: nothing matched exactly
+    const toks=q.split(/\s+/).filter(Boolean); al=aliasKeys(aliasHits(q,true));
+    mkeys=Object.keys(DB).filter(k=>byKey[k]&&(al.has(k)||fuzzyHay(k,toks))).sort(); bkeys=Object.keys(BDB).filter(k=>fuzzyHay(k,toks)).sort(); }
   MGROUPS.concat([TISSUE]).forEach(g=>{h+=sec(g,mkeys.filter(k=>DB[k].g===g),"muscle");});
-  const bkeys=Object.keys(BDB).filter(k=>k.indexOf(q)>=0).sort();
   BGROUPS.forEach(g=>{h+=sec("Bones: "+g.toLowerCase(),bkeys.filter(k=>BDB[k][0]===g),"bone");});
   list.innerHTML=h||'<p style="color:var(--muted);margin:6px 2px">No match. Try a shorter name, for example "flexor" or "rib".</p>';
   syncList();
@@ -1180,12 +1239,76 @@ document.addEventListener("keydown",e=>{
   if((e.key==="h"||e.key==="H")&&sel) toggleHide();
 });
 
+/* ---------- deep links: location.hash mirrors the main view ---------- */
+// #m=<muscle>|#b=<bone> (selection), #ex=<exercise>[&v=<option,option,...>] (v: option name per variation group, empty = default),
+// #cmp=<A>|<B> (each side name[:option,option]), #tab=ex|wk. All names are encodeURIComponent'ed; the plan is not part of the link.
+let hashReady=false, lastHash="";
+const enc=encodeURIComponent, own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k), dec=s=>{try{return decodeURIComponent(s);}catch(e){return null;}};
+const trimV=a=>{a=a.slice(); while(a.length&&!a[a.length-1]) a.pop(); return a;};
+const vList=(i,v)=>trimV(varNames(i,v)).map(enc).join(",");
+const cmpSide=X=>enc(EX[X.i].n)+(vList(X.i,X.v)?":"+vList(X.i,X.v):"");
+function hashNow(){
+  const p=[];
+  if(sel) p.push((sel.kind==="muscle"?"m=":"b=")+enc(sel.key));
+  if(cmp) p.push("cmp="+cmpSide(cmp[0])+"|"+cmpSide(cmp[1]));
+  else if(selEx!==null){ p.push("ex="+enc(EX[selEx].n)); const vl=vList(selEx,exVars[selEx]); if(vl) p.push("v="+vl); }
+  if(curTab!=="anat") p.push("tab="+curTab);
+  return p.join("&");
+}
+function syncHash(){
+  if(!hashReady) return; const h=hashNow(); lastHash=h;
+  try{ if(("#"+h)!==location.hash&&(h||location.hash)) history.replaceState(null,"",location.pathname+location.search+(h?"#"+h:"")); }catch(e){}
+}
+// option names (positional by group, but any group's non-default option of that name is accepted) -> option index array; unknown names fall back to the default
+function varFromNames(i,names){
+  const gs=EX[i].v||[], v=gs.map(()=>0), at=(g,nm)=>g[1].findIndex((o,oi)=>oi>0&&o[0]===nm);
+  names.forEach((nm,pos)=>{ if(!nm) return; let gi=(pos<gs.length&&at(gs[pos],nm)>0)?pos:gs.findIndex(g=>at(g,nm)>0); if(gi>=0) v[gi]=at(gs[gi],nm); });
+  return v;
+}
+const decList=s=>s.split(",").map(x=>dec(x)||"");
+function applyHash(raw){
+  const o=Object.create(null); String(raw||"").replace(/^#/,"").split("&").forEach(s=>{const j=s.indexOf("="); if(j>0&&!own(o,s.slice(0,j))) o[s.slice(0,j)]=s.slice(j+1);});
+  const exI=n=>{const d=dec(n); return d!==null&&own(EXI,d)?EXI[d]:-1;};
+  const side=x=>{const j=x.indexOf(":"), i=exI(j<0?x:x.slice(0,j)); return i<0?null:{i:i,v:varFromNames(i,j<0?[]:decList(x.slice(j+1)))};};
+  let any=false, exTab=false;
+  const cs=own(o,"cmp")?o.cmp.split("|").map(side):null;
+  if(cs&&cs.length===2&&cs[0]&&cs[1]){
+    selEx=cs[0].i; exVars[cs[0].i]=cs[0].v.slice(); if(cs[1].i!==cs[0].i) exVars[cs[1].i]=cs[1].v.slice();
+    cmp=cs; cmpPick=false; volOn=false; sel=null; view="cmp"; cardAway=false;
+    if(!state.muscles){state.muscles=true;$("#tMuscles").checked=true;}
+    setMode("cmp"); renderCard(); syncList(); syncExList(); revealCard(); any=exTab=true;
+  } else if(own(o,"ex")){
+    const i=exI(o.ex);
+    if(i>=0){ exVars[i]=varFromNames(i,own(o,"v")?decList(o.v):[]); cmpPick=false; selectEx(i); any=exTab=true; }
+  }
+  const mk=own(o,"m")?dec(o.m):null, bk=own(o,"b")?dec(o.b):null;
+  if(mk!==null&&own(byKey,mk)){ select("muscle",mk,true); any=true; }
+  else if(bk!==null&&own(byBone,bk)){ select("bone",bk,true); any=true; }
+  if(own(o,"tab")&&(o.tab==="anat"||o.tab==="ex"||o.tab==="wk")){ openTab(o.tab); any=true; }
+  else if(exTab) openTab("ex");
+  return any;
+}
+window.addEventListener("hashchange",()=>{ const h=location.hash.replace(/^#/,""); if(!h||h===lastHash) return; if(applyHash(h)) syncHash(); });
+function copyLink(btn){
+  const h=hashNow(), url=location.href.split("#")[0]+(h?"#"+h:"");
+  const done=msg=>{ btn.textContent=msg; clearTimeout(btn._t); btn._t=setTimeout(()=>{btn.textContent="Copy link";},1800); };
+  const fallback=()=>{ // no async clipboard (insecure context, old browser): execCommand on a hidden field, else show the link selected for a manual copy
+    let okc=false; const ta=document.createElement("textarea"); ta.value=url; ta.setAttribute("readonly",""); ta.style.cssText="position:fixed;left:-9999px;top:0";
+    document.body.appendChild(ta); ta.select(); try{ okc=!!(document.execCommand&&document.execCommand("copy")); }catch(e){} ta.remove();
+    if(okc) return done("Copied");
+    let f=btn.parentNode.nextElementSibling; if(!f||!f.classList.contains("copyurl")){ f=document.createElement("input"); f.className="search copyurl"; f.readOnly=true; f.setAttribute("aria-label","Link to this view"); f.style.marginTop="10px"; btn.parentNode.insertAdjacentElement("afterend",f); }
+    f.value=url; f.focus(); f.select(); done("Select and copy");
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText){ try{ navigator.clipboard.writeText(url).then(()=>done("Copied"),fallback); }catch(e){ fallback(); } } else fallback();
+}
+
 const nMus=Object.keys(DB).filter(k=>DB[k].g!==TISSUE).length;
 $("#foot").innerHTML=nMus+" muscles in "+muscleMeshes.length+" meshes, "+Object.keys(BDB).length+" bone types in "+boneMeshes.length+" meshes. "+
  "Meshes from <a href='https://lifesciencedb.jp/bp3d/' target='_blank' rel='noopener'>BodyParts3D</a> (© The Database Center for Life Science, CC BY-SA 2.1 JP) and "+
  "<a href='https://www.z-anatomy.com/' target='_blank' rel='noopener'>Z-Anatomy</a> (CC BY-SA 4.0), as aligned in Johan Bellander's BodyExplorer, further decimated here (Low and Medium; High is the unreduced source). "+
  "The mesh data on this page is shared under CC BY-SA 4.0. For learning, not for clinical use.";
 buildList(); buildEq(); buildExList(); buildBest(); renderPlan(); renderVolSum(); renderSuggest(); syncGoalUI(); syncModeUI(); applyVisuals();
+if(applyHash(location.hash)){ hashReady=true; syncHash(); } else hashReady=true;
 $("#loading").remove();
 })();
 </script>

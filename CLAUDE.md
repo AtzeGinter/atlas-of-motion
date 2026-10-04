@@ -31,6 +31,7 @@ tools/
   assemble.py         Inject meta3.json into template.html -> ../index.html
   data/muscles.txt    Muscle/connective-tissue info, one line per key: key|group|action;action|origin|insertion|nerve
   data/extra.txt      Optional extras per key: key|exercises text|clinical note
+  data/aliases.txt    Colloquial names for search: alias|key[:part][,key[:part]...] (lower-case; meta.py puts them in META.al, lint.py checks keys/parts exist)
   test/smoke.js       jsdom smoke test (real three.js, WebGL stubbed); package.json alongside
 ```
 
@@ -90,6 +91,7 @@ If you only changed `template.html`, `data/*.txt`, `bones.py`, `exercises.py` or
   lod:{low:{file:"geo/low.bin",bytes,faces,counts:[[nv,nf],...]}, medium:{...}, high:{...}},
   db:{ key:{g:group, a:[actions], o:origin, i:insertion, n:nerve, t?:exercisesText, x?:note} },
   bdb:{ boneKey:[region, description] },
+  al:{ alias:["key" | "key:part", ...] },   // data/aliases.txt
   ex:[{ n:name, c:category, e:equipment, q:cue, t:[[key,part,level],...], v?:[[group,[[option,[[key,part,level],...]],...]]], eq:[categories] }]
 }
 ```
@@ -134,7 +136,7 @@ selected structure (`M_SEL`) → heat mode material (`HM` levels, `CM` compariso
 ### Exercise logic
 - `effTargets(i, vars)`: base targets with variation overrides applied.
 - `perOf(targets)` → `{per:{key:{l,parts}}, tot}`; weights `W = {3:1, 2:0.45, 1:0.15}`. Specificity of a muscle = `W[level] / tot`.
-- `EXK[key]`: precomputed list of exercises per muscle **from base targets only** (variations are ignored there; known gap).
+- `EXK[key]`: precomputed ranking per muscle, entries `{i, v, l, parts, s}`. `v` is null for the base exercise; otherwise the option-index array of ONE non-default option (other groups default), added only when that variation beats the base for that muscle (higher level, higher rounded specificity, or a visible part emphasis; equal/worse variants are skipped, combinations across groups are not enumerated). Shown as `exLabel(x)` = "Back squat (Wide)"; rows carry `data-ex` + `data-v`, and `openEx()` sets `exVars[i]=v` (empty = defaults) before `selectEx(i)`. Used by "Best exercises for" and the muscle card table.
 - `meshLevels(targets)`: Map mesh → level, respecting part-specific targets.
 - Volume: `VOLF = {3:1, 2:0.5, 1:0}` sets per weekly set; `volumeByMesh()`, `volOfKey(key, part)`; bands are relative to the goal range `tg={g,lo,hi}` (presets Maintain 4–6, Strength 6–10, Muscle close to failure 8–12 (default), Muscle moderate 10–20, or Custom 1..40): 0 Low (<lo/2), 1 Below target, 2 In target, 3 More than needed (`volBand`, `volStatus`, classes `v0..v3`, `VM`). `renderSuggest()`/`suggestions()`/`sugScore()` is the gap filler: greedy top 3 default-variation exercises (3 sets each, equipment-filtered, not in the plan, rescored after each pick) over the `SUMMARY` groups (exact: per-mesh volume plus the candidate's per-mesh contribution `sugAdd()`, max over group members). Score: per group, gain = w·(U(n)−U(s)) with U(x)=x−x²/(2·lo), x capped at `lo` (a set is worth w·(1−s/lo): the first sets into an empty group count most, nothing past `lo`); w is the row's third element (1, or .33 for 15 minor rows such as front delts, upper traps, rhomboids, rotator cuff, forearms, abs, obliques, lower back, glute medius, hip flexors, adductors, soleus, tibialis). Group gains are sorted and credited 1, 1/2, 1/4, ... (so a broad compound cannot win on many small spills; the exercise whose prime movers are the biggest gaps wins), then multiplied by (1 − waste/sets added to SUMMARY groups), waste = `SPILL` (0.5) per set landing in a group already at `lo` (up to `hi`) + `OVER` (1) per set above `hi` (relative, so it never flips the sign and the 1-set target still converges), and by `FULLF` (0.6) for category "Full body" (technical, fatiguing lifts). The listed "+N" per group is the useful part (sets toward `lo`, capped at the gap), top 3 groups by weighted gain. Scenario check (squat + bench → a row, a hamstring exercise, a delt exercise; PPL without calves → calf raise) lives in smoke.js; known data-driven quirk: exercises with generous target lists (Meadows row: rear delt 3; Cuban press: side delt 3) tend to win their slot over staples (Barbell row, Face pull, Lateral raise). `SUMMARY` lists the 27 rows of the weekly table; a row is `[label, "key[|part],key[|part],...", weight?]` (weight only used by the gap filler) and shows the MAX weekly sets over its members (e.g. Quadriceps = four heads; Hip flexors = psoas major + iliacus, rectus femoris deliberately omitted). Clicking a row selects its first key.
 
@@ -147,6 +149,12 @@ selected structure (`M_SEL`) → heat mode material (`HM` levels, `CM` compariso
 
 ### Cards and lists
 `renderCard()` dispatches to `renderCmpCard()`, `renderExCard()` or the muscle/bone card. Click handling is delegated on `#card` via `data-act`, `data-ex`, `data-key`, `data-var`. Sidebar tabs: Anatomy (`buildList`, region chips, per-structure checkboxes), Exercises (`buildEq`, `buildBest`, `buildExList`, comparison banner), Workout (`renderPlan`, `buildAdd`, `renderVolSum`, `#tVol`).
+
+### Search (`ALIAS`, `aliasHits`, `exSearch`, `fuzzyHay`, `near`)
+Index (`#q`), exercise (`#qe`) and planner-add (`#qa`) searches first do the old substring match, plus alias matches (the query equals or starts an alias such as "lats", "hammies", "rear delts"). Exercises match an alias when a base target hits the aliased key (and its part, for part aliases such as `deltoid:spinal part`). Only if nothing matches and the query has >= 4 characters, a typo fallback compares each query word with name words and alias words (edit distance incl. transposition, <= 1 edit, <= 2 for words of 8+ characters).
+
+### Deep links (`hashNow`, `syncHash`, `applyHash`, `copyLink`)
+`location.hash` mirrors the view via `history.replaceState` (no history entries; written from `renderCard()` and `openTab()`): `m=<muscle>` or `b=<bone>`, `ex=<exercise name>[&v=<option names, comma-separated, "" = default>]`, `cmp=<A>|<B>` (each `name[:option,option]`), `tab=ex|wk`. All parts are `encodeURIComponent`-ed names (not indices); the plan is not encoded. `applyHash()` restores at startup and on `hashchange`, ignoring unknown or malformed values. Muscle, exercise card and comparison cards have a "Copy link" button (`navigator.clipboard`, else `execCommand`, else a selected read-only field).
 
 ### Persistence
 localStorage, all wrapped in try/catch. `aom.lod.v1`: `"low"|"medium"|"high"` (written only on an explicit choice; anything else is ignored). `aom.plan.v2`: `[{n:exerciseName, sets, v:[optionName per variation group]}]` (`""` or missing = default option; unknown names fall back to the default, entries for exercises that no longer exist are dropped). `aom.eq.v1`: array of enabled equipment categories. `aom.goal.v1`: `{g:"maintain"|"strength"|"hyp8"|"hyp10"|"custom",lo,hi}` (written on change only; presets take lo/hi from `GOALS`, invalid custom ranges fall back to the default). In memory `plan[].v` and `exVars` are option-index arrays; conversion happens only in `loadPlan()`/`savePlan()` (`varNames`/`varIdx`), so reordering `VARS` options is safe but renaming one resets it to the default. Legacy keys `myology.plan.v1` (variation indices, validated against the current `EX[i].v`) and `myology.eq.v1` are migrated on first load and then removed. Bump the version suffix if the format changes.
@@ -161,7 +169,7 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs on push and PR to `main`: `
 ## Known limitations and open issues
 
 - Exercise involvement uses three coarse levels estimated from EMG literature and coaching practice; specificity and volume inherit that coarseness.
-- `EXK` / "Best exercises for" ignore variations (e.g. the TFL-biased side-lying abduction variant does not rank).
+- `EXK` ranks single non-default variation options only (not combinations across groups, e.g. Wide + Deep squat), and a part emphasis is shown only when it is the top level for that muscle.
 - Left and right share one key: hiding, exercise heat and volume always apply to both sides; single-sided exercises light both legs.
 - Missing structures in source data: tongue, pharyngeal constrictors, buccinator, auricular/occipitalis, perineal muscles, extensor digitorum brevis, dorsal interossei of the foot; sacrum, coccyx, costal cartilages.
 - Anatomy and exercise texts were written for this project and are not reviewed by an anatomist; innervation of small hand/foot/laryngeal muscles is the most error-prone.
@@ -169,7 +177,7 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs on push and PR to `main`: `
 
 ## Roadmap ideas
 
-1. Rank variations as separate entries in "Best exercises for".
+1. Rank variation combinations across groups (single options are already ranked as separate entries).
 2. Plan export/import (JSON) and training days with per-session volume.
 3. Left/right and per-part toggles in the Index.
 4. Replace three levels with cited per-muscle percentages.
