@@ -652,6 +652,20 @@ async function phoneRun(){
  pq('#ovOpen').click();
  ok(!pq('#ov').hidden&&pq('#vp').contains(pq('#ov'))&&pqa('#ovGrid tr.g').length===27&&pqa('#ovGrid tr.g').every(r=>r.querySelectorAll('.cb').length===7),'phone: the overview opens (full-screen overlay in the viewport) with the 27 x 7 grid');
  ok(pq('#ovGrid tr.g[data-g="1"] .cb[data-d="1"]').dataset.c==='1'&&/Recovery conflicts <b>1<\/b>/.test(pq('#ovSum').innerHTML),'phone: the conflict cell is flagged');
+ // phone: the Schedule board is the default view; columns render (swipeable), the add slot and the "Move to…" fallback work
+ const pcols=()=>pqa('#ovBoard .bcol'),pcards=dd=>pqa('#ovBoard .bcol[data-d="'+dd+'"] .bcard[data-d]');
+ ok(!pq('#ovSch').hidden&&pq('#ovMus').hidden&&pcols().length===7&&pcards(0).length===1&&pcards(1).length===1&&pq('#ovBoard .bcol[data-d="1"] .bw'),'phone: the overview opens on the Schedule board with 7 day columns, cards and the Day 2 conflict marker');
+ pq('#ovBoard .bslot.end[data-d="3"]').click();
+ ok(!!pq('#bpq')&&pq('#ovBoard .bcol[data-d="3"] .bpick'),'phone: the add slot opens the inline picker');
+ pq('#bpq').value='back squat';pq('#bpq').dispatchEvent(new p.Event('input',{bubbles:true}));
+ pqa('#bpr [data-bact="pick"]').find(b=>/Back squat/.test(b.textContent)).click();
+ ok(pcards(3).length===1&&pcards(3)[0].querySelector('.bnm').textContent==='Back squat'&&!pq('.bpick'),'phone: picking an exercise adds it to that day');
+ const pmv=pcards(1)[0].querySelector('select.bmv');pmv.value='4';pmv.dispatchEvent(new p.Event('change',{bubbles:true}));
+ ok(pcards(4).length===1&&pcards(1).length===0&&!pq('#wstrip [data-day="2"]').classList.contains('warn')&&!pq('#wstrip [data-day="1"]').classList.contains('warn'),'phone: the "Move to…" select moves a card and clears the conflict');
+ pcards(4)[0].querySelector('[data-bact="rm"]').click();pcards(3)[0].querySelector('[data-bact="rm"]').click();
+ pq('#ovBoard .bslot.end[data-d="1"]').click();pq('#bpq').value='bench';pq('#bpq').dispatchEvent(new p.Event('input',{bubbles:true}));
+ pqa('#bpr [data-bact="pick"]').find(b=>/Barbell bench press/.test(b.textContent)).click();
+ ok(pcards(1).length===1&&pq('#wstrip [data-day="1"]').classList.contains('warn'),'phone: bench back on Day 2, conflict flagged again');
  // endurance on the phone: add form in the sheet, pill on the card, endurance row + balance cards in the full-screen overview
  pq('#ovClose').click();
  pq('#endOpen').click();const ps=(id,v)=>{pq(id).value=v;pq(id).dispatchEvent(new p.Event('change',{bubbles:true}));};
@@ -829,6 +843,184 @@ async function endRun(){
  // cleanup
  w.localStorage.removeItem('aom.hr.v1');
  clearAll();
+}
+// ---- schedule board in the week overview: view switch, cards, drag and drop (pointer events), keyboard moves, slot picker, steppers, persistence ----
+async function boardRun(){
+ const ovOpen=()=>{if(q('#ov').hidden)q('#ovOpen').click();};
+ const col=dd=>q('#ovBoard .bcol[data-d="'+dd+'"]'),cards=dd=>qa('#ovBoard .bcol[data-d="'+dd+'"] .bcard[data-d]');
+ const label=c=>c.querySelector('.bnm')?c.querySelector('.bnm').textContent:'E:'+c.dataset.t;
+ const cn=dd=>cards(dd).map(label),keys=dd=>days()[dd].items.map(p=>p.t==='e'?'E:'+p.a:p.n);
+ const live=()=>q('#ovLive').textContent.replace(/ /g,'');
+ const R=(l,t,wd,h)=>({left:l,top:t,width:wd,height:h,right:l+wd,bottom:t+h,x:l,y:t});
+ // jsdom has no layout: columns are 100 px wide, cards 50 px high every 60 px from y=50, the board is 700 x 600
+ const gbr=w.Element.prototype.getBoundingClientRect;
+ w.Element.prototype.getBoundingClientRect=function(){
+  if(this.id==='ovBoard') return R(0,0,700,600);
+  const c=this.classList;
+  if(c&&c.contains('bcol')) return R(+this.dataset.d*100,0,100,600);
+  if(c&&c.contains('bcard')&&this.dataset.d!==undefined) return R(+this.dataset.d*100,50+(+this.dataset.i)*60,100,50);
+  return R(0,0,0,0);
+ };
+ const pev=(type,x,y,tgt,pt)=>{const e=new w.MouseEvent(type,{bubbles:true,cancelable:true,clientX:x,clientY:y,button:0});Object.defineProperty(e,'pointerId',{value:7});Object.defineProperty(e,'pointerType',{value:pt||'mouse'});tgt.dispatchEvent(e);return e;};
+ const cx=dd=>dd*100+50,cy=i=>50+i*60+25; // centre of card slot i of day dd
+ const key=(el,k,o)=>el.dispatchEvent(new w.KeyboardEvent('keydown',Object.assign({key:k,bubbles:true,cancelable:true},o||{})));
+ const setv=(el,v,t)=>{el.value=v;ev(el,t||'input');};
+ w.localStorage.removeItem('aom.ovview.v1');
+ q('[data-tab="wk"]').click();if(!q('#ov').hidden)q('#ovClose').click();clearAll();selDay(0);
+ addEx('Barbell bench press');addEx('Barbell row');selDay(1);addEx('Barbell bench press');
+ ovOpen();
+ // default view and layout
+ ok(!q('#ovSch').hidden&&q('#ovMus').hidden&&q('#ovSw [data-ovv="sch"]').getAttribute('aria-pressed')==='true'&&q('#ovSw [data-ovv="mus"]').getAttribute('aria-pressed')==='false','overview opens on the Schedule view by default');
+ ok(qa('#ovBoard .bcol').length===7&&cn(0).join()==='Barbell bench press,Barbell row'&&cn(1).join()==='Barbell bench press'&&cn(2).length===0,'board: 7 day columns with cards in plan order ('+[0,1,2].map(cn).join(' | ')+')');
+ ok(col(2).classList.contains('rest')&&/Rest day/.test(col(2).querySelector('.bh2').textContent)&&col(0).querySelector('.bh2').textContent==='6 sets'&&!col(0).classList.contains('rest'),'rest days are visibly empty, busy days show their sets ("'+col(0).querySelector('.bh2').textContent+'")');
+ ok(qa('#ovBoard .bslot.end').length===7&&qa('#ovBoard .bslot:not(.end)').length===qa('#ovBoard .bcard[data-d]').length,'every column has an end slot, every card has a slot before it');
+ const bc=cards(0)[0];
+ ok(bc.querySelector('.bst span').textContent==='3 sets'&&/Chest/.test(bc.querySelector('.bgl').textContent)&&bc.getAttribute('tabindex')==='0','strength card: name, sets stepper, muscle-group summary ("'+bc.querySelector('.bgl').textContent+'"), focusable');
+ ok(col(1).querySelector('.bw')&&!col(0).querySelector('.bw')&&/still recovering/.test(cards(1)[0].querySelector('small.warn').textContent)&&!cards(0)[0].querySelector('small.warn'),'Day 2 header and card show the recovery conflict, Day 1 does not ("'+cards(1)[0].querySelector('small.warn').textContent+'")');
+ // pointer drag with a mouse: Day 1 bench -> end of Day 3
+ const d0=cards(0)[0];
+ pev('pointerdown',cx(0),cy(0),d0);
+ pev('pointermove',cx(0)+2,cy(0)+2,d0);
+ ok(!q('.bghost')&&!d0.classList.contains('dragging'),'mouse: a 3 px movement does not start a drag');
+ pev('pointermove',cx(0)+30,cy(0)+20,d0);
+ ok(!!q('.bghost')&&d0.classList.contains('dragging')&&/Picked up Barbell bench press/.test(live()),'mouse: after 4 px the card lifts (ghost + dimmed original, announced)');
+ pev('pointermove',cx(2),300,d0);
+ ok(col(2).classList.contains('dover')&&q('#ovBoard .bcol[data-d="2"] .bslot.end').classList.contains('over'),'drop target: Day 3 is highlighted and its end slot shows the drop indicator');
+ pev('pointermove',cx(1)+5,cy(0)-20,d0);
+ ok(q('#ovBoard .bcol[data-d="1"] .bslot[data-i="0"]').classList.contains('over')&&!q('#ovBoard .bslot.end.over'),'dropping above a card highlights the slot before it');
+ pev('pointermove',cx(2),300,d0);
+ pev('pointerup',cx(2),300,d0);
+ ok(!q('.bghost')&&names(2).join()==='Barbell bench press'&&names(0).join()==='Barbell row'&&names(1).join()==='Barbell bench press','drop: bench moved from Day 1 to Day 3 and persisted ('+[0,1,2].map(i=>names(i).join('+')).join(' | ')+')');
+ ok(cn(2).join()==='Barbell bench press'&&cn(0).join()==='Barbell row','board re-rendered with the new order');
+ ok(dayBtn(2).classList.contains('warn')&&!dayBtn(1).classList.contains('warn')&&col(2).querySelector('.bw')&&!col(1).querySelector('.bw'),'conflicts follow the move: Day 2 is clear, Day 3 (bench the day after bench) is flagged on the day card and in the board');
+ ok(/Recovery conflicts <b>1<\/b>/.test(q('#ovSum').innerHTML)&&dayBtn(2).getAttribute('aria-pressed')==='true'&&qa('#plan .prow').length===1&&/Moved Barbell bench press to Day 3, position 1 of 1/.test(live()),'summary, planner selection and live region updated ('+live()+')');
+ // slot between cards 1 and 2: open the inline picker and insert at that index
+ selDay(1);addEx('Back squat');addEx('Hip thrust');
+ ok(cn(1).join()==='Barbell bench press,Back squat,Hip thrust','planner additions show up on the board');
+ const sl=()=>q('#ovBoard .bslot[data-d="1"][data-i="1"]');
+ ok(sl().getAttribute('aria-label')==='Add to Day 2 at position 2','slot between card 1 and 2 has a label ("'+sl().getAttribute('aria-label')+'")');
+ sl().click();
+ ok(!!q('#ovBoard .bpick')&&d.activeElement===q('#bpq')&&sl().getAttribute('aria-expanded')==='true','clicking a slot opens the picker with the search focused');
+ setv(q('#bpq'),'romanian');
+ ok(qa('#bpr [data-bact="pick"]').some(b=>b.firstChild.textContent==='+ Romanian deadlift'),'picker search finds exercises ("'+qa('#bpr button').map(b=>b.firstChild.textContent).join(', ')+'")');
+ setv(q('#bpq'),'hammies');
+ ok(qa('#bpr [data-bact="pick"]').length>0,'picker uses the alias search ("hammies")');
+ q('#eqchips [data-eq="Barbell"]').click();setv(q('#bpq'),'romanian');
+ ok(!!q('#bpq')&&!qa('#bpr [data-bact="pick"]').some(b=>b.firstChild.textContent==='+ Romanian deadlift')&&qa('#bpr [data-bact="pick"]').length>0,'picker respects the equipment filter (and stays open)');
+ q('#eqchips [data-eq="Barbell"]').click();
+ setv(q('#bpq'),'romanian');
+ qa('#bpr [data-bact="pick"]').find(b=>b.firstChild.textContent==='+ Romanian deadlift').click();
+ ok(names(1).join()==='Barbell bench press,Romanian deadlift,Back squat,Hip thrust'&&!q('#ovBoard .bpick'),'picked exercise is inserted at exactly index 1 and the picker closes ('+names(1).join(' | ')+')');
+ ok(days()[1].items[1].sets===3&&cards(1)[1].querySelector('.bst span').textContent==='3 sets'&&cards(1)[1]===d.activeElement,'inserted with 3 sets and the default variation; the new card has focus');
+ // reorder within a day with the pointer: Hip thrust (index 3) above Romanian deadlift (index 1)
+ const th=cards(1)[3];
+ pev('pointerdown',cx(1),cy(3),th);pev('pointermove',cx(1),cy(3)-30,th);pev('pointermove',cx(1),130,th);
+ ok(q('#ovBoard .bcol[data-d="1"] .bslot[data-i="1"]').classList.contains('over'),'reorder: indicator line sits between card 1 and card 2');
+ pev('pointerup',cx(1),130,th);
+ ok(names(1).join()==='Barbell bench press,Hip thrust,Romanian deadlift,Back squat','reorder within a day: Hip thrust now second ('+names(1).join(' | ')+')');
+ const t1=cards(1)[1];pev('pointerdown',cx(1),cy(1),t1);pev('pointermove',cx(1),cy(1)+8,t1);pev('pointerup',cx(1),cy(1)+8,t1);
+ ok(names(1).join()==='Barbell bench press,Hip thrust,Romanian deadlift,Back squat'&&!q('.bghost'),'dropping a card where it was is a no-op');
+ // Escape cancels
+ const before=JSON.stringify(wk());
+ const e0=cards(1)[0];pev('pointerdown',cx(1),cy(0),e0);pev('pointermove',cx(1)+40,cy(0)+10,e0);pev('pointermove',cx(4),300,e0);
+ ok(!!q('.bghost'),'second drag started');
+ d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+ ok(!q('.bghost')&&!q('.dragging')&&!q('#ov').hidden&&/cancelled/i.test(live()),'Escape cancels the drag (overlay stays open, announced)');
+ pev('pointerup',cx(4),300,e0);
+ ok(JSON.stringify(wk())===before,'after Escape nothing changed, even when the button is released over another day');
+ const e1=cards(1)[0];pev('pointerdown',cx(1),cy(0),e1);pev('pointermove',cx(1)+40,cy(0)+10,e1);pev('pointerup',cx(1),900,e1);
+ ok(JSON.stringify(wk())===before&&!q('.bghost'),'releasing outside the board cancels the move');
+ // touch: long press needed; early movement is scrolling
+ const e2=cards(1)[0];pev('pointerdown',cx(1),cy(0),e2,'touch');pev('pointermove',cx(1),cy(0)+25,e2,'touch');await sleep(380);
+ ok(!q('.bghost'),'touch: moving before the long press does not drag (the page may scroll)');
+ pev('pointerup',cx(1),cy(0)+25,e2,'touch');
+ pev('pointerdown',cx(1),cy(0),e2,'touch');await sleep(380);
+ ok(!!q('.bghost')&&e2.classList.contains('dragging'),'touch: pressing for ~300 ms lifts the card');
+ pev('pointermove',cx(5),cy(0),e2,'touch');pev('pointerup',cx(5),300,e2,'touch');
+ ok(names(5).join()==='Barbell bench press'&&names(1).join()==='Hip thrust,Romanian deadlift,Back squat'&&!q('.bghost'),'touch: long-press drag moved the card to Day 6');
+ const inc=cards(5)[0].querySelector('[data-bact="inc"]');pev('pointerdown',cx(5),cy(0),inc);pev('pointermove',cx(5)+40,cy(0)+30,inc);
+ ok(!q('.bghost'),'pressing the stepper button does not start a drag');pev('pointerup',cx(5)+40,cy(0)+30,inc);
+ // sets stepper on a card -> plan and planner tab
+ selDay(5);
+ cards(5)[0].querySelector('[data-bact="inc"]').click();
+ ok(days()[5].items[0].sets===4&&cards(5)[0].querySelector('.bst span').textContent==='4 sets'&&/4 sets/.test(q('#plan .prow .step span').textContent),'card stepper "+": 4 sets in storage, on the card and in the planner tab');
+ for(let k=0;k<4;k++) cards(5)[0].querySelector('[data-bact="dec"]').click();
+ ok(days()[5].items[0].sets===1&&cards(5)[0].querySelector('[data-bact="dec"]').getAttribute('aria-disabled')==='true'&&names(5).length===1,'"−" stops at 1 set (the × removes)');
+ q('#plan [data-inc="0"]').click();
+ ok(cards(5)[0].querySelector('.bst span').textContent==='2 sets','planner tab stepper updates the card');
+ // endurance through a slot picker, interleaved with strength
+ sl().click();
+ q('#ovBoard .bpick [data-tab="en"]').click();
+ ok(!!q('#bpa')&&d.activeElement===q('#bpa'),'picker "Endurance" tab shows activity, type and minutes');
+ setv(q('#bpa'),'muaythai','change');
+ ok(q('#bpk').value==='rounds'&&q('#bpm').value==='90','choosing Muay Thai fills the default session (rounds, 90 min)');
+ setv(q('#bpm'),'75','change');
+ q('#ovBoard [data-bact="padd"]').click();
+ ok(keys(1).join()==='Hip thrust,E:muaythai,Romanian deadlift,Back squat'&&days()[1].items[1].min===75,'endurance session inserted at index 1 and persisted in schedule order ('+keys(1).join(',')+')');
+ const ec=cards(1)[1];
+ ok(ec.classList.contains('e')&&/Thai/.test(ec.querySelector('.pl').textContent)&&ec.querySelector('.pl').classList.contains('ph')&&ec.querySelector('[data-bact="min"]').value==='75','endurance card: activity pill coloured by intensity, kind, minutes');
+ ok(/75 min/.test(col(1).querySelector('.bh2').textContent),'column header shows the endurance minutes ("'+col(1).querySelector('.bh2').textContent+'")');
+ setv(ec.querySelector('[data-bact="min"]'),'60','change');
+ ok(days()[1].items[1].min===60&&days()[1].items[1].t==='e'&&cards(1)[1].querySelector('[data-bact="min"]').value==='60','minutes edited inline, order kept ('+keys(1).join(',')+')');
+ selDay(1);
+ ok(qa('#ses .srow').length===1&&q('#ses [data-sf="a"]').value==='muaythai','planner tab lists the same session');
+ setv(q('#ses [data-sf="min"]'),'45','change');
+ ok(days()[1].items[1].min===45&&keys(1).join()==='Hip thrust,E:muaythai,Romanian deadlift,Back squat','editing the session in the planner keeps its place in the schedule');
+ // keyboard
+ let fc=cards(1)[2];fc.focus();key(fc,'ArrowRight',{altKey:true});
+ ok(keys(2).join()==='Barbell bench press,Romanian deadlift'&&keys(1).join()==='Hip thrust,E:muaythai,Back squat','Alt+ArrowRight moves the focused card to the next day (same position, clamped to the end)');
+ ok(d.activeElement.classList.contains('bcard')&&label(d.activeElement)==='Romanian deadlift'&&/Moved Romanian deadlift to Day 3/.test(live()),'focus follows the moved card and the move is announced ("'+live()+'")');
+ fc=d.activeElement;key(fc,'ArrowUp',{altKey:true});
+ ok(keys(2).join()==='Romanian deadlift,Barbell bench press'&&label(d.activeElement)==='Romanian deadlift'&&/position 1 of 2/.test(live()),'Alt+ArrowUp moves the card up within the day');
+ fc=d.activeElement;key(fc,'ArrowDown',{altKey:true});
+ ok(keys(2).join()==='Barbell bench press,Romanian deadlift','Alt+ArrowDown moves it back down');
+ fc=d.activeElement;key(fc,'ArrowDown',{altKey:true});
+ ok(/Already last/.test(live())&&keys(2)[1]==='Romanian deadlift','Alt+ArrowDown on the last card does nothing and says so');
+ selDay(0);const f0=cards(0)[0];f0.focus();const b0=JSON.stringify(wk());key(f0,'ArrowLeft',{altKey:true});
+ ok(JSON.stringify(wk())===b0&&/first day/.test(live()),'Alt+ArrowLeft on Day 1 stays put ("'+live()+'")');
+ key(cards(0)[0],'ArrowRight');
+ ok(JSON.stringify(wk())===b0,'arrow keys without Alt do nothing');
+ ok(qa('#ovBoard .bcard').every(c=>c.getAttribute('aria-label')&&c.getAttribute('tabindex')==='0')&&qa('#ovBoard button').every(b=>b.getAttribute('aria-label')||b.textContent.trim()),'cards are focusable and every board button has a label');
+ // planner "Move to…" still works and the board follows
+ selDay(5);q('#plan select.mv').value='4';ev(q('#plan select.mv'),'change');
+ ok(names(4).join()==='Barbell bench press'&&cn(4).join()==='Barbell bench press'&&cn(5).length===0,'planner tab "Move to…" moves the row and the board reflects it');
+ // remove
+ const nb=cards(4).length;cards(4)[0].querySelector('[data-bact="rm"]').click();
+ ok(cards(4).length===nb-1&&names(4).length===0&&/Removed Barbell bench press/.test(live()),'× removes a card');
+ // rename inline
+ col(0).querySelector('.bdn').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));
+ ok(!!q('#bIn')&&d.activeElement===q('#bIn'),'double-clicking the day name opens the inline rename field');
+ q('#bIn').value='Pull';key(q('#bIn'),'Enter');
+ ok(nameOf(0)==='Pull'&&col(0).querySelector('.bdn').textContent==='Pull'&&dayBtn(0).textContent.includes('Pull'),'rename persisted and shown on the board and the day card');
+ col(0).querySelector('[data-bact="ren"]').click();q('#bIn').value='Nope';key(q('#bIn'),'Escape');
+ ok(nameOf(0)==='Pull'&&!q('#bIn')&&!q('#ov').hidden,'Escape cancels the rename without closing the overview');
+ col(0).querySelector('[data-bact="ren"]').click();q('#bIn').value='';key(q('#bIn'),'Enter');
+ ok(nameOf(0)==='Day 1','an empty name falls back to "Day 1"');
+ // picker closes on Escape
+ q('#ovBoard .bslot[data-d="3"][data-i="0"]').click();
+ ok(!!q('#bpq'),'end slot of an empty day opens the picker');
+ key(q('#bpq'),'Escape');
+ ok(!q('.bpick')&&!q('#ov').hidden,'Escape closes the picker, not the overview');
+ // persisted view, muscle grid still intact
+ q('#ovSw [data-ovv="mus"]').click();
+ ok(!q('#ovMus').hidden&&q('#ovSch').hidden&&JSON.parse(w.localStorage.getItem('aom.ovview.v1'))==='mus'&&q('#ovSw [data-ovv="mus"]').getAttribute('aria-pressed')==='true','switch to Muscles shows the grid and stores aom.ovview.v1');
+ ok(qa('#ovGrid tr.g').length===27&&qa('#ovGrid tr.g').every(r=>r.querySelectorAll('.cb').length===7)&&q('#ovGrid tr.er .eb[data-d="1"]').dataset.m==='45','the muscle grid and its endurance row follow the board edits');
+ // order survives a reload; stored view is respected
+ const stored=w.localStorage.getItem('aom.plan.v3');
+ const r=boot({store:{'aom.plan.v3':stored,'aom.ovview.v1':'"mus"'}}),rd=r.document,rq=s=>rd.querySelector(s);
+ await waitFor(()=>!rd.getElementById('loading'),60000,'reload instance');
+ rq('#ovOpen').click();
+ ok(!rq('#ovMus').hidden&&rq('#ovSch').hidden,'reload: the overview opens on the stored Muscles view');
+ rq('#ovSw [data-ovv="sch"]').click();
+ const rl=dd=>[...rd.querySelectorAll('#ovBoard .bcol[data-d="'+dd+'"] .bcard')].map(c=>c.querySelector('.bnm')?c.querySelector('.bnm').textContent:'E:'+c.querySelector('.pl').textContent.split(' ')[0]);
+ ok(rl(1).join()==='Hip thrust,E:Thai,Back squat'&&rl(2).slice(-1)[0]==='Romanian deadlift'&&JSON.parse(r.localStorage.getItem('aom.ovview.v1'))==='sch','reload: interleaved order of strength and endurance is restored ('+rl(1).join(' | ')+')');
+ r.close();
+ // back to a clean state
+ q('#ovSw [data-ovv="sch"]').click();
+ q('#ovClose').click();
+ w.Element.prototype.getBoundingClientRect=gbr;
+ w.localStorage.removeItem('aom.ovview.v1');
+ clearAll();selDay(0);
 }
 (async()=>{
  // startup
@@ -1028,6 +1220,7 @@ async function endRun(){
  ok(qa('[data-view]').length===5&&q('#toolbar').contains(q('[data-view="front"]')),'desktop: view buttons are in the floating toolbar');
  await weekRun();
  await endRun();
+ await boardRun();
  await sugRun();
  await migrateRun();
  await searchRun();
