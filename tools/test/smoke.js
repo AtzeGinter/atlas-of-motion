@@ -566,6 +566,7 @@ async function phoneRun(){
  await searchRun();
  await variationRun();
  await linkRun();
+ ok(/^v\d+\.\d+ · [0-9a-f]{7}$/.test(q('#ver').textContent)&&q('#vp').contains(q('#ver')),'version display in the viewport corner: '+q('#ver').textContent);
  await camRun();
  await lodRun();
  await otherRuns();

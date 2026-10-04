@@ -8,9 +8,13 @@ root = os.path.join(here, '..')
 md5 = lambda path: hashlib.md5(open(path, 'rb').read()).hexdigest()
 # cache-bust: ?v=<content hash> so browsers never pair a cached old .bin with new mesh counts
 for L in meta['lod'].values(): L['file'] += '?v=' + md5(os.path.join(root, L['file']))[:10]
-t = t.replace('__META__', json.dumps(meta, separators=(',', ':'), ensure_ascii=False))
+metaj = json.dumps(meta, separators=(',', ':'), ensure_ascii=False)
+# version shown in the corner: tools/version.txt (bump it for every release) + a build id hashed from the sources (reproducible, no git data)
+version = open(os.path.join(here, 'version.txt'), encoding='utf-8').read().strip()
+buildid = hashlib.md5((t + metaj + version).encode()).hexdigest()[:7]
+t = t.replace('__META__', metaj).replace('__VERSION__', version).replace('__BUILDID__', buildid)
 open(os.path.join(here, '..', 'index.html'), 'w', encoding='utf-8', newline='\n').write(t)
-print('index.html written', round(len(t) / 1e6, 1), 'MB')
+print('index.html written', round(len(t) / 1e6, 1), 'MB, version', version, 'build', buildid)
 
 # service worker: precache list = app shell; build hash covers every precached file so any change gives a new cache name
 SHELL_FILES = ['index.html', 'manifest.webmanifest', 'vendor/three.min.js', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',

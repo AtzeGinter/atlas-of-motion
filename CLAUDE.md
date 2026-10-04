@@ -168,6 +168,8 @@ localStorage, all wrapped in try/catch. `aom.lod.v1`: `"low"|"medium"|"high"` (w
 
 Service worker: `geo()` registers its cache write with a synchronous `waitUntil` (Safari rejects late calls); requests with `&direct=1` bypass the worker. `fetchLod` retries once with `&direct=1` when a controlled fetch fails, so a broken worker cannot block loading or the quality switch.
 
+Version display: `#ver` in the viewport corner (bottom right; top right on phones) shows `v<tools/version.txt> · <build id>`; the build id is an md5 of template + META + version computed in `assemble.py`. **Bump `tools/version.txt` (1.0 → 1.1 …) with every user-visible release.**
+
 ## Testing
 
 `tools/test/smoke.js` (needs Node >= 18) loads `index.html` in jsdom with real three@0.128.0, stubs `WebGLRenderer`, waits until the loading overlay is gone, then clicks through: best-for list, exercise selection, variations, add to plan, comparison and swap, equipment filter, workout plan, volume mode, then the quality levels (default Medium, switch to High changes the triangle count in the scene and persists `aom.lod.v1`, last request wins, failed switch keeps the level), start-up cases (stored choice, invalid value, failed fetch, `file://`), then boots another instance with `matchMedia` stubbed to a coarse phone (defaults to Low) (sheet states, card-in-sheet flow, popovers, touch tap, phone/desktop switch). It asserts on each step (`ok - ...` / `FAIL - ...`), treats startup errors, `console.error` and uncaught exceptions as failures, and exits non-zero if anything fails. Keep assertions in step with exercise data (e.g. Back squat / Wide stance / Hip thrust) when you change it.
