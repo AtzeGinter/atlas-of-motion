@@ -19,8 +19,8 @@ pronator teres||Can compress the median nerve (pronator syndrome). Common flexor
 flexor retinaculum of wrist||Compression of the median nerve under it is carpal tunnel syndrome.
 psoas major|Hanging knee raises, standing knee drives|
 gluteus maximus|Hip thrusts, squats, deadlifts, step-ups|
-gluteus medius|Side-lying abduction, banded side walks, single-leg work|Weakness shows as the Trendelenburg sign: the pelvis drops on the opposite side when walking.
-piriformis||The sciatic nerve passes beneath it; tightness may irritate the nerve (piriformis syndrome).
+gluteus medius|Side-lying abduction, banded side walks, single-leg work|Weakness shows as the Trendelenburg sign: when standing or stepping on the affected leg, the pelvis drops on the opposite side.
+piriformis||The sciatic nerve usually emerges just below it (in some people through it); tightness may irritate the nerve (piriformis syndrome, a debated diagnosis).
 sartorius||The longest muscle in the body.
 rectus femoris|Squats, leg extensions, lunges|The only quadriceps head that crosses the hip.
 vastus lateralis|Squats, leg press, leg extensions|Largest quadriceps head.
@@ -31,10 +31,10 @@ semitendinosus|Nordic curls, Romanian deadlifts, leg curls|Its tendon is a commo
 semimembranosus|Nordic curls, Romanian deadlifts, leg curls|
 gastrocnemius|Standing calf raises, jumping, sprinting|Works best with the knee straight because it crosses the knee.
 soleus|Seated calf raises|Does most of the plantarflexion work when the knee is bent.
-tibialis anterior|Tibialis raises, heel walks|Weakness or deep fibular nerve damage causes foot drop.
+tibialis anterior|Tibialis raises, heel walks|Weakness or common/deep fibular nerve damage causes foot drop.
 tibialis posterior||Dysfunction leads to adult-acquired flatfoot.
 calcaneal tendon||Ruptures typically occur 2–6 cm above the heel during explosive push-off.
 iliotibial tract||Friction or compression at the lateral knee causes IT band syndrome, common in runners.
-masseter||Strongest muscle by force relative to size; clenching and bruxism overload it.
+masseter||Often cited as the strongest muscle relative to its size; clenching and bruxism overload it.
 sternocleidomastoid|Resisted neck flexion and rotation|Shortening on one side causes torticollis (wry neck).
 posterior crico-arytenoid||Bilateral paralysis can close the airway.

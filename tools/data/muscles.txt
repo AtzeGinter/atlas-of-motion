@@ -16,8 +16,8 @@ superior rectus|Eye|Elevates the eye; also adducts and intorts it|Common tendino
 inferior rectus|Eye|Depresses the eye; also adducts and extorts it|Common tendinous ring|Inferior sclera|Oculomotor nerve (CN III)
 medial rectus|Eye|Adducts the eye (turns it toward the nose)|Common tendinous ring|Medial sclera|Oculomotor nerve (CN III)
 lateral rectus|Eye|Abducts the eye (turns it outward)|Common tendinous ring|Lateral sclera|Abducens nerve (CN VI)
-superior oblique|Eye|Intorts the eye; depresses it most when it is turned inward|Body of the sphenoid|Posterosuperior sclera, after passing through the trochlea|Trochlear nerve (CN IV)
-inferior oblique|Eye|Extorts the eye; elevates it most when it is turned inward|Orbital floor of the maxilla|Posterolateral sclera|Oculomotor nerve (CN III)
+superior oblique|Eye|Intorts the eye; depresses it most when it is turned inward; also abducts it|Body of the sphenoid|Posterosuperior sclera, after passing through the trochlea|Trochlear nerve (CN IV)
+inferior oblique|Eye|Extorts the eye; elevates it most when it is turned inward; also abducts it|Orbital floor of the maxilla|Posterolateral sclera|Oculomotor nerve (CN III)
 masseter|Jaw|Elevates the mandible (closes the jaw); superficial part assists protrusion|Zygomatic arch|Lateral surface of the ramus and angle of the mandible|Mandibular nerve (CN V3), masseteric branch
 temporalis|Jaw|Elevates the mandible; posterior fibres retract it|Temporal fossa and temporal fascia|Coronoid process and anterior ramus of the mandible|Mandibular nerve (CN V3), deep temporal nerves
 medial pterygoid|Jaw|Elevates and protrudes the mandible; side-to-side grinding|Medial surface of the lateral pterygoid plate; maxillary tuberosity|Medial surface of the ramus and angle of the mandible|Mandibular nerve (CN V3)
@@ -38,7 +38,7 @@ oblique arytenoid|Throat|Pulls the arytenoids together; narrows the laryngeal in
 thyro-arytenoid|Throat|Shortens and relaxes the vocal folds (lowers pitch); vocalis part fine-tunes tension|Inner surface of the thyroid cartilage|Anterolateral arytenoid cartilage|Recurrent laryngeal nerve (CN X)
 levator veli palatini|Throat|Elevates the soft palate during swallowing and speech|Petrous temporal bone and cartilage of the auditory tube|Palatine aponeurosis|Pharyngeal plexus (CN X)
 tensor veli palatini|Throat|Tenses the soft palate; opens the auditory tube (equalises ear pressure)|Scaphoid fossa of the sphenoid and auditory tube cartilage|Palatine aponeurosis, after hooking around the pterygoid hamulus|Mandibular nerve (CN V3)
-sternocleidomastoid|Neck|One side: tilts the head to the same side and turns the face to the opposite side; both sides: flex the neck; assists forced inhalation|Manubrium and medial third of the clavicle|Mastoid process and superior nuchal line|Accessory nerve (CN XI); C2–C3 for sensation
+sternocleidomastoid|Neck|One side: tilts the head to the same side and turns the face to the opposite side; both sides: flex the neck; assists forced inhalation|Manubrium and medial third of the clavicle|Mastoid process and superior nuchal line|Accessory nerve (CN XI); C2–C3 for proprioception
 platysma|Neck|Tenses the skin of the neck; pulls the corners of the mouth down|Fascia over the upper pectoralis major and deltoid|Lower border of the mandible and skin of the lower face|Facial nerve (CN VII), cervical branch
 scalenus anterior|Neck|Elevates the first rib; flexes and tilts the neck to the same side|Transverse processes of C3–C6|Scalene tubercle of the first rib|Ventral rami of C4–C6
 scalenus medius|Neck|Elevates the first rib; tilts the neck to the same side|Transverse processes of C2–C7|Upper surface of the first rib|Ventral rami of C3–C8
@@ -144,10 +144,10 @@ vastus intermedius|Thigh|Extends the knee|Anterior and lateral femoral shaft|Pat
 pectineus|Thigh|Adducts and flexes the hip|Pectineal line of the pubis|Pectineal line of the femur|Femoral nerve (L2–L3), sometimes obturator nerve
 adductor longus|Thigh|Adducts and flexes the hip|Body of the pubis|Middle third of the linea aspera|Obturator nerve (L2–L4)
 adductor brevis|Thigh|Adducts the hip|Body and inferior ramus of the pubis|Upper linea aspera|Obturator nerve (L2–L4)
-adductor magnus|Thigh|Adducts the hip; adductor part flexes, hamstring part extends the hip|Inferior pubic ramus, ischial ramus, ischial tuberosity|Linea aspera and adductor tubercle|Obturator nerve (adductor part); tibial nerve (hamstring part)
+adductor magnus|Thigh|Adducts the hip; adductor part flexes, hamstring part extends the hip|Inferior pubic ramus, ischial ramus, ischial tuberosity|Linea aspera and adductor tubercle|Adductor part: obturator nerve (L2–L4). Hamstring part: tibial part of the sciatic nerve (L4)
 adductor minimus|Thigh|Adducts and externally rotates the hip (upper part of adductor magnus)|Inferior pubic ramus|Upper linea aspera|Obturator nerve (L2–L4)
 gracilis|Thigh|Adducts the hip; flexes and internally rotates the knee|Body and inferior ramus of the pubis|Medial upper tibia (pes anserinus)|Obturator nerve (L2–L3)
-biceps femoris|Thigh|Flexes the knee; long head extends the hip; externally rotates the bent knee|Long head: ischial tuberosity. Short head: linea aspera|Head of the fibula|Long head: tibial nerve. Short head: common fibular nerve (L5–S2)
+biceps femoris|Thigh|Flexes the knee; long head extends the hip; externally rotates the bent knee|Long head: ischial tuberosity. Short head: linea aspera|Head of the fibula|Long head: tibial part of the sciatic nerve (L5–S2). Short head: common fibular part of the sciatic nerve (L5–S2)
 semitendinosus|Thigh|Flexes the knee; extends the hip; internally rotates the bent knee|Ischial tuberosity|Medial upper tibia (pes anserinus)|Tibial part of the sciatic nerve (L5–S2)
 semimembranosus|Thigh|Flexes the knee; extends the hip; internally rotates the bent knee|Ischial tuberosity|Posterior medial tibial condyle|Tibial part of the sciatic nerve (L5–S2)
 tibialis anterior|Lower leg|Dorsiflexes the ankle; inverts the foot|Lateral condyle and upper lateral tibia|Medial cuneiform and base of the 1st metatarsal|Deep fibular nerve (L4–L5)
@@ -162,7 +162,7 @@ plantaris|Lower leg|Weakly assists plantarflexion and knee flexion|Lateral supra
 popliteus|Lower leg|Unlocks the extended knee by rotating the femur on the tibia|Lateral femoral condyle|Posterior tibia above the soleal line|Tibial nerve (L4–S1)
 flexor digitorum longus|Lower leg|Flexes toes 2–5; plantarflexes the ankle; supports the arch|Posterior tibia|Distal phalanges of toes 2–5|Tibial nerve (S2–S3)
 flexor hallucis longus|Lower leg|Flexes the big toe; plantarflexes the ankle; push-off in walking|Posterior fibula and interosseous membrane|Distal phalanx of the big toe|Tibial nerve (S2–S3)
-tibialis posterior|Lower leg|Inverts the foot; plantarflexes the ankle; main support of the medial arch|Posterior tibia, fibula and interosseous membrane|Navicular, cuneiforms, bases of metatarsals 2–4|Tibial nerve (L4–L5)
+tibialis posterior|Lower leg|Inverts the foot; plantarflexes the ankle; main dynamic support of the medial arch|Posterior tibia, fibula and interosseous membrane|Navicular, cuneiforms, bases of metatarsals 2–4|Tibial nerve (L4–L5)
 extensor hallucis brevis|Foot|Extends the big toe|Dorsal calcaneus|Proximal phalanx of the big toe|Deep fibular nerve (L5–S1)
 abductor hallucis|Foot|Abducts and flexes the big toe; supports the medial arch|Medial calcaneal tuberosity and flexor retinaculum|Proximal phalanx of the big toe|Medial plantar nerve (S1–S2)
 flexor digitorum brevis|Foot|Flexes toes 2–5 at the middle joints|Medial calcaneal tuberosity and plantar aponeurosis|Middle phalanges of toes 2–5|Medial plantar nerve (S1–S2)
@@ -177,7 +177,7 @@ plantar interossei (foot)|Foot|Bring toes 3–5 toward the 2nd toe (adduction); 
 calcaneal tendon|Connective tissue|The Achilles tendon: the thickest and strongest tendon, transmitting the pull of gastrocnemius and soleus to the heel|||
 iliotibial tract|Connective tissue|Thick band of fascia on the outer thigh; transmits force from gluteus maximus and tensor fasciae latae and stabilises the knee|||
 thoracolumbar fascia|Connective tissue|Layered fascia of the lower back that encloses the deep back muscles and links latissimus dorsi, gluteus maximus and the abdominal muscles into one force-transmitting system|||
-flexor retinaculum of wrist|Connective tissue|Fibrous band forming the roof of the carpal tunnel, through which the finger flexor tendons and the median nerve pass|||
+flexor retinaculum of wrist|Connective tissue|Fibrous band forming the roof of the carpal tunnel, through which the long flexor tendons of the fingers and thumb and the median nerve pass|||
 interosseous membrane of forearm|Connective tissue|Sheet of fibrous tissue joining radius and ulna; transfers load between them and anchors deep forearm muscles|||
 interosseous membrane of leg|Connective tissue|Sheet of fibrous tissue joining tibia and fibula; anchors deep leg muscles|||
 long plantar ligament|Connective tissue|The longest ligament of the sole; supports the lateral longitudinal arch|||
