@@ -310,6 +310,60 @@ async function phoneRun(){
  ok(q('#volsum [data-key="flexor digitorum superficialis"]'),'summary row still selects its first key');
  q('#wkClear').click();addEx('Leg extension');
  ok(rowVal('Quadriceps')===3,'Quadriceps row: '+rowVal('Quadriceps'));
+ // ---- weekly-volume goal ----
+ const gl=k=>w.localStorage.getItem(k),setSel=(v)=>{q('#goalSel').value=v;ev(q('#goalSel'),'change');},legend=()=>qa('#volLegend span').map(s=>s.textContent).join('|');
+ const rowStat=n=>{const r=qa('#volsum tr').find(r=>r.cells[0].textContent.trim()===n);return r?r.cells[2].textContent.split('·')[1].trim():'';},rowBar=n=>{const r=qa('#volsum tr').find(r=>r.cells[0].textContent.trim()===n);return r&&r.querySelector('.vbar i')?r.querySelector('.vbar i').className:'';};
+ ok(gl('aom.goal.v1')===null&&q('#goalSel').value==='hyp8'&&legend()==='Under 4|4–7.5|8–12|Over 12|None','default goal is Muscle, close to failure 8–12 with nothing stored; legend: '+legend());
+ ok(qa('#goalSel option').map(o=>o.value).join()==='maintain,strength,hyp8,hyp10,custom'&&q('#goalCust').hidden,'goal select offers the four presets and Custom; custom inputs hidden');
+ ok(rowStat('Quadriceps')==='Low'&&rowBar('Quadriceps')==='v0'&&qa('#volsum .vbar b').length===27,'3 sets vs 8–12: Quadriceps is "Low" (v0); every bar carries a target marker');
+ setSel('maintain');
+ ok(JSON.stringify(JSON.parse(gl('aom.goal.v1')))==='{"g":"maintain","lo":4,"hi":6}'&&legend()==='Under 2|2–3.5|4–6|Over 6|None','Maintain persists {g,lo,hi} to aom.goal.v1 and rewrites the legend: '+gl('aom.goal.v1')+' '+legend());
+ ok(rowStat('Quadriceps')==='Below target'&&rowBar('Quadriceps')==='v1','Maintain: 3 sets is "Below target" (v1)');
+ for(let k=0;k<5;k++) q('#plan [data-inc="0"]').click();
+ ok(rowVal('Quadriceps')===8&&rowStat('Quadriceps')==='More than needed'&&rowBar('Quadriceps')==='v3','Maintain: 8 sets is "More than needed" (v3, not the in-target colour)');
+ setSel('hyp8');
+ ok(rowStat('Quadriceps')==='In target'&&rowBar('Quadriceps')==='v2'&&JSON.parse(gl('aom.goal.v1')).g==='hyp8','back to 8–12: 8 sets is "In target" (v2)');
+ q('#tVol').checked=true;ev(q('#tVol'),'change');q('#volsum [data-key="vastus lateralis"]').click();
+ ok(C().includes('Your week: 8 sets (in target)'),'muscle card uses the goal status: '+(C().match(/Your week[^)]*\)/)||[''])[0]);
+ q('#tVol').checked=false;ev(q('#tVol'),'change');
+ setSel('custom');
+ ok(!q('#goalCust').hidden&&q('#goalLo').value==='8'&&q('#goalHi').value==='12'&&JSON.parse(gl('aom.goal.v1')).g==='custom','Custom shows the two inputs, starting from the current range');
+ const cust=(lo,hi)=>{if(lo!==null){q('#goalLo').value=lo;ev(q('#goalLo'),'change');}if(hi!==null){q('#goalHi').value=hi;ev(q('#goalHi'),'change');}return JSON.parse(gl('aom.goal.v1'));};
+ let cg=cust(6,9);
+ ok(cg.g==='custom'&&cg.lo===6&&cg.hi===9&&legend()==='Under 3|3–5.5|6–9|Over 9|None','valid custom 6–9 persists and drives the legend: '+legend());
+ cg=cust(null,4);
+ ok(cg.lo>=1&&cg.lo<=cg.hi&&cg.hi===4&&q('#goalLo').value===String(cg.lo),'hi below lo is clamped (lo follows): '+JSON.stringify(cg));
+ cg=cust(12,null);
+ ok(cg.lo<=cg.hi&&cg.lo===12&&q('#goalHi').value===String(cg.hi),'lo above hi is clamped (hi follows): '+JSON.stringify(cg));
+ cg=cust(0,null);cg=cust(null,99);
+ ok(cg.lo===1&&cg.hi===40,'out-of-range values clamp to 1..40: '+JSON.stringify(cg));
+ // ---- gap filler ----
+ setSel('hyp8');q('#wkClear').click();
+ const sugNames=()=>qa('#sug li .exlink').map(b=>b.textContent),sugGroups=li=>li.querySelector('small').textContent.split(' · ').slice(1).map(s=>s.replace(/ \+[\d.]+$/,''));
+ ok(qa('#sug li').length===3&&/starter set/.test(q('#sug').textContent)&&new Set(sugNames()).size===3,'empty plan: three distinct starter suggestions ('+sugNames().join(', ')+')');
+ addEx('Back squat');addEx('Barbell bench press');
+ const sn=sugNames(),first=qa('#sug li')[0],fg=sugGroups(first),before=fg.map(rowVal);
+ ok(sn.length>=1&&sn.length<=3&&!sn.some(n=>plan().some(p=>p.n===n))&&!/starter set/.test(q('#sug').textContent),'plan of squat + bench: '+sn.length+' suggestions, none already in the plan ('+sn.join(', ')+')');
+ ok(fg.length>=1&&fg.length<=3&&before.every(v=>v<8),'first suggestion lists groups that are below target before adding: '+first.querySelector('small').textContent+' '+JSON.stringify(before));
+ const added=first.querySelector('.exlink').textContent;
+ first.querySelector('[data-sadd]').click();
+ const pl=plan();
+ ok(pl.length===3&&pl[2].n===added&&pl[2].sets===3,'"+ Add 3 sets" appends the suggestion with 3 sets ('+added+')');
+ ok(!sugNames().includes(added)&&sugNames().join()!==sn.join()&&fg.every((g,k)=>rowVal(g)>before[k]),'suggestions change after adding and the listed groups went up');
+ const sx=q('#sug .exlink').textContent;q('#sug .exlink').click();
+ ok(q('#card h2')&&q('#card h2').textContent===sx,'a suggestion name opens its exercise card ('+sx+')');
+ q('[data-tab="wk"]').click();
+ // equipment filter restricts the candidates
+ const EQC=['Barbell','Dumbbells','Kettlebell','Cable','Machine','Band','Other'];
+ EQC.forEach(c=>q('[data-eq="'+c+'"]').click());
+ const bw=qa('#sug li .exlink').map(b=>b.textContent);
+ ok(bw.length>=1&&bw.every(n=>META.ex.find(e=>e.n===n).eq.includes('Bodyweight')),'Bodyweight only: every suggestion is bodyweight-compatible ('+bw.join(', ')+')');
+ q('#eqAll').click();
+ // when every group reaches the target the block says so (1–40 sets: add suggestions until done)
+ q('#wkClear').click();cust(1,null);cg=cust(null,40);
+ let guard=0;while(q('#sug [data-sadd]')&&guard++<40) q('#sug [data-sadd]').click();
+ ok(/Every muscle group is at or above its target\./.test(q('#sug').textContent)&&!q('#sug [data-sadd]')&&qa('#volsum tr').every(r=>parseFloat(r.cells[2].textContent)>=1),'all 27 groups at the 1-set target after '+plan().length+' greedy additions: "Every muscle group…" shown');
+ setSel('hyp8');q('#wkClear').click();
  // desktop instance: no matchMedia stub, so the phone code paths stay inactive
  ok(w.__dpr===2&&!q('#side').classList.contains('has-card')&&q('#card').parentNode===q('#vp'),'desktop: pixel ratio capped at 2, card floats in the viewport, sheet classes unused');
  ok(q('#btnLayers').getAttribute('aria-expanded')==='false'&&q('#popLayers').contains(q('#tBones'))&&q('#popLayers').contains(q('#opM')),'desktop: layer toggles and opacity sliders live in the Layers popover, closed by default');

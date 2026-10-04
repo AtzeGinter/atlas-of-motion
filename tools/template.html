@@ -192,9 +192,19 @@ select.search{appearance:auto;}
 .vsum td{padding:5px 6px 5px 0;border-bottom:1px solid var(--line);}
 .vsum td:nth-child(2){width:38%;}
 .vsum td:last-child{text-align:right;white-space:nowrap;color:var(--muted);font-size:12px;padding-right:0;}
-.vbar{height:7px;border-radius:4px;background:var(--line);overflow:hidden;}
+.vbar{height:7px;border-radius:4px;background:var(--line);overflow:hidden;position:relative;}
 .vbar i{display:block;height:100%;}
-.v0{background:#f6e3a1;}.v1{background:#f3a14b;}.v2{background:#d6402b;}.v3{background:#7e1d57;}
+.vbar b{position:absolute;top:0;bottom:0;min-width:2px;border:solid var(--ink);border-width:0 1px;opacity:.4;pointer-events:none;box-sizing:border-box;}
+.v0{background:#f6e3a1;}.v1{background:#f3a14b;}.v2{background:#2f9e68;}.v3{background:#7e1d57;}
+.goal{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:8px;margin-bottom:6px;font-size:13px;color:var(--muted);}
+.goal[hidden]{display:none;}
+.goal .search{margin:0;}
+.goal .cust{display:flex;align-items:center;gap:8px;}
+.goal input.search{width:76px;}
+.sug{margin:6px 0 0;padding:0;list-style:none;}
+.sug li{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;}
+.sug small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px;}
+.sug .btn{white-space:nowrap;padding:5px 10px;font-size:12.5px;}
 .ca2{background:#2f6fd0;}.ca1{background:#93bdf2;}.ceq{background:#b49ae0;}.cb1{background:#f6b27a;}.cb2{background:#e0601e;}
 .cmpt{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;}
 .cmpt th{text-align:left;font-weight:500;color:var(--muted);font-size:11.5px;padding:0 6px 4px 0;border-bottom:1px solid var(--line);}
@@ -317,13 +327,19 @@ select.search{appearance:auto;}
       <div class="addres" id="addres"></div>
     </div>
     <div class="sec">
+      <div class="goal"><label for="goalSel">Goal</label><select class="search" id="goalSel" aria-label="Weekly volume goal"></select></div>
+      <div class="goal" id="goalCust" hidden><span>Sets</span><div class="cust"><input class="search" id="goalLo" type="number" min="1" max="40" step="1" inputmode="numeric" aria-label="Target minimum sets per week"><span>to</span><input class="search" id="goalHi" type="number" min="1" max="40" step="1" inputmode="numeric" aria-label="Target maximum sets per week"></div></div>
       <label class="toggle"><span>Show weekly volume on the body</span><input type="checkbox" id="tVol"></label>
-      <div class="legend"><span><i class="sw v0"></i>Under 4</span><span><i class="sw v1"></i>4–9</span><span><i class="sw v2"></i>10–20</span><span><i class="sw v3"></i>Over 20</span><span><i class="sw l0"></i>None</span></div>
+      <div class="legend" id="volLegend"></div>
+    </div>
+    <div class="sec" id="sugSec">
+      <h2>Suggested to complete your week</h2>
+      <div id="sug"></div>
     </div>
     <div class="sec">
       <h2>Weekly sets per muscle</h2>
       <div id="volsum"></div>
-      <p class="fine">Sets where a muscle is a prime mover count fully, synergist sets count half, stabiliser work is not counted. Roughly 10–20 hard sets per muscle per week is a common hypertrophy target; fewer still builds strength, more is not automatically better. Your plan is saved in this browser only.</p>
+      <p class="fine">Around 10 hard sets per muscle per week clearly beats fewer; more still helps a little for size, with diminishing returns, while strength plateaus earlier. Sets taken close to failure count more but also cost more recovery, so 8–12 is a practical range for most people. Synergist sets count half, stabiliser work is not counted. The faint markers show your target range. Your plan is saved in this browser only.</p>
     </div>
     </div>
 
@@ -418,7 +434,7 @@ function keyMat(k){
 const M_SEL=stdMat(lin(0x3cc6d6),{emissive:lin(0x0a3238),roughness:0.45});
 const HM={3:stdMat(lin(0xd62f1f),{emissive:lin(0x2a0400),roughness:0.5}),2:stdMat(lin(0xf08a3c),{emissive:lin(0x1e0c00),roughness:0.5}),1:stdMat(lin(0xf3d27a),{roughness:0.55})};
 const CM={a2:stdMat(lin(0x2f6fd0),{roughness:0.5}),a1:stdMat(lin(0x93bdf2),{roughness:0.55}),eq:stdMat(lin(0xb49ae0),{roughness:0.55}),b1:stdMat(lin(0xf6b27a),{roughness:0.55}),b2:stdMat(lin(0xe0601e),{roughness:0.5})};
-const VM=[stdMat(lin(0xf6e3a1),{roughness:0.55}),stdMat(lin(0xf3a14b),{roughness:0.55}),stdMat(lin(0xd6402b),{roughness:0.5}),stdMat(lin(0x7e1d57),{roughness:0.5})];
+const VM=[stdMat(lin(0xf6e3a1),{roughness:0.55}),stdMat(lin(0xf3a14b),{roughness:0.55}),stdMat(lin(0x2f9e68),{roughness:0.5}),stdMat(lin(0x7e1d57),{roughness:0.5})];
 const M_GREY=stdMat(lin(0xa3aeb4),{transparent:true,opacity:0.16,depthWrite:false});
 const M_HOV=stdMat(lin(0xe0605a),{emissive:lin(0x30100c)});
 const M_FADE=stdMat(lin(0x9aa7ae),{transparent:true,opacity:0.06,depthWrite:false});
@@ -931,8 +947,32 @@ function meshLevels(tg){const mp=new Map(); tg.forEach(r=>(byKey[r[0]]||[]).forE
 function volumeByMesh(){const mp=new Map(); plan.forEach(p=>{meshLevels(effTargets(EXI[p.n],p.v)).forEach((l,m)=>mp.set(m,(mp.get(m)||0)+p.sets*VOLF[l]));}); return mp;}
 let volCache=null;
 function volOfKey(k,part){ if(!volCache) volCache=volumeByMesh(); let v=0; (byKey[k]||[]).forEach(m=>{if(!part||m.userData.part===part) v=Math.max(v,volCache.get(m)||0);}); return v; }
-const volBand=s=>s<4?0:(s<10?1:(s<=20?2:3));
-const volStatus=s=>s<=0?"Not trained":(s<4?"Low":(s<10?"Moderate":(s<=20?"In target range":"High")));
+/* weekly-volume goal: target range [lo,hi] sets per muscle group; bands relative to it: 0 low (<lo/2), 1 below target, 2 in target, 3 more than needed */
+const GOALS={maintain:["Maintain",4,6],strength:["Strength",6,10],hyp8:["Muscle, close to failure",8,12],hyp10:["Muscle, moderate intensity",10,20]}, GOAL_KEY="aom.goal.v1", VST=["Low","Below target","In target","More than needed"];
+const goalOK=(lo,hi)=>Number.isInteger(lo)&&Number.isInteger(hi)&&lo>=1&&hi>=lo&&hi<=40;
+function loadGoal(){const o=store.get(GOAL_KEY,null);
+  if(o&&GOALS[o.g]) return {g:o.g,lo:GOALS[o.g][1],hi:GOALS[o.g][2]};
+  if(o&&o.g==="custom"&&goalOK(o.lo,o.hi)) return {g:"custom",lo:o.lo,hi:o.hi};
+  return {g:"hyp8",lo:8,hi:12};}
+let tg=loadGoal();
+const rng=(a,b)=>a===b?""+a:a+"–"+b;
+const volBand=s=>s<tg.lo/2?0:(s<tg.lo?1:(s<=tg.hi?2:3));
+const volStatus=s=>s<=0?"Not trained":VST[volBand(s)];
+function renderLegend(){const a=tg.lo/2, t=[["v0","Under "+fmt(a)],["v1",rng(fmt(a),fmt(tg.lo-0.5))],["v2",rng(tg.lo,tg.hi)],["v3","Over "+tg.hi]];
+  $("#volLegend").innerHTML=t.map((x,b)=>'<span title="'+VST[b]+'"><i class="sw '+x[0]+'"></i>'+x[1]+'</span>').join("")+'<span><i class="sw l0"></i>None</span>';}
+function syncGoalUI(){ $("#goalSel").value=tg.g; $("#goalCust").hidden=tg.g!=="custom"; $("#goalLo").value=tg.lo; $("#goalHi").value=tg.hi; renderLegend(); }
+function setGoal(g,lo,hi){
+  tg={g:g,lo:lo,hi:hi}; store.set(GOAL_KEY,tg); syncGoalUI(); renderVolSum(); renderSuggest();
+  if(mode==="vol"){ setMode("vol"); if(sel&&view==="sel") renderCard(); }
+}
+$("#goalSel").innerHTML=Object.keys(GOALS).map(k=>'<option value="'+k+'">'+GOALS[k][0]+' · '+rng(GOALS[k][1],GOALS[k][2])+'</option>').join("")+'<option value="custom">Custom range</option>';
+$("#goalSel").onchange=e=>{const g=e.target.value; if(g==="custom") setGoal("custom",tg.lo,tg.hi); else setGoal(g,GOALS[g][1],GOALS[g][2]);};
+function goalInput(hiEdited){
+  const c=x=>Math.min(40,Math.max(1,Math.round(+$(x).value)||0)); let lo=c("#goalLo"), hi=c("#goalHi");
+  if(lo>hi){ if(hiEdited) lo=hi; else hi=lo; }
+  setGoal("custom",lo,hi);
+}
+$("#goalLo").onchange=()=>goalInput(false); $("#goalHi").onchange=()=>goalInput(true);
 function setMode(m){
   mode=m; heat=null; heatTip=null;
   if(m==="ex"){ const lv=meshLevels(effTargets(selEx,exVars[selEx])); heat=new Map(); heatTip=new Map(); lv.forEach((l,ms)=>{heat.set(ms,HM[l]); heatTip.set(ms,ROLE[l].toLowerCase());}); }
@@ -985,7 +1025,7 @@ document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ openTab(b.dat
 
 /* equipment */
 function buildEq(){ $("#eqchips").innerHTML=EQCATS.map(c=>'<button class="chip" data-eq="'+c+'" aria-pressed="'+eqOn.has(c)+'">'+c+'</button>').join(""); }
-function eqChanged(){ store.set(EQ_KEY,[...eqOn]); buildEq(); buildExList(); buildBest(); buildAdd(); if(sel&&view==="sel") renderCard(); }
+function eqChanged(){ store.set(EQ_KEY,[...eqOn]); buildEq(); buildExList(); buildBest(); buildAdd(); renderSuggest(); if(sel&&view==="sel") renderCard(); }
 $("#eqchips").addEventListener("click",e=>{const c=e.target.closest("[data-eq]"); if(!c) return; const k=c.dataset.eq; eqOn.has(k)?eqOn.delete(k):eqOn.add(k); eqChanged();});
 $("#eqAll").onclick=()=>{eqOn=new Set(EQCATS); eqChanged();};
 
@@ -1011,7 +1051,7 @@ $("#best").addEventListener("click",e=>{const t=e.target.closest("[data-ex]"); i
 const SUMMARY=[["Upper chest","pectoralis major|clavicular part"],["Mid and lower chest","pectoralis major|sternocostal part"],["Front delts","deltoid|clavicular part"],["Side delts","deltoid|acromial part"],["Rear delts","deltoid|spinal part"],["Upper traps","trapezius|descending part"],["Mid traps","trapezius|transverse part"],["Rhomboids","rhomboid major,rhomboid minor"],["Lats","latissimus dorsi"],["Rotator cuff (infraspinatus)","infraspinatus"],["Biceps","biceps brachii"],["Brachialis","brachialis"],["Triceps","triceps brachii"],["Forearm flexors","flexor digitorum superficialis,flexor digitorum profundus,flexor carpi radialis,flexor carpi ulnaris"],["Forearm extensors","extensor carpi radialis longus,extensor carpi radialis brevis,extensor carpi ulnaris,extensor digitorum"],["Abs","rectus abdominis"],["Obliques","external oblique,internal oblique"],["Lower back","iliocostalis,longissimus,multifidus"],["Glutes","gluteus maximus"],["Glute medius","gluteus medius"],["Hip flexors","psoas major,iliacus"],["Quadriceps","vastus lateralis,vastus medialis,vastus intermedius,rectus femoris"],["Hamstrings","biceps femoris,semitendinosus,semimembranosus"],["Adductors","adductor magnus,adductor longus,adductor brevis"],["Calves (gastrocnemius)","gastrocnemius"],["Soleus","soleus"],["Tibialis anterior","tibialis anterior"]];
 function savePlan(){ store.set(PLAN_KEY,plan.map(p=>({n:p.n,sets:p.sets,v:varNames(EXI[p.n],p.v)}))); }
 function addToPlan(i,v){ plan.push({n:EX[i].n,sets:3,v:(v||[]).slice()}); planChanged(); }
-function planChanged(){ savePlan(); volCache=null; renderPlan(); renderVolSum(); if(mode==="vol") setMode("vol"); }
+function planChanged(){ savePlan(); volCache=null; renderPlan(); renderVolSum(); renderSuggest(); if(mode==="vol") setMode("vol"); }
 function renderPlan(){
   const tot=plan.reduce((a,p)=>a+p.sets,0);
   $("#plan").innerHTML=plan.length?plan.map((p,ix)=>{const i=EXI[p.n], vt=varText(i,p.v);
@@ -1039,9 +1079,38 @@ $("#addres").addEventListener("click",e=>{const t=e.target.closest("[data-add]")
 function renderVolSum(){
   if(!plan.length){$("#volsum").innerHTML='<p class="empty">Add exercises to see your weekly volume.</p>'; return;}
   const rows=SUMMARY.map(r=>{const ms=r[1].split(",").map(x=>x.split("|")); return [r[0],ms[0][0],Math.max(...ms.map(x=>volOfKey(x[0],x[1]||"")))];});
+  const full=tg.hi*1.5, mk='<b style="left:'+tg.lo/full*100+'%;width:'+(tg.hi-tg.lo)/full*100+'%"></b>';
   $("#volsum").innerHTML='<table class="vsum"><tbody>'+rows.map(r=>{const s=r[2], b=volBand(s);
-    return '<tr><td><button class="exlink" data-key="'+r[1]+'">'+r[0]+'</button></td><td><div class="vbar">'+(s>0?'<i class="v'+b+'" style="width:'+Math.min(100,s/25*100)+'%"></i>':'')+'</div></td><td>'+fmt(s)+' · '+volStatus(s)+'</td></tr>';}).join("")+'</tbody></table>';
+    return '<tr><td><button class="exlink" data-key="'+r[1]+'">'+r[0]+'</button></td><td><div class="vbar">'+(s>0?'<i class="v'+b+'" style="width:'+Math.min(100,s/full*100)+'%"></i>':'')+mk+'</div></td><td>'+fmt(s)+' · '+volStatus(s)+'</td></tr>';}).join("")+'</tbody></table>';
 }
+/* gap filler: greedy top 3 default-variation exercises (3 sets each) that lift the most groups up to the goal's lower bound without overshooting its upper bound */
+let sumG=null; const sugC={};
+function sumMeshes(){ return sumG||(sumG=SUMMARY.map(r=>{const s=new Set(); r[1].split(",").forEach(x=>{const [k,p]=x.split("|"); (byKey[k]||[]).forEach(m=>{if(!p||m.userData.part===p) s.add(m);});}); return [r[0],[...s]];})); }
+function sugAdd(i){ if(!sugC[i]){const mp=new Map(); meshLevels(effTargets(i,[])).forEach((l,m)=>{if(VOLF[l]) mp.set(m,3*VOLF[l]);}); sugC[i]=mp;} return sugC[i]; }
+function suggestions(){
+  if(!volCache) volCache=volumeByMesh();
+  const G=sumMeshes(), vol=new Map(volCache), lo=tg.lo, hi=tg.hi, used=new Set(plan.map(p=>p.n)), out=[];
+  const val=(ms,c)=>{let v=0; for(let j=0;j<ms.length;j++) v=Math.max(v,(vol.get(ms[j])||0)+(c&&c.get(ms[j])||0)); return v;};
+  const gaps=G.some(g=>val(g[1])<lo);
+  while(gaps&&out.length<3){
+    const s=G.map(g=>val(g[1])); if(!s.some(x=>x<lo)) break;
+    let best=null;
+    EX.forEach((e,i)=>{ if(used.has(e.n)||!eqOK(i)) return; const c=sugAdd(i); let sc=0; const gs=[];
+      G.forEach((g,gi)=>{ const n=val(g[1],c); if(n===s[gi]) return; const f=Math.min(n,lo)-Math.min(s[gi],lo);
+        sc+=f-0.5*(Math.max(0,n-hi)-Math.max(0,s[gi]-hi)); if(f>0) gs.push([g[0],n-s[gi],f]); });
+      if(sc>1e-9&&(!best||sc>best.sc)) best={i:i,sc:sc,gs:gs.sort((a,b)=>b[2]-a[2]).slice(0,3)}; });
+    if(!best) break;
+    used.add(EX[best.i].n); out.push(best); sugAdd(best.i).forEach((v,m)=>vol.set(m,(vol.get(m)||0)+v));
+  }
+  return {gaps:gaps,out:out};
+}
+function renderSuggest(){
+  const r=suggestions(), t=rng(tg.lo,tg.hi);
+  $("#sug").innerHTML=!r.gaps?'<p class="empty">Every muscle group is at or above its target.</p>':
+    '<p class="fine" style="margin-top:0!important">'+(plan.length?'Exercises that fill the biggest gaps below '+t+' sets per muscle group.':'Your week is empty, so these make a starter set toward '+t+' sets per muscle group.')+'</p>'+
+    (r.out.length?'<ul class="sug">'+r.out.map(x=>'<li><div><button class="exlink" data-ex="'+x.i+'">'+EX[x.i].n+'</button><small>'+EX[x.i].e.toLowerCase()+' · '+x.gs.map(g=>g[0]+' +'+fmt(g[1])).join(' · ')+'</small></div><button class="btn" data-sadd="'+x.i+'">+ Add 3 sets</button></li>').join("")+'</ul>':'<p class="empty">No exercise with your equipment fills the remaining gaps.</p>');
+}
+$("#sug").addEventListener("click",e=>{const t=e.target.closest("button"); if(!t) return; if(t.dataset.sadd!==undefined) addToPlan(+t.dataset.sadd,[]); else if(t.dataset.ex!==undefined) selectEx(+t.dataset.ex);});
 $("#volsum").addEventListener("click",e=>{const t=e.target.closest("[data-key]"); if(t) select("muscle",t.dataset.key,true);});
 $("#tVol").onchange=e=>{ volOn=e.target.checked; if(volOn){selEx=null;cmp=null;cmpPick=false; if(view!=="sel") view="sel"; setMode("vol"); renderCard(); syncExList();} else if(mode==="vol") setMode(null); };
 
@@ -1106,7 +1175,7 @@ $("#foot").innerHTML=nMus+" muscles in "+muscleMeshes.length+" meshes, "+Object.
  "Meshes from <a href='https://lifesciencedb.jp/bp3d/' target='_blank' rel='noopener'>BodyParts3D</a> (© The Database Center for Life Science, CC BY-SA 2.1 JP) and "+
  "<a href='https://www.z-anatomy.com/' target='_blank' rel='noopener'>Z-Anatomy</a> (CC BY-SA 4.0), as aligned in Johan Bellander's BodyExplorer, further decimated here (Low and Medium; High is the unreduced source). "+
  "The mesh data on this page is shared under CC BY-SA 4.0. For learning, not for clinical use.";
-buildList(); buildEq(); buildExList(); buildBest(); renderPlan(); renderVolSum(); syncModeUI(); applyVisuals();
+buildList(); buildEq(); buildExList(); buildBest(); renderPlan(); renderVolSum(); renderSuggest(); syncGoalUI(); syncModeUI(); applyVisuals();
 $("#loading").remove();
 })();
 </script>
