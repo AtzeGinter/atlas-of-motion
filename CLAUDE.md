@@ -21,6 +21,7 @@ LICENSE-DATA          CC BY-SA 4.0: embedded 3D mesh data.
 tools/
   template.html       The whole app source: HTML + CSS + one inline <script>. Placeholders __GEO__ and __META__.
   build.py            Mesh pipeline: load GLBs, decimate, transform, quantise, pack -> geo.b64 + meta.json
+  extract.py          Recover geo.b64 + meta2.json from the committed ../index.html (db/bdb rebuilt from data/*.txt + bones.py); replaces build.py + meta.py for non-mesh changes
   meta.py             Map each mesh to an anatomy key/side/part, attach muscle + bone info -> meta2.json
   bones.py            Bone descriptions and regions (imported by meta.py)
   exercises.py        Exercise database, variations, equipment categories -> meta3.json
@@ -45,7 +46,7 @@ python assemble.py          # -> ../index.html
 cd test && npm install && npm test
 ```
 
-If you only changed `template.html`, `data/*.txt`, `bones.py` or `exercises.py`, you can skip `build.py` as long as `geo.b64` and `meta.json` exist (they are git-ignored, so on a fresh clone the full pipeline is needed). Changing decimation in `build.py` changes mesh order/counts; always rerun everything after it.
+If you only changed `template.html`, `data/*.txt`, `bones.py` or `exercises.py`, skip `build.py` and `meta.py` and run `python extract.py && python exercises.py && python assemble.py` (no BodyExplorer clone needed; `extract.py` reads the mesh data and mesh list from the committed `../index.html` and rebuilds `db`/`bdb` from the text sources). Regenerating without edits reproduces `index.html` byte for byte. The full pipeline is still needed after changing `build.py` decimation or the mesh mapping in `meta.py` (`PARTPRE`, `HEADPRE`, `MERGE`). Scripts read/write UTF-8 with LF explicitly, so Windows builds are safe. Changing decimation in `build.py` changes mesh order/counts; always rerun everything after it.
 
 ### Source data
 

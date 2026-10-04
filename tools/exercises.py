@@ -1,5 +1,5 @@
 import json
-M=json.load(open('meta2.json'))
+M=json.load(open('meta2.json',encoding='utf-8'))
 DB=M['db']
 parts={}
 for k,key,side,part,nv,nf in M['meshes']:
@@ -264,7 +264,7 @@ for name,cat,eq,cue,spec in E:
             t[(key,part)]=max(t.get((key,part),0),l)
     out.append({'n':name,'c':cat,'e':eq,'q':cue,'t':[[k,p,l] for (k,p),l in sorted(t.items(),key=lambda x:-x[1])]})
 M['ex']=out
-json.dump(M,open('meta3.json','w'),separators=(',',':'))
+json.dump(M,open('meta3.json','w',encoding='utf-8',newline='\n'),separators=(',',':'))
 print(len(out),'exercises; muscles covered',len({k for e in out for k,_,_ in e['t']}))
 
 # ---------- variations: override levels (0 removes) ----------
@@ -310,5 +310,5 @@ EQ={"Barbell":["Barbell"],"Trap bar":["Barbell"],"Dumbbells":["Dumbbells"],"Dumb
     "Bar":["Bodyweight"],"Bench":["Bodyweight"],"Resistance band":["Band"],"Weight plate":["Other"],"Neck harness":["Other"],"Ab wheel":["Other"]}
 for e in out: e['eq']=EQ[e['e']]
 M['ex']=out
-json.dump(M,open('meta3.json','w'),separators=(',',':'))
+json.dump(M,open('meta3.json','w',encoding='utf-8',newline='\n'),separators=(',',':'))
 print('variations on',len(VARS))

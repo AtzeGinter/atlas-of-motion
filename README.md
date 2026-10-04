@@ -37,6 +37,15 @@ python assemble.py          # -> ../index.html
 cd test && npm install && npm test   # optional smoke test
 ```
 
+To rebuild after editing only `template.html`, `exercises.py`, `bones.py` or `data/*.txt`, skip the clone and recover the mesh data from the committed `index.html`:
+
+```bash
+cd tools
+python extract.py && python exercises.py && python assemble.py
+```
+
+The full pipeline above is still needed after changing decimation in `build.py` or the mesh-to-key mapping in `meta.py` (`PARTPRE`/`HEADPRE`/`MERGE`).
+
 Anatomy text lives in `tools/data/muscles.txt` (`key|group|action|origin|insertion|nerve`) and `tools/data/extra.txt`; bone text in `tools/bones.py`; exercises in `tools/exercises.py`.
 
 ## Accuracy and limitations

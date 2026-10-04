@@ -2,7 +2,7 @@ import trimesh, numpy as np, pyfqmr, json, gzip, base64, re, sys
 MR=float(sys.argv[1]) if len(sys.argv)>1 else 0.45
 BR=float(sys.argv[2]) if len(sys.argv)>2 else 0.35
 A=trimesh.load('BodyExplorer/public/anatomy.glb'); S=trimesh.load('BodyExplorer/public/skeleton.glb')
-mapping={e['name']:e for e in json.load(open('BodyExplorer/public/mesh_mapping.json'))}
+mapping={e['name']:e for e in json.load(open('BodyExplorer/public/mesh_mapping.json',encoding='utf-8'))}
 items=[]
 for kind,scn,ratio in (('m',A,MR),('b',S,BR)):
     for name,g in scn.geometry.items():
@@ -39,5 +39,5 @@ for kind,name,P,F in items:
     meta.append([kind,name,len(P),len(F)]); tot_f+=len(F)
 raw=b''.join(buf); gz=gzip.compress(raw,9)
 print('faces',tot_f,'raw',len(raw),'gz',len(gz),'b64',len(base64.b64encode(gz)))
-json.dump({'lo':lo2.tolist(),'span':span.tolist(),'meshes':meta},open('meta.json','w'))
-open('geo.b64','w').write(base64.b64encode(gz).decode())
+json.dump({'lo':lo2.tolist(),'span':span.tolist(),'meshes':meta},open('meta.json','w',encoding='utf-8',newline='\n'))
+open('geo.b64','w',newline='\n').write(base64.b64encode(gz).decode())
