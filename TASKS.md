@@ -26,7 +26,7 @@ Legend: **S/M/L** = rough size. **Agent** = suggested executor (`sonnet` for wel
 | 1.3 | ✅ **Done 2026-10-04.** ★ Weekly summary rows use a single representative muscle (Quadriceps = vastus lateralis only, Hamstrings = semitendinosus only, Lower back = iliocostalis). Use the max/avg over the whole group so rectus femoris-only or biceps-femoris-biased work shows up. | S | sonnet |
 | 1.4 | ✅ **Done 2026-10-04.** ★ Data lint script: field count per line in `muscles.txt`/`extra.txt`, duplicate keys, duplicate exercise names, every `EQ`/category value valid, `EXCATS` in template == categories in `exercises.py`. Run in CI. | S | sonnet |
 | 1.5 | ✅ **Done 2026-10-04.** ★ Refactor duplicated body-depth logic (`focusOn` re-implements `bodyZ`). | S | sonnet |
-| 1.6 | Anatomy review pass, focusing on innervation of small hand/foot/laryngeal muscles (flagged as most error-prone). Ideally an anatomist; otherwise cross-check against Gray's/TA2 and record sources. | L | opus + you |
+| 1.6 | ✅ **Done 2026-10-04.** Anatomy review pass, focusing on innervation of small hand/foot/laryngeal muscles (flagged as most error-prone). Ideally an anatomist; otherwise cross-check against Gray's/TA2 and record sources. | L | opus + you |
 
 ## P1b: UI cleanup and mobile experience (requested 2026-10-04)
 
@@ -39,10 +39,10 @@ Goal: less clutter on desktop, and a phone layout that actually works. The curre
 | # | Task | Size | Agent |
 |---|------|------|-------|
 | 5.1 | ✅ **Done 2026-10-04** (findings and decisions below). **Audit first**: screenshots at 375×812, 768×1024 and desktop (browser pane mobile emulation + a real phone). List concrete problems; agree on a target layout before coding. | S | opus + you |
-| 5.2 | **Desktop declutter / progressive disclosure**: move Layers, opacity sliders and View into a compact floating toolbar or "Display" popover on the viewport. Collapse rarely used sections by default. Sidebar keeps only the tabs and their content. Remember open/closed state per viewer. | M | sonnet |
-| 5.3 | **Mobile layout**: full-screen 3D view + a draggable **bottom sheet** (peek / half / full snap points). Tabs become a bottom nav. The selected muscle/exercise card lives *in* the sheet instead of floating over the model. Use `100dvh` and safe-area insets. | L | sonnet (opus to review) |
-| 5.4 | **Touch interaction**: tap shows a name label (replaces hover tooltip), double-tap to focus/zoom, larger tap-vs-drag threshold on touch, two-finger pan hint, touch-specific hint text. | M | sonnet |
-| 5.5 | **Touch targets and inputs**: ≥ 44 px hit areas (checkboxes, steppers, chips, × buttons). Inputs at 16 px font so iOS doesn't zoom on focus. Bigger variation buttons. | S | sonnet |
+| 5.2 | ✅ **Done 2026-10-04.** **Desktop declutter / progressive disclosure**: move Layers, opacity sliders and View into a compact floating toolbar or "Display" popover on the viewport. Collapse rarely used sections by default. Sidebar keeps only the tabs and their content. Remember open/closed state per viewer. | M | sonnet |
+| 5.3 | ✅ **Done 2026-10-04.** **Mobile layout**: full-screen 3D view + a draggable **bottom sheet** (peek / half / full snap points). Tabs become a bottom nav. The selected muscle/exercise card lives *in* the sheet instead of floating over the model. Use `100dvh` and safe-area insets. | L | sonnet (opus to review) |
+| 5.4 | ✅ **Done 2026-10-04.** **Touch interaction**: tap shows a name label (replaces hover tooltip), double-tap to focus/zoom, larger tap-vs-drag threshold on touch, two-finger pan hint, touch-specific hint text. | M | sonnet |
+| 5.5 | ✅ **Done 2026-10-04.** **Touch targets and inputs**: ≥ 44 px hit areas (checkboxes, steppers, chips, × buttons). Inputs at 16 px font so iOS doesn't zoom on focus. Bigger variation buttons. | S | sonnet |
 | 5.6 | **Phone performance**: cap pixel ratio at ~1.5 on small screens, measure load and FPS on a mid-range phone, consider lower-detail geometry for mobile (ties in with 2.1/2.4/2.6). | M | sonnet |
 | 5.7 | Extend the smoke test with a mobile-width run (layout classes and the sheet open/close flow), plus manual check on iOS Safari and Android Chrome. | S | sonnet |
 
@@ -87,7 +87,7 @@ Goal: less clutter on desktop, and a phone layout that actually works. The curre
 | 4.3 | **Search by action/movement**: "elbow flexion", "hip abduction" → highlight all muscles with that action (data is already in `db[key].a`). Good learning feature. | M | sonnet |
 | 4.4 | **Antagonist / agonist info** on the muscle card and a "balance" warning in the planner (e.g. pressing vs pulling sets, quad vs hamstring ratio). | M | opus |
 | 4.5 | **Quiz mode**: highlight a random muscle, pick its name / function / nerve; spaced-repetition score in localStorage. | M | sonnet |
-| 4.6 | **Exercise database expansion**: fill coverage gaps (80 muscles covered). Candidates: Nordic curl, Copenhagen plank, tibialis raise, Pallof press, reverse hyper, landmine press, sissy squat, Jefferson curl, wrist roller, hip airplane. Add a `unilateral` flag and `difficulty`. | M | sonnet (data) + opus (review levels) |
+| 4.6 | ✅ **Done 2026-10-04.** **Exercise database expansion**: fill coverage gaps (80 muscles covered). Candidates: Nordic curl, Copenhagen plank, tibialis raise, Pallof press, reverse hyper, landmine press, sissy squat, Jefferson curl, wrist roller, hip airplane. Add a `unilateral` flag and `difficulty`. | M | sonnet (data) + opus (review levels) |
 | 4.7 | **"Fill my gaps" planner helper**: given the current plan and equipment, suggest the exercise that best raises under-trained muscles without overshooting others. | M | opus |
 | 4.8 | **Screenshot / export view** as PNG (`preserveDrawingBuffer` or render-to-canvas on demand), e.g. to save an exercise heatmap. | S | sonnet |
 | 4.9 | **3D labels / leader lines** for the selected structure and its origin/insertion bones. | L | opus |

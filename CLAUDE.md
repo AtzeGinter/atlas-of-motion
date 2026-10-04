@@ -131,6 +131,13 @@ selected structure (`M_SEL`) → heat mode material (`HM` levels, `CM` compariso
 - `meshLevels(targets)`: Map mesh → level, respecting part-specific targets.
 - Volume: `VOLF = {3:1, 2:0.5, 1:0}` sets per weekly set; `volumeByMesh()`, `volOfKey(key, part)`; bands <4, 4–9, 10–20, >20 (`volBand`, `volStatus`). `SUMMARY` lists the 27 rows of the weekly table; a row is `[label, "key[|part],key[|part],..."]` and shows the MAX weekly sets over its members (e.g. Quadriceps = four heads; Hip flexors = psoas major + iliacus, rectus femoris deliberately omitted). Clicking a row selects its first key.
 
+### Layout, bottom sheet and touch
+- `#toolbar` floats on `#vp`: a Layers popover (`#btnLayers`/`#popLayers`: toggles + opacity sliders) and the view buttons (`#popView`; inline on desktop, a View popover on phones). Popovers: `aria-expanded` on the button, `.open` on the popover, one at a time (`POPS`, `closePops()`), closed by outside click and Escape.
+- Phone = `matchMedia("(max-width:760px)")` (`isPhone()`; guarded for absence). `<aside id="side">` becomes a bottom sheet with `data-sheet="peek|half|full"` (`setSheet()`, heights from CSS vars/`sheetH()`); the header `#shead` (handle `#grab` + title + tabs) drags with pointer events (velocity-aware snap) and the handle tap cycles states. `#sbody` scrolls inside the sheet.
+- On phones `#card` is moved into `#cslot` (back into `#vp` on desktop, `placeCard()`); while shown the sheet has `has-card` and hides the panes. Tapping a tab sets `cardAway` and collapses the card to a `.mini` summary. `select()`/`selectEx()` call `revealCard()` (opens peek to half). `renderCard()` is a wrapper that calls `syncCardUI()` after `renderCard0()`.
+- `applyInset()` (ResizeObserver on the sheet) sets `camera.setViewOffset` so the body is centred in the uncovered area; `baseRadius()` divides by `visFrac(sheetNom)` and `setSheet()` rescales `goal.r`. Picking is unaffected (NDC from the full canvas rect). Pixel ratio capped at 1.5 on phones.
+- Touch: tap shows `#tip` for 1.5 s (`showTipAt`), drag threshold 10 px for touch (5 for mouse), double-tap on the selected structure = `focusOn`. `@media (pointer:coarse)` enlarges hit areas to 44 px; search inputs are 16 px.
+
 ### Cards and lists
 `renderCard()` dispatches to `renderCmpCard()`, `renderExCard()` or the muscle/bone card. Click handling is delegated on `#card` via `data-act`, `data-ex`, `data-key`, `data-var`. Sidebar tabs: Anatomy (`buildList`, region chips, per-structure checkboxes), Exercises (`buildEq`, `buildBest`, `buildExList`, comparison banner), Workout (`renderPlan`, `buildAdd`, `renderVolSum`, `#tVol`).
 
@@ -139,7 +146,7 @@ localStorage, all wrapped in try/catch. `aom.plan.v2`: `[{n:exerciseName, sets, 
 
 ## Testing
 
-`tools/test/smoke.js` (needs Node >= 18) loads `index.html` in jsdom with real three@0.128.0, stubs `WebGLRenderer`, waits until the loading overlay is gone, then clicks through: best-for list, exercise selection, variations, add to plan, comparison and swap, equipment filter, workout plan, volume mode. It asserts on each step (`ok - ...` / `FAIL - ...`), treats startup errors, `console.error` and uncaught exceptions as failures, and exits non-zero if anything fails. Keep assertions in step with exercise data (e.g. Back squat / Wide stance / Hip thrust) when you change it.
+`tools/test/smoke.js` (needs Node >= 18) loads `index.html` in jsdom with real three@0.128.0, stubs `WebGLRenderer`, waits until the loading overlay is gone, then clicks through: best-for list, exercise selection, variations, add to plan, comparison and swap, equipment filter, workout plan, volume mode, then boots a second instance with `matchMedia` stubbed to a coarse phone (sheet states, card-in-sheet flow, popovers, touch tap, phone/desktop switch). It asserts on each step (`ok - ...` / `FAIL - ...`), treats startup errors, `console.error` and uncaught exceptions as failures, and exits non-zero if anything fails. Keep assertions in step with exercise data (e.g. Back squat / Wide stance / Hip thrust) when you change it.
 It does not test rendering or raycasting accuracy; check those manually in a browser.
 
 CI (GitHub Actions, `.github/workflows/ci.yml`) runs on push and PR to `main`: `extract.py`, `exercises.py`, `lint.py`, `assemble.py` in `tools/`, then `git diff --exit-code -- index.html`, then `npm ci && npm test`. GitHub Pages deploys from `main` / root separately.

@@ -7,24 +7,38 @@ const finish=()=>{console.log(`\n${pass} passed, ${fail} failed`);process.exit(f
 const die=m=>{ok(false,m);finish();};
 if(typeof DecompressionStream==='undefined'||typeof Response==='undefined') die('Node >= 18 required (DecompressionStream/Response/Blob globals missing), found '+process.version);
 const fs=require('fs');const {JSDOM,VirtualConsole}=require('jsdom');
-let html=fs.readFileSync(require('path').join(__dirname,'..','..','index.html'),'utf8').replace(/<script src="[^"]+three[^"]+"><\/script>/,'');
-const errs=[],vc=new VirtualConsole();
-vc.on('error',(...a)=>errs.push('console.error: '+a.join(' ')));vc.on('jsdomError',e=>errs.push('jsdomError: '+(e.stack||e.message)));
-const dom=new JSDOM(html,{runScripts:'outside-only',pretendToBeVisual:true,url:'https://example.test/',virtualConsole:vc});const w=dom.window;const THREE=require('three');
-w.addEventListener('error',e=>errs.push('uncaught: '+(e.message||e.error)));
-class FR{constructor(){this.domElement=w.document.createElement('canvas');}setPixelRatio(){}setClearColor(){}setSize(){}render(s){}}
-w.THREE=Object.assign({},THREE,{WebGLRenderer:FR});w.ResizeObserver=class{observe(){}};
-w.DecompressionStream=DecompressionStream;w.Response=Response;w.Blob=Blob;
-w.HTMLCanvasElement.prototype.getContext=function(){return {createRadialGradient(){return{addColorStop(){}}},fillRect(){}}};
-Object.defineProperty(w.HTMLElement.prototype,'clientWidth',{get(){return 1000}});Object.defineProperty(w.HTMLElement.prototype,'clientHeight',{get(){return 800}});
-w.HTMLCanvasElement.prototype.getBoundingClientRect=()=>({left:0,top:0,width:1000,height:800});w.HTMLElement.prototype.setPointerCapture=()=>{};
-// seed legacy (pre-rename) storage to exercise the migration: variation INDEX arrays (Back squat Stance=Wide), an entry without v, an exercise that no longer exists, equipment minus Band
-const OLD_EQ=['Barbell','Dumbbells','Kettlebell','Cable','Machine','Bodyweight','Other'];
-w.localStorage.setItem('myology.plan.v1',JSON.stringify([{n:'Back squat',sets:4,v:[1,0]},{n:'Hip thrust',sets:2},{n:'Removed exercise',sets:3,v:[]}]));
-w.localStorage.setItem('myology.eq.v1',JSON.stringify(OLD_EQ));
-const js=html.match(/<script>([\s\S]*?)<\/script>/)[1];
+const html0=fs.readFileSync(require('path').join(__dirname,'..','..','index.html'),'utf8').replace(/<script src="[^"]+three[^"]+"><\/script>/,'');
+const js=html0.match(/<script>([\s\S]*?)<\/script>/)[1];
 const mi=js.indexOf('const META='),META=JSON.parse(js.slice(mi+11,js.indexOf('\n',mi)).replace(/;\s*$/,'')); // embedded data, to derive expectations
-w.eval(`(async()=>{try{${js.replace('(async function(){','await (async function(){')}}catch(e){window.__fatal=e.stack||String(e)}})()`);
+const errs=[];
+const OLD_EQ=['Barbell','Dumbbells','Kettlebell','Cable','Machine','Bodyweight','Other'];
+// boot one page instance. opts.phone: stub matchMedia so "(max-width:760px)" and "(pointer:coarse)" match (w.__setPhone(false) flips them and fires the change listeners); otherwise matchMedia is absent (exercises the guard)
+function boot(opts){
+ opts=opts||{};
+ const vc=new VirtualConsole();
+ vc.on('error',(...a)=>errs.push('console.error: '+a.join(' ')));vc.on('jsdomError',e=>errs.push('jsdomError: '+(e.stack||e.message)));
+ const dom=new JSDOM(html0,{runScripts:'outside-only',pretendToBeVisual:true,url:'https://example.test/',virtualConsole:vc});const w=dom.window;const THREE=require('three');
+ w.addEventListener('error',e=>errs.push('uncaught: '+(e.message||e.error)));
+ class FR{constructor(){this.domElement=w.document.createElement('canvas');}setPixelRatio(r){w.__dpr=r;}setClearColor(){}setSize(){}render(s){}}
+ w.THREE=Object.assign({},THREE,{WebGLRenderer:FR});w.ResizeObserver=class{observe(){}};
+ w.DecompressionStream=DecompressionStream;w.Response=Response;w.Blob=Blob;
+ w.HTMLCanvasElement.prototype.getContext=function(){return {createRadialGradient(){return{addColorStop(){}}},fillRect(){}}};
+ Object.defineProperty(w.HTMLElement.prototype,'clientWidth',{get(){return 1000}});Object.defineProperty(w.HTMLElement.prototype,'clientHeight',{get(){return 800}});
+ w.HTMLCanvasElement.prototype.getBoundingClientRect=()=>({left:0,top:0,width:1000,height:800});w.HTMLElement.prototype.setPointerCapture=()=>{};
+ w.devicePixelRatio=3;
+ if(opts.phone){
+  let phone=true;const mqs=[];
+  w.matchMedia=q=>{const m={media:q,get matches(){return phone&&/max-width:\s*760px|pointer:\s*coarse/.test(q);},ls:[],addEventListener(t,f){this.ls.push(f);},removeEventListener(){},addListener(f){this.ls.push(f);},removeListener(){}};mqs.push(m);return m;};
+  w.__setPhone=v=>{phone=v;mqs.forEach(m=>m.ls.forEach(f=>f({matches:m.matches,media:m.media})));};
+ } else {
+  // seed legacy (pre-rename) storage to exercise the migration: variation INDEX arrays (Back squat Stance=Wide), an entry without v, an exercise that no longer exists, equipment minus Band
+  w.localStorage.setItem('myology.plan.v1',JSON.stringify([{n:'Back squat',sets:4,v:[1,0]},{n:'Hip thrust',sets:2},{n:'Removed exercise',sets:3,v:[]}]));
+  w.localStorage.setItem('myology.eq.v1',JSON.stringify(OLD_EQ));
+ }
+ w.eval(`(async()=>{try{${js.replace('(async function(){','await (async function(){')}}catch(e){window.__fatal=e.stack||String(e)}})()`);
+ return w;
+}
+const w=boot();
 const ev=(el,t)=>el.dispatchEvent(new w.Event(t,{bubbles:true}));
 const d=w.document,C=()=>d.getElementById('card').textContent.replace(/\s+/g,' '),q=s=>d.querySelector(s),qa=s=>[...d.querySelectorAll(s)];
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -34,6 +48,78 @@ const bestNames=()=>qa('#best [data-ex]').map(b=>b.textContent),bestPct=()=>qa('
 const plan=()=>JSON.parse(w.localStorage.getItem('aom.plan.v2')||'null');
 const addRes=n=>qa('#addres [data-add]').find(b=>b.firstChild.textContent.trim()==='+ '+n);
 const addEx=n=>{q('#qa').value=n.toLowerCase();ev(q('#qa'),'input');const b=addRes(n);if(!ok(b,'search offers "'+n+'"')) return;b.click();};
+// ---- phone instance: matchMedia reports max-width:760px and a coarse pointer ----
+async function phoneRun(){
+ const p=boot({phone:true}),pd=p.document,pq=x=>pd.querySelector(x),pqa=x=>[...pd.querySelectorAll(x)];
+ const t0=Date.now();
+ while(pq('#loading')){ if(p.__fatal) die('phone: startup IIFE threw: '+p.__fatal); if(Date.now()-t0>60000) die('phone: startup timed out'); await sleep(100); }
+ const side=pq('#side'),card=pq('#card'),sheet=()=>side.dataset.sheet,grab=pq('#grab');
+ const pev=(el,t,o)=>{const e=new p.Event(t,{bubbles:true});Object.assign(e,{pointerId:1,pointerType:'touch',clientX:500,clientY:400,button:0,buttons:1},o||{});el.dispatchEvent(e);};
+ const toPeek=()=>{for(let i=0;i<3&&sheet()!=='peek';i++)grab.click();};
+ ok(p.__dpr===1.5,'phone: renderer pixel ratio capped at 1.5 (got '+p.__dpr+')');
+ ok(sheet()==='peek','phone: sheet starts in "peek"');
+ ok(side.contains(card)&&card.parentNode===pq('#cslot')&&!pq('#vp').contains(card),'phone: #card lives inside the sheet, not over the viewport');
+ ok(pq('#hint').textContent.includes('pinch to zoom')&&pq('#hint').textContent.includes('tap to inspect'),'phone: touch-specific hint text');
+ ok(!side.classList.contains('has-card'),'phone: no card, panes visible');
+ // grab handle cycles peek -> half -> full -> peek
+ const seq=[];for(let i=0;i<3;i++){grab.click();seq.push(sheet());}
+ ok(seq.join('>')==='half>full>peek','phone: tapping the handle cycles states ('+seq.join('>')+')');
+ // dragging the header (jsdom has no layout, so only check that a drag gesture runs through the state machine and leaves a valid state)
+ const hd=pq('#shead');pev(hd,'pointerdown',{clientY:700});pev(hd,'pointermove',{clientY:500});pev(hd,'pointerup',{clientY:500});
+ ok(['peek','half','full'].includes(sheet())&&!side.classList.contains('dragging'),'phone: a header drag ends in a valid snap state ('+sheet()+')');
+ await sleep(80); // the click that follows a drag is swallowed for a moment
+ toPeek();
+ // Layers popover
+ const bl=pq('#btnLayers'),pl=pq('#popLayers'),bv=pq('#btnView'),pv=pq('#popView');
+ ok(bl.getAttribute('aria-expanded')==='false'&&!pl.classList.contains('open'),'phone: Layers popover closed initially');
+ bl.click();
+ ok(bl.getAttribute('aria-expanded')==='true'&&pl.classList.contains('open'),'phone: Layers button opens the popover (aria-expanded=true)');
+ bl.click();
+ ok(bl.getAttribute('aria-expanded')==='false'&&!pl.classList.contains('open'),'phone: Layers button closes it again');
+ bl.click();pd.dispatchEvent(new p.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ ok(bl.getAttribute('aria-expanded')==='false'&&!pl.classList.contains('open'),'phone: Escape closes the popover');
+ bl.click();bv.click();
+ ok(!pl.classList.contains('open')&&pv.classList.contains('open')&&bv.getAttribute('aria-expanded')==='true'&&bl.getAttribute('aria-expanded')==='false','phone: only one popover open at a time');
+ pq('canvas').dispatchEvent(new p.Event('click',{bubbles:true}));
+ ok(!pv.classList.contains('open')&&bv.getAttribute('aria-expanded')==='false','phone: outside click closes the popover');
+ bv.click();pq('[data-view="back"]').click();
+ ok(!pv.classList.contains('open'),'phone: choosing a view closes the View popover');
+ // tab tap in peek opens the sheet to half
+ pq('[data-tab="ex"]').click();
+ ok(sheet()==='half'&&!pq('#paneEx').hidden,'phone: tapping a tab in peek opens the sheet to half and shows that pane');
+ toPeek();
+ // selecting an exercise shows the card in the sheet
+ pqa('#exlist .item').find(b=>b.textContent==='Back squat').click();
+ ok(card.classList.contains('show')&&side.contains(card)&&pq('#card h2').textContent==='Back squat','phone: selecting an exercise shows its card inside the sheet');
+ ok(sheet()==='half'||sheet()==='full','phone: sheet opened to at least half (is '+sheet()+')');
+ ok(side.classList.contains('has-card'),'phone: panes are hidden while the card is shown');
+ // tapping a tab while a card is shown brings the panes back and collapses the card to a summary
+ pq('[data-tab="anat"]').click();
+ ok(!side.classList.contains('has-card')&&card.classList.contains('mini')&&card.classList.contains('show'),'phone: tab tap shows the panes, card collapses to a summary');
+ card.querySelector('h2').click();
+ ok(side.classList.contains('has-card')&&!card.classList.contains('mini'),'phone: tapping the summary expands the card again');
+ // close returns to the panes
+ pq('[data-act="exclose"]').click();
+ ok(!card.classList.contains('show')&&!side.classList.contains('has-card'),'phone: closing the card shows the panes again');
+ // muscle from the index
+ pq('[data-tab="anat"]').click();
+ const mi2=pqa('#list .item').find(b=>b.dataset.kind==='muscle');mi2.click();
+ ok(card.classList.contains('show')&&side.contains(card)&&side.classList.contains('has-card')&&pq('#card h2').textContent===mi2.dataset.key,'phone: selecting a muscle from the index shows its card in the sheet');
+ pq('#card .close').click();
+ ok(!side.classList.contains('has-card'),'phone: closing the muscle card restores the panes');
+ // touch tap: shows the name label and selects; a 7 px wobble still counts as a tap (mouse threshold is 5 px, touch 10 px)
+ const cv=pq('canvas'),tip=pq('#tip');pev(cv,'pointerdown',{clientX:500,clientY:400});pev(cv,'pointermove',{clientX:507,clientY:400});pev(cv,'pointerup',{clientX:507,clientY:400,buttons:0});
+ ok(tip.style.display==='block'&&tip.textContent.length>0,'phone: touch tap shows the name label ("'+tip.textContent+'")');
+ ok(card.classList.contains('show')&&side.classList.contains('has-card'),'phone: touch tap on a structure also selects it (card in sheet)');
+ await sleep(1700);
+ ok(tip.style.display==='none','phone: the touch label disappears after about 1.5 s');
+ // viewport grows to desktop size: card returns to the viewport, sheet classes cleared
+ p.__setPhone(false);
+ ok(card.parentNode===pq('#vp')&&!side.classList.contains('has-card')&&!card.classList.contains('mini'),'phone->desktop: card moves back over the viewport');
+ ok(pq('#hint').textContent.includes('right-drag')&&p.__dpr===2,'phone->desktop: mouse hint text restored, pixel ratio cap back to 2');
+ p.__setPhone(true);
+ ok(card.parentNode===pq('#cslot'),'desktop->phone: card moves into the sheet again');
+}
 (async()=>{
  // startup
  const msg0=q('#loadMsg').textContent,t0=Date.now();
@@ -162,6 +248,11 @@ const addEx=n=>{q('#qa').value=n.toLowerCase();ev(q('#qa'),'input');const b=addR
  ok(q('#volsum [data-key="flexor digitorum superficialis"]'),'summary row still selects its first key');
  q('#wkClear').click();addEx('Leg extension');
  ok(rowVal('Quadriceps')===3,'Quadriceps row: '+rowVal('Quadriceps'));
+ // desktop instance: no matchMedia stub, so the phone code paths stay inactive
+ ok(w.__dpr===2&&!q('#side').classList.contains('has-card')&&q('#card').parentNode===q('#vp'),'desktop: pixel ratio capped at 2, card floats in the viewport, sheet classes unused');
+ ok(q('#btnLayers').getAttribute('aria-expanded')==='false'&&q('#popLayers').contains(q('#tBones'))&&q('#popLayers').contains(q('#opM')),'desktop: layer toggles and opacity sliders live in the Layers popover, closed by default');
+ ok(qa('[data-view]').length===5&&q('#toolbar').contains(q('[data-view="front"]')),'desktop: view buttons are in the floating toolbar');
+ await phoneRun();
  // no errors anywhere
  ok(errs.length===0,'no console errors or uncaught exceptions'+(errs.length?':\n  '+errs.slice(0,10).join('\n  '):''));
  finish();
