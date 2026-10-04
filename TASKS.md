@@ -57,6 +57,16 @@ Goal: less clutter on desktop, and a phone layout that actually works. The curre
 
 (This replaces the earlier ideas 4.11 partly and 4.12 fully. Do 5.1 first; 5.2 and 5.3 share the same refactor of the sidebar markup, so one agent should do them sequentially.)
 
+## P1c: Planner improvements (requested 2026-10-04)
+
+| # | Task | Size | Agent |
+|---|------|------|-------|
+| 6.1 | **Goal-based volume targets** replace the fixed 10–20 band: Maintain 4–6 · Strength 6–10 · Hypertrophy, close to failure 8–12 (default) · Hypertrophy, moderate intensity 10–20 · Custom range. The weekly table, bands, heatmap colours and status texts follow the target; "over target" reads as "more than needed", not as "good". Short evidence note in the UI (≥10 sets beat fewer; diminishing returns above; strength plateaus earlier; sets close to failure cost more recovery). Persisted. | M | sonnet |
+| 6.2 | **Gap filler**: "Suggested to complete your week": greedy scoring over the exercises allowed by your equipment. Gain = raised under-target groups; penalty = overshoot of groups already at or above target. Top 3 with "+ add" and which groups each fills. Updates live. (Supersedes 4.7.) | M | sonnet (opus to review the scoring) |
+| 6.3 | Training days (Day 1…n or weekdays, per-day exercises, weekly volume = sum, per-day view). **Needs the user's decisions first** (asked 2026-10-04, not yet answered). | L | – |
+| 6.4 | Endurance training (running etc., VO2max intervals, zone minutes vs targets, muscles on the body). **Needs the user's decisions first.** | L | – |
+| 6.5 | Weekly volume controls beyond 6.1 (per-muscle targets, scale the whole week for deload/build weeks, typing sets directly). **Needs the user's decisions first.** | M | – |
+
 ## P2: Performance and hosting (now that it's GitHub Pages)
 
 | # | Task | Size | Agent |
@@ -89,7 +99,7 @@ Goal: less clutter on desktop, and a phone layout that actually works. The curre
 | 4.4 | **Antagonist / agonist info** on the muscle card and a "balance" warning in the planner (e.g. pressing vs pulling sets, quad vs hamstring ratio). | M | opus |
 | 4.5 | **Quiz mode**: highlight a random muscle, pick its name / function / nerve; spaced-repetition score in localStorage. | M | sonnet |
 | 4.6 | ✅ **Done 2026-10-04.** **Exercise database expansion**: fill coverage gaps (80 muscles covered). Candidates: Nordic curl, Copenhagen plank, tibialis raise, Pallof press, reverse hyper, landmine press, sissy squat, Jefferson curl, wrist roller, hip airplane. Add a `unilateral` flag and `difficulty`. | M | sonnet (data) + opus (review levels) |
-| 4.7 | **"Fill my gaps" planner helper**: given the current plan and equipment, suggest the exercise that best raises under-trained muscles without overshooting others. | M | opus |
+| 4.7 | ~~"Fill my gaps"~~ → moved to 6.2. **"Fill my gaps" planner helper**: given the current plan and equipment, suggest the exercise that best raises under-trained muscles without overshooting others. | M | opus |
 | 4.8 | **Screenshot / export view** as PNG (`preserveDrawingBuffer` or render-to-canvas on demand), e.g. to save an exercise heatmap. | S | sonnet |
 | 4.9 | **3D labels / leader lines** for the selected structure and its origin/insertion bones. | L | opus |
 | 4.10 | **i18n** (German first?): externalise UI strings; anatomy keys stay English, add translated display names. Latin (TA2) names as an option for students. | L | opus |
@@ -102,6 +112,7 @@ Goal: less clutter on desktop, and a phone layout that actually works. The curre
 
 1. **P0 in one batch**: 0.2, 0.4, 0.5 can run as parallel `sonnet` agents (separate files); 0.1/0.3 need you; 0.6 after 0.4/0.5.
 2. **P1 quick fixes** (1.1–1.5) as one `sonnet` agent, then a review pass.
-3. **P1b UI/mobile**: 5.1 audit → 5.2 + 5.3 (one agent, sequential) → 5.4/5.5 → 5.7.
+3. **P1c planner**: 6.1 + 6.2 (one agent, after the quality levels 2.7 land).
+3b. **P1b UI/mobile**: 5.1 audit → 5.2 + 5.3 (one agent, sequential) → 5.4/5.5 → 5.7.
 4. **2.1 → 2.2 → 2.3** (hosting/perf chain), then 2.5.
 5. Features by value/effort: 4.2, 4.1, 3.1, 3.2, 4.3, 4.6.
