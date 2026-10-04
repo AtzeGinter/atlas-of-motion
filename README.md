@@ -12,7 +12,7 @@ An interactive 3D atlas of the human muscular system that runs entirely in the b
 - **Muscle view**: every exercise that trains the selected muscle, with involvement and specificity.
 - **Best exercises for a muscle**, sortable by effectiveness or specificity.
 - **Comparison mode**: two exercises side by side, coloured by which one works each muscle more.
-- **Equipment filter** and a **workout builder** with weekly sets per muscle and a volume heatmap. The plan is stored in the browser's localStorage.
+- **Equipment filter** and a **workout builder**: a seven-day training week with a week overview (sets per muscle group and day, plus a rough fatigue / recovery estimate that flags muscles trained again while still recovering), weekly sets per muscle, a volume heatmap and a gap filler that suggests what to add and on which day. The plan is stored in the browser's localStorage.
 
 ## Run it
 

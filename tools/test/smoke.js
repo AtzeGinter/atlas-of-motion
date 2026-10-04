@@ -34,6 +34,8 @@ function boot(opts){
   let phone=true;const mqs=[];
   w.matchMedia=q=>{const m={media:q,get matches(){return phone&&/max-width:\s*760px|pointer:\s*coarse/.test(q);},ls:[],addEventListener(t,f){this.ls.push(f);},removeEventListener(){},addListener(f){this.ls.push(f);},removeListener(){}};mqs.push(m);return m;};
   w.__setPhone=v=>{phone=v;mqs.forEach(m=>m.ls.forEach(f=>f({matches:m.matches,media:m.media})));};
+ } else if(opts.store){
+  Object.keys(opts.store).forEach(k=>w.localStorage.setItem(k,opts.store[k]));
  } else {
   // seed legacy (pre-rename) storage to exercise the migration: variation INDEX arrays (Back squat Stance=Wide), an entry without v, an exercise that no longer exists, equipment minus Band
   w.localStorage.setItem('myology.plan.v1',JSON.stringify([{n:'Back squat',sets:4,v:[1,0]},{n:'Hip thrust',sets:2},{n:'Removed exercise',sets:3,v:[]}]));
@@ -50,9 +52,11 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const exItem=n=>qa('#exlist .item').find(b=>b.textContent===n),exNames=()=>qa('#exlist .item').map(b=>b.textContent);
 const roleKeys=r=>{const h=qa('#card h3').find(x=>x.textContent===r);return h?[...h.nextElementSibling.querySelectorAll('[data-key]')].map(b=>b.dataset.key):[];};
 const bestNames=()=>qa('#best [data-ex]').map(b=>b.textContent),bestPct=()=>qa('#best small').map(s=>parseFloat(s.textContent));
-const plan=()=>JSON.parse(w.localStorage.getItem('aom.plan.v2')||'null');
+const wk=()=>JSON.parse(w.localStorage.getItem('aom.plan.v3')||'null'),plan=()=>{const o=wk();return o?[].concat(...o.days.map(d=>d.items)):null;}; // plan(): flat list over all days of the stored week
 const addRes=n=>qa('#addres [data-add]').find(b=>b.firstChild.textContent.trim()==='+ '+n);
 const addEx=n=>{q('#qa').value=n.toLowerCase();ev(q('#qa'),'input');const b=addRes(n);if(!ok(b,'search offers "'+n+'"')) return;b.click();};
+const days=()=>wk().days,names=i=>days()[i].items.map(p=>p.n),nameOf=i=>days()[i].name,dayBtn=i=>q('#wstrip [data-day="'+i+'"]'),selDay=i=>dayBtn(i).click();
+const clearAll=()=>{for(let i=6;i>=0;i--){selDay(i);if(!q('#wkClear').disabled)q('#wkClear').click();}selDay(0);}; // empty every day
 // total triangle-index count over all body meshes in the three.js scene (captured by the stubbed renderer)
 const idxCount=win=>{let n=0;win.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind&&o.geometry.index)n+=o.geometry.index.count;});return n;};
 const lodBtn=(doc,l)=>doc.querySelector('[data-lod="'+l+'"]'),lodOn=doc=>[...doc.querySelectorAll('[data-lod]')].filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.dataset.lod).join(',');
@@ -71,6 +75,282 @@ async function otherRuns(){
  const g=boot({phone:true,url:'file:///C:/atlas/index.html'}),gd=g.document;
  await waitFor(()=>/web server/.test(gd.getElementById('loadMsg').textContent),15000,'file:// message');
  ok(/web server/.test(gd.getElementById('loadMsg').textContent)&&g.__fetched.length===0&&!g.__fatal,'file:// page: #loadMsg asks for a web server and nothing is fetched');
+}
+// ---- training days, week overview, recovery model, planned marks (main desktop instance) ----
+async function weekRun(){
+ const rowVal=n=>{const r=qa('#volsum tr').find(r=>r.cells[0].textContent.trim()===n);return r?parseFloat(r.cells[2].textContent):NaN;};
+ const exOf=n=>META.ex.find(e=>e.n===n);
+ const lvl=(n,key,part)=>Math.max(0,...exOf(n).t.filter(t=>t[0]===key&&(!t[1]||t[1]===part)).map(t=>t[2]));
+ const VF={0:0,1:0,2:0.5,3:1};
+ const ovOpen=()=>{if(q('#ov').hidden)q('#ovOpen').click();};
+ const cell=(g,dd)=>q('#ovGrid tr.g[data-g="'+g+'"] .cb[data-d="'+dd+'"]'),GCHEST=1;
+ const enter=()=>q('#dayIn').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
+ const rename=t=>{q('#dayRen').click();q('#dayIn').value=t;enter();};
+ q('[data-tab="wk"]').click();clearAll();selDay(0);
+ // week strip
+ ok(qa('#wstrip [data-day]').length===7&&qa('#wstrip [data-day]').map(b=>b.firstChild.textContent).join()==='D1,D2,D3,D4,D5,D6,D7','week strip: seven day buttons D1..D7');
+ ok(dayBtn(0).getAttribute('aria-pressed')==='true'&&qa('#wstrip .rest').length===7&&q('#dayLbl').textContent.includes('Day 1'),'Day 1 selected, all seven days are rest days (dashed)');
+ // adding to the selected day
+ selDay(2);addEx('Barbell bench press');
+ ok(names(2).join()==='Barbell bench press'&&names(0).length===0&&qa('#plan .prow').length===1,'with Day 3 selected, the add search puts the exercise into Day 3');
+ ok(!dayBtn(2).classList.contains('rest')&&dayBtn(2).textContent.includes('3')&&dayBtn(0).classList.contains('rest')&&q('#qa').placeholder==='Add an exercise to Day 3','Day 3 button shows its 3 sets, Day 1 stays a rest day');
+ q('[data-tab="ex"]').click();exItem('Barbell bench press').click();
+ ok(q('[data-act="add"]').textContent==='Add again to Day 3 (3 sets planned)','exercise card button names the selected day: "'+q('[data-act="add"]').textContent+'"');
+ selDay(4);
+ ok(q('[data-act="add"]').textContent.startsWith('Add again to Day 5'),'selecting another day updates the open exercise card');
+ q('[data-act="add"]').click();
+ ok(names(4).join()==='Barbell bench press'&&names(2).length===1,'"Add to Day 5" on the exercise card adds to Day 5');
+ q('#exClear').click();q('[data-tab="wk"]').click();
+ // weekly table = sum over the days
+ selDay(0);addEx('Back squat');selDay(5);addEx('Back squat');
+ ok(rowVal('Quadriceps')===6&&rowVal('Mid and lower chest')===6,'weekly table sums the days: Quadriceps 3+3, Mid and lower chest 3+3 ('+rowVal('Quadriceps')+', '+rowVal('Mid and lower chest')+')');
+ ok(/3 sets on Day 6 · 12 sets in the week/.test(q('#plan').textContent),'day footer mentions the day and the week total: '+q('#plan .fine').textContent);
+ // rename
+ selDay(1);q('#dayRen').click();
+ ok(!!q('#dayIn')&&q('#dayIn').value==='Day 2','pencil turns the day name into an input');
+ q('#dayIn').value='Push day';enter();
+ ok(!q('#dayIn')&&nameOf(1)==='Push day'&&dayBtn(1).firstChild.textContent==='PD'&&q('#dayLbl').textContent.includes('Push day'),'Enter renames the day (stored "Push day", button "PD")');
+ rename('');
+ ok(nameOf(1)==='Day 2'&&dayBtn(1).firstChild.textContent==='D2','an empty name falls back to "Day 2"');
+ rename('Legs and glutes day long');
+ ok(nameOf(1)==='Legs and glutes'&&nameOf(1).length<=16,'names are cut at 16 characters ("'+nameOf(1)+'")');
+ rename('<b>Push</b>');
+ ok(!q('#dayLbl b')&&qa('#wstrip b').length===7&&q('#dayLbl').textContent.includes('<b>Push</b>'),'day names are escaped in the UI');
+ q('#dayRen').click();q('#dayIn').value='Pull';q('#dayIn').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ ok(!q('#dayIn')&&nameOf(1)!=='Pull','Escape cancels the rename');
+ rename('Pull');
+ ok(nameOf(1)==='Pull'&&dayBtn(1).firstChild.textContent==='Pull'&&q('#qa').placeholder==='Add an exercise to Pull','rename persisted in aom.plan.v3, used in the strip and the add placeholder');
+ // copy / clear / move
+ selDay(0);
+ ok(!q('#dayCopy').disabled&&qa('#dayCopy option').length===7,'copy select lists the six other days');
+ q('#dayCopy').value='3';ev(q('#dayCopy'),'change');
+ ok(names(3).join()==='Back squat'&&names(0).join()==='Back squat'&&/Copied 1 exercise to Day 4/.test(q('#dayMsg').textContent),'Copy day to… copies the exercises ('+q('#dayMsg').textContent+')');
+ q('#dayCopy').value='3';ev(q('#dayCopy'),'change');
+ ok(names(3).length===1&&/already/.test(q('#dayMsg').textContent),'copying again does not duplicate');
+ selDay(3);q('#wkClear').click();
+ ok(names(3).length===0&&dayBtn(3).classList.contains('rest')&&names(0).length===1,'Clear day empties only the selected day');
+ selDay(0);q('#plan select.mv').value='6';ev(q('#plan select.mv'),'change');
+ ok(names(6).join()==='Back squat'&&names(0).length===0&&q('#dayLbl').textContent.includes('Day 1'),'"Move to…" moves the row to Day 7 and stays on Day 1');
+ selDay(1);rename('');selDay(0);
+ // recovery model: bench Day 1 + Day 2 flags, Day 1 + Day 3 does not
+ clearAll();selDay(0);addEx('Barbell bench press');selDay(1);
+ ok(!q('#wstrip .warn'),'bench on Day 1 alone: no conflict');
+ addEx('Barbell bench press');
+ ok(dayBtn(1).classList.contains('warn')&&dayBtn(1).textContent.includes('⚠')&&!dayBtn(0).classList.contains('warn'),'bench Day 1 + Day 2: week strip shows ⚠ on Day 2 only');
+ ok(/Mid and lower chest/.test(q('#plan .prow small.warn').textContent)&&/still recovering from Day 1/.test(q('#plan .prow small.warn').textContent),'row note: "'+q('#plan .prow small.warn').textContent+'"');
+ ok(!/Upper chest/.test(q('#plan .prow small.warn').textContent),'Upper chest (1.5 effective sets) is not flagged at 3 sets');
+ ok(/1 exercise, 3 sets/.test(q('#plan').textContent),'singular exercise wording');
+ ovOpen();
+ ok(cell(GCHEST,1).dataset.c==='1'&&cell(GCHEST,1).textContent.includes('⚠')&&cell(GCHEST,1).dataset.e==='3'&&cell(GCHEST,0).dataset.c==='0','overview: Mid and lower chest on Day 2 is flagged (⚠), Day 1 is not');
+ ok(/Mid and lower chest: 3 sets on Day 1, still recovering on Day 2/.test(cell(GCHEST,1).title),'cell tooltip: "'+cell(GCHEST,1).title+'"');
+ ok(cell(GCHEST,1).dataset.f==='1.8'&&cell(GCHEST,0).dataset.f==='0','carry-over on Day 2 = 0.6 x 3 sets = 1.8, none on Day 1');
+ ok(/Recovery conflicts <b>1<\/b>/.test(q('#ovSum').innerHTML),'summary line counts the conflict: "'+q('#ovSum').textContent+'"');
+ q('#ovClose').click();
+ selDay(1);q('#plan [data-rm="0"]').click();selDay(2);addEx('Barbell bench press');
+ ok(!q('#wstrip .warn'),'bench Day 1 + Day 3: no conflict flagged for 3 sets');
+ q('#plan [data-inc="0"]').click();selDay(0);q('#plan [data-inc="0"]').click();
+ ok(!q('#wstrip .warn'),'bench Day 1 + Day 3 with 4 sets each: still no conflict');
+ selDay(1);addEx('Barbell bench press');q('#plan [data-inc="0"]').click();
+ ok(dayBtn(1).classList.contains('warn')&&dayBtn(2).classList.contains('warn')&&!dayBtn(0).classList.contains('warn'),'4-set bench on Days 1, 2 and 3 flags Day 2 and Day 3');
+ clearAll();selDay(6);addEx('Barbell bench press');selDay(0);addEx('Barbell bench press');
+ ok(dayBtn(0).classList.contains('warn')&&!dayBtn(6).classList.contains('warn'),'the week wraps: bench on Day 7 and Day 1 flags Day 1');
+ // overview open / close
+ clearAll();selDay(0);addEx('Barbell bench press');addEx('Barbell row');selDay(3);addEx('Back squat');
+ ok(q('#ov').hidden,'overview closed by default');
+ q('#ovOpen').click();
+ ok(!q('#ov').hidden&&q('#vp').contains(q('#ov'))&&d.activeElement===q('#ovClose'),'"Week overview" opens the overlay inside #vp and focuses its close button');
+ ok(qa('#ovGrid tr.g').length===27&&qa('#ovGrid tr.g').every(r=>r.querySelectorAll('.cb').length===7&&r.querySelectorAll('.wb').length===1)&&qa('#ovGrid thead [data-oday]').length===7,'grid: 27 group rows x 7 day columns + a week column, 7 day headers');
+ ok(qa('#ovGrid tr.sec th').map(t=>t.textContent).join()==='Upper push,Upper pull,Arms,Core,Lower body','rows grouped into Upper push / Upper pull / Arms / Core / Lower body');
+ ok(qa('#ovGrid tr.g th.rl').map(t=>t.textContent).sort().join('|')===qa('#volsum tr').map(r=>r.cells[0].textContent.trim()).sort().join('|'),'overview rows are exactly the 27 weekly-table groups');
+ ok(/Fatigue is a rough estimate/.test(q('#ov').textContent)&&q('#ovLeg').textContent.includes('Carried-over fatigue')&&q('#ovLeg').textContent.includes('still recovering'),'legend and note explain the fatigue overlay as an approximation');
+ q('#ovClose').click();
+ ok(q('#ov').hidden&&d.activeElement===q('#ovOpen'),'"Show body" closes it and returns focus to the opener');
+ q('#ovOpen').click();d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ ok(q('#ov').hidden,'Escape closes the overview');
+ q('#ovOpen').click();
+ // cell values = e_g(d)
+ const exp=(n,key,part,sets)=>sets*VF[lvl(n,key,part)];
+ ok(+cell(GCHEST,0).dataset.e===exp('Barbell bench press','pectoralis major','sternocostal part',3)&&+cell(GCHEST,3).dataset.e===0,'Mid and lower chest: Day 1 = bench 3 sets x prime mover (3), Day 4 = 0');
+ const rowOf=l=>qa('#ovGrid tr.g').find(r=>r.querySelector('th').textContent===l);
+ ok(+rowOf('Quadriceps').querySelector('.cb[data-d="3"]').dataset.e===exp('Back squat','vastus lateralis','',3)&&+rowOf('Quadriceps').querySelector('.cb[data-d="0"]').dataset.e===0,'Quadriceps: Day 4 = back squat 3 sets x prime mover');
+ ok(qa('#ovGrid tr.g').every(r=>{const v=rowVal(r.querySelector('th').textContent),dsum=qa('.cb',r).reduce((a,c)=>a+(+c.dataset.e),0);return Math.abs(v-(+r.querySelector('.wb').dataset.w))<1e-9&&v<=dsum+1e-9;}),'week column equals the weekly table for all 27 groups (and never exceeds the sum of the days)');
+ ok(+rowOf('Quadriceps').querySelector('.wb').dataset.w===3&&rowOf('Quadriceps').querySelector('.wb').className.includes('v0'),'week column carries the goal band class (3 of 8 sets = Low, v0)');
+ ok(/Training days <b>2<\/b>/.test(q('#ovSum').innerHTML)&&/Total sets <b>9<\/b>/.test(q('#ovSum').innerHTML),'summary: 2 training days, 9 sets');
+ cell(GCHEST,0).click();
+ ok(/Mid and lower chest · Day 1/.test(q('#ovDet').textContent)&&q('#ovDet').textContent.includes('Barbell bench press')&&cell(GCHEST,0).classList.contains('sel'),'clicking a cell lists the exercises that hit the group: '+q('#ovDet').textContent.slice(0,90));
+ cell(GCHEST,1).click();
+ ok(/not trained/.test(q('#ovDet').textContent)&&/Carry-over 1\.8 \(recovering/.test(q('#ovDet').textContent),'an untrained cell shows its carry-over: '+q('#ovDet').textContent);
+ q('#ovGrid [data-oday="4"]').click();
+ ok(dayBtn(4).getAttribute('aria-pressed')==='true'&&q('#dayLbl').textContent.includes('Day 5'),'clicking a day header selects that day in the planner');
+ selDay(1);addEx('Barbell bench press');
+ ok(cell(GCHEST,1).dataset.c==='1'&&/Recovery conflicts <b>1<\/b>/.test(q('#ovSum').innerHTML),'overview updates live while open');
+ q('#ovClose').click();
+ // volume heatmap: whole week / selected day
+ const amberHex=new w.THREE.Color(0xcfae7a).convertSRGBToLinear();
+ const amberOf=key=>{let n=0;w.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind==='muscle'&&(!key||o.userData.key===key)&&o.material.color&&Math.abs(o.material.color.r-amberHex.r)<1e-6&&Math.abs(o.material.color.g-amberHex.g)<1e-6)n++;});return n;};
+ q('#tVol').checked=true;ev(q('#tVol'),'change');
+ ok(!q('#volScope').hidden&&q('[data-vs="week"]').getAttribute('aria-pressed')==='true','volume mode shows the Whole week / Selected day toggle');
+ q('[data-vs="day"]').click();selDay(1);
+ ok(q('[data-vs="day"]').getAttribute('aria-pressed')==='true'&&/Still recovering/.test(q('#volLegend').textContent),'Selected day: the legend adds "Still recovering"');
+ ok(amberOf('pectoralis major')===0&&amberOf()>0,'Day 2 trains chest: chest keeps its volume colour, other groups still recovering from Day 1 are amber ('+amberOf()+' meshes)');
+ selDay(2);
+ ok(amberOf('pectoralis major')>0,'Day 3: chest (trained on Days 1 and 2) shows the amber recovery material');
+ q('[data-vs="week"]').click();
+ ok(amberOf()===0&&!/Still recovering/.test(q('#volLegend').textContent),'Whole week: no amber again');
+ q('#tVol').checked=false;ev(q('#tVol'),'change');
+ ok(q('#volScope').hidden,'toggle hidden when volume mode is off');
+ // ---- planned exercises are marked wherever exercises are listed ----
+ clearAll();selDay(0);
+ q('[data-tab="ex"]').click();exItem('Back squat').click();
+ qa('[data-var]').find(b=>b.textContent==='Wide').click();q('[data-act="add"]').click();
+ q('[data-tab="wk"]').click();selDay(3);q('[data-tab="ex"]').click();
+ qa('[data-var]').find(b=>b.textContent==='Shoulder-width').click();qa('[data-var]').find(b=>b.textContent==='Parallel').click();q('[data-act="add"]').click();
+ q('[data-tab="wk"]').click();
+ ok(JSON.stringify(days()[0].items[0].v)==='["Wide",""]'&&names(3).join()==='Back squat'&&days()[3].items[0].v.join('')==='','Back squat (Wide) on Day 1, default Back squat on Day 4');
+ q('#volsum [data-key="adductor magnus"]').click();
+ const xrow=t=>qa('#card .ext tbody tr').find(r=>r.querySelector('.exlink').textContent===t);
+ let rb=xrow('Back squat'),rw=xrow('Back squat (Wide)');
+ ok(rb&&rw,'adductor magnus card lists both the base and the Wide entry of Back squat');
+ ok(rb.classList.contains('inplan')&&/In plan · Day 4 · 3 sets/.test(rb.querySelector('.pbadge').textContent),'base row marked: "'+(rb.querySelector('.pbadge')||{}).textContent+'"');
+ ok(rw.classList.contains('inplan')&&/In plan · Day 1 · 3 sets/.test(rw.querySelector('.pbadge').textContent),'Wide row marked with Day 1 only: "'+(rw.querySelector('.pbadge')||{}).textContent+'"');
+ ok(qa('#card .ext tbody tr').filter(r=>r.classList.contains('inplan')).length===2&&qa('#card .ext tbody tr').some(r=>!r.classList.contains('inplan')&&!r.querySelector('.pbadge')),'unplanned rows carry no mark');
+ selDay(3);q('#plan [data-rm="0"]').click();
+ rb=xrow('Back squat');rw=xrow('Back squat (Wide)');
+ ok(!rb.classList.contains('inplan')&&/Planned as: Wide/.test(rb.querySelector('.pother').textContent)&&rw.classList.contains('inplan'),'only the Wide variation planned: the base row gets the subtle "Planned as: Wide", the Wide row stays marked (card re-rendered live)');
+ selDay(0);q('#plan [data-inc="0"]').click();selDay(5);addEx('Back squat');
+ rw=xrow('Back squat (Wide)');rb=xrow('Back squat');
+ ok(/Day 1 · 4 sets/.test(rw.querySelector('.pbadge').textContent)&&/Day 6 · 3 sets/.test(rb.querySelector('.pbadge').textContent),'badges follow edits (Wide 4 sets on Day 1, base on Day 6)');
+ selDay(5);q('#plan [data-rm="0"]').click();selDay(0);q('#plan [data-rm="0"]').click();
+ ok(!qa('#card .ext tbody tr').some(r=>r.classList.contains('inplan')||r.querySelector('.pbadge')||r.querySelector('.pother')),'removing the exercises from the plan clears every mark');
+ q('#card .close').click();
+ selDay(1);addEx('Hip thrust');
+ q('[data-tab="ex"]').click();q('#bestM').value='gluteus maximus';ev(q('#bestM'),'change');q('[data-sort="eff"]').click();
+ const bl=qa('#best li').find(l=>l.querySelector('.exlink').textContent==='Hip thrust');
+ ok(bl&&bl.classList.contains('inplan')&&bl.querySelector('.ptag')&&/Day 2/.test(bl.querySelector('.ptag').title),'Best-for list marks the planned Hip thrust ("planned" tag)');
+ ok(qa('#best li.inplan').every(l=>/^Hip thrust/.test(l.querySelector('.exlink').textContent)),'no other best-for entry is marked');
+ ok(exItem('Hip thrust').classList.contains('inplan')&&!exItem('Back squat').classList.contains('inplan')&&/Day 2/.test(exItem('Hip thrust').title),'exercise list marks Hip thrust only');
+ q('[data-tab="wk"]').click();selDay(1);q('#plan [data-rm="0"]').click();
+ ok(!exItem('Hip thrust').classList.contains('inplan')&&qa('#best li.inplan').length===0,'marks vanish when the exercise leaves the plan');
+ clearAll();selDay(0);
+}
+// ---- gap filler: summary chips, top picks, alternatives, options, day placement ----
+async function sugRun(){
+ const numOf=x=>parseFloat(x),rowVal=n=>{const r=qa('#volsum tr').find(r=>r.cells[0].textContent.trim()===n);return r?parseFloat(r.cells[2].textContent):NaN;};
+ const exOf=n=>META.ex.find(e=>e.n===n);
+ const goal=g=>{q('#goalSel').value=g;ev(q('#goalSel'),'change');};
+ const chips=()=>qa('#sug [data-gap]').filter(b=>!['all','more'].includes(b.dataset.gap));
+ const chip=l=>qa('#sug [data-gap]').find(b=>b.firstChild.textContent.trim()===l);
+ const more=()=>{const b=q('#sug [data-gap="more"]');if(b&&/^\+/.test(b.textContent))b.click();};
+ const cards=()=>qa('#sug li.sg'),nm=c=>c.querySelector('.exlink').textContent;
+ const inc=s=>(s.match(/\+([\d.]+)/g)||[]).reduce((a,x)=>a+parseFloat(x.slice(1)),0);
+ q('[data-tab="wk"]').click();clearAll();selDay(0);goal('maintain');
+ addEx('Back squat');addEx('Barbell bench press');q('#plan [data-inc="0"]').click();
+ // gap chips
+ more();
+ const vols=qa('#volsum tr').map(r=>[r.cells[0].textContent.trim(),parseFloat(r.cells[2].textContent)]),under=vols.filter(x=>x[1]<4);
+ ok(under.length>0&&under.length<27,'maintain goal (4 sets): '+under.length+' of 27 groups are below target');
+ ok(chips().map(b=>b.firstChild.textContent.trim()).sort().join('|')===under.map(x=>x[0]).sort().join('|'),'gap chips are exactly the groups under target');
+ ok(chips().every(b=>{const m=b.querySelector('b').textContent.match(/^([\d.]+) \/ 4$/);return m&&Math.abs(+m[1]-rowVal(b.firstChild.textContent.trim()))<0.05;}),'each chip shows "sets / target" matching the weekly table');
+ const cv=chips().map(b=>parseFloat(b.querySelector('b').textContent));
+ ok(cv.every((x,k)=>!k||x>=cv[k-1]),'chips are sorted by deficit (fewest sets first)');
+ ok(qa('#sug .sgt')[0].textContent==='Top picks'&&q('[data-gap="all"]').getAttribute('aria-pressed')==='true','"Top picks" heading, "All gaps" pressed');
+ // top picks: day, reason, equipment
+ const c0=cards()[0];
+ ok(cards().length>=1&&cards().length<=3&&/^(⚠ )?Day \d · (no recovery conflict|rest day, no recovery conflict|still overlaps recovery)$/.test(c0.querySelector('.dy').textContent),'top pick shows its day and why: "'+c0.querySelector('.dy').textContent+'"');
+ ok(/^(Prime mover|Synergist) for /.test(c0.querySelector('.rsn').textContent)&&/^\+ Add to Day \d/.test(c0.querySelector('[data-sadd]').textContent),'top pick shows a reason ("'+c0.querySelector('.rsn').textContent+'") and "+ Add to Day N"');
+ ok(q('#sugMore').open&&qa('#sugMore .alt').length===under.length&&qa('#sugMore .altr').length>=qa('#sugMore .alt').length,'"More options" is open on desktop with a block per gap group');
+ // filter by a chip: only prime movers of that group
+ const HAMS=['biceps femoris','semitendinosus','semimembranosus'];
+ ok(!!chip('Hamstrings'),'Hamstrings is a gap');
+ chip('Hamstrings').click();
+ ok(q('#sug .sgt').textContent==='Best for Hamstrings'&&chip('Hamstrings').getAttribute('aria-pressed')==='true'&&cards().length>=2&&cards().length<=4,'chip filters to "Best for Hamstrings" ('+cards().map(nm).join(', ')+')');
+ ok(cards().every(c=>exOf(nm(c)).t.some(t=>HAMS.includes(t[0])&&t[2]===3)),'every option trains hamstrings as prime mover');
+ ok(new Set(cards().map(c=>exOf(nm(c)).eq[0])).size>=2,'options use different equipment where possible ('+cards().map(c=>exOf(nm(c)).eq[0]).join(', ')+')');
+ ok(!cards().some(c=>plan().some(p=>p.n===nm(c))),'planned exercises are not offered');
+ q('[data-gap="all"]').click();
+ ok(q('#sug .sgt').textContent==='Top picks'&&!!q('#sugMore'),'"All gaps" resets the filter');
+ // alternatives exclude planned exercises and respect the equipment filter
+ ok(qa('#sugMore .altr').every(c=>!plan().some(p=>p.n===nm(c))),'alternatives exclude planned exercises');
+ q('[data-eq="Barbell"]').click();
+ ok(qa('#sug .exlink').length>0&&qa('#sug .exlink').every(b=>exOf(b.textContent).eq.some(c=>c!=='Barbell')),'with Barbell off, no suggestion or alternative needs a barbell');
+ q('#eqAll').click();
+ ok(qa('#sugMore .altr').some(c=>exOf(nm(c)).eq[0]==='Barbell'),'with all equipment on, barbell options appear again');
+ // sets stepper and "+N"
+ goal('hyp10');
+ more();
+ chip('Hamstrings').click();
+ let c1=cards()[0];const n3=inc(c1.querySelector('small').textContent),name1=nm(c1);
+ ok(c1.querySelector('.step span').textContent==='3 sets'&&n3>0,'default 3 sets, "+N" = '+n3);
+ c1.querySelector('[data-ss$=":1"]').click();cards()[0].querySelector('[data-ss$=":1"]').click();
+ c1=cards()[0];
+ ok(nm(c1)===name1&&c1.querySelector('.step span').textContent==='5 sets'&&inc(c1.querySelector('small').textContent)>n3,'sets stepper 3 -> 5 raises the "+N" numbers ('+n3+' -> '+inc(c1.querySelector('small').textContent)+')');
+ for(let k=0;k<5;k++) cards()[0].querySelector('[data-ss$=":1"]').click();
+ ok(cards()[0].querySelector('.step span').textContent==='6 sets'&&cards()[0].querySelector('[data-ss$=":1"]').disabled,'stepper stops at 6');
+ for(let k=0;k<8;k++) cards()[0].querySelector('[data-ss$=":-1"]').click();
+ ok(cards()[0].querySelector('.step span').textContent==='1 sets'&&cards()[0].querySelector('[data-ss$=":-1"]').disabled,'stepper stops at 1');
+ for(let k=0;k<4;k++) cards()[0].querySelector('[data-ss$=":1"]').click();
+ c1=cards()[0];const sd=+c1.querySelector('[data-sadd]').dataset.sday,label=c1.querySelector('[data-sadd]').textContent;
+ ok(c1.querySelector('.step span').textContent==='5 sets'&&label==='+ Add to '+nameOf(sd),'button names the target day: "'+label+'"');
+ c1.querySelector('[data-sadd]').click();
+ const it=days()[sd].items.find(p=>p.n===name1);
+ ok(it&&it.sets===5&&dayBtn(sd).getAttribute('aria-pressed')==='true','the 5-set entry landed on the shown day ('+nameOf(sd)+'), which is now selected');
+ // variation select
+ let found=null;
+ for(const ch of chips()){ const gl=ch.firstChild.textContent.trim(); chip(gl).click(); const c=cards().find(c=>c.querySelector('select.sv')); if(c){found=c;break;} }
+ if(ok(found,'some suggestion offers a variation select')){
+  const fn=nm(found),sel=found.querySelector('select.sv'),gi=+sel.dataset.sv.split(':')[1],opts=exOf(fn).v[gi][1];
+  sel.value=String(opts.length-1);ev(sel,'change');
+  const f2=cards().find(c=>nm(c)===fn),sd2=+f2.querySelector('[data-sadd]').dataset.sday;
+  ok(f2.querySelector('select.sv').value===String(opts.length-1),'variation select keeps the choice after re-render');
+  f2.querySelector('[data-sadd]').click();
+  const it2=days()[sd2].items.find(p=>p.n===fn);
+  ok(it2&&it2.v[gi]===opts[opts.length-1][0],'adding stores the chosen variation: '+fn+' / '+(it2&&JSON.stringify(it2.v)));
+ }
+ // hover preview on the body
+ q('[data-gap="all"]').click();
+ const grey=()=>{let n=0;w.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind==='muscle'&&o.material.opacity<0.2)n++;});return n;};
+ if(!q('#exClear').disabled) q('#exClear').click();
+ const g0=grey(),sg=cards()[0];
+ sg.dispatchEvent(new w.MouseEvent('mouseover',{bubbles:true}));
+ ok(g0===0&&grey()>100,'hovering a suggestion previews its muscles on the body (others greyed: '+grey()+' meshes)');
+ sg.dispatchEvent(new w.MouseEvent('mouseout',{bubbles:true,relatedTarget:q('#sug')}));
+ ok(grey()===0,'leaving restores the previous view');
+ // placement: chest trained on Day 1 -> chest exercises are not put on Day 2 or Day 7
+ goal('hyp8');clearAll();selDay(0);addEx('Barbell bench press');
+ more();
+ chip('Mid and lower chest').click();
+ const days4=cards().map(c=>+c.querySelector('[data-sadd]').dataset.sday);
+ ok(cards().length>=2&&days4.every(x=>x!==1&&x!==6),'chest options never land the day after (Day 2) or before (Day 7) the bench day: Days '+days4.map(x=>x+1).join(','));
+ ok(cards().every(c=>!/⚠|overlaps/.test(c.querySelector('.dy').textContent)),'and are shown without a recovery warning');
+ cards()[0].querySelector('[data-sadd]').click();
+ ok(!q('#wstrip .warn'),'adding the first chest option creates no conflict');
+ // a rest day is used (and said so) when training days would overlap
+ clearAll();selDay(0);addEx('Barbell bench press');selDay(1);addEx('Barbell row');selDay(2);addEx('Back squat');selDay(3);addEx('Romanian deadlift');
+ q('[data-gap="all"]').click();
+ chip('Mid and lower chest')&&chip('Mid and lower chest').click();
+ ok(!chip('Mid and lower chest')||cards().every(c=>+c.querySelector('[data-sday]').dataset.sday!==1),'with Days 1-4 trained, chest work is not offered for Day 2');
+ // empty state + balance check
+ clearAll();selDay(0);
+ q('#goalSel').value='custom';ev(q('#goalSel'),'change');q('#goalLo').value='1';ev(q('#goalLo'),'change');q('#goalHi').value='40';ev(q('#goalHi'),'change');
+ let guard=0;while(q('#sug li.sg [data-sadd]')&&guard++<40) q('#sug li.sg [data-sadd]').click();
+ ok(/Every muscle group is at or above its target\./.test(q('#sug').textContent)&&!q('#sug [data-gap]'),'no gaps: "Every muscle group is at or above its target", no chips');
+ selDay(0);addEx('Barbell bench press');selDay(1);addEx('Barbell bench press');
+ ok(/Balance check/.test(q('#sug').textContent)&&/still recovering on Day/.test(q('#sug').textContent),'with no gaps but a recovery conflict, a "Balance check" line explains it: '+(q('#sug .fine b')?q('#sug').textContent.slice(0,160):''));
+ goal('hyp8');clearAll();selDay(0);
+}
+async function migrateRun(){
+ const m=boot({store:{'aom.plan.v2':JSON.stringify([{n:'Back squat',sets:4,v:['Wide','']},{n:'Hip thrust',sets:2},{n:'Removed exercise',sets:3}])}}),md=m.document;
+ await waitFor(()=>!md.getElementById('loading'),60000,'migration instance');
+ const ls=k=>m.localStorage.getItem(k),v3=JSON.parse(ls('aom.plan.v3')||'null');
+ ok(v3&&v3.days.length===7&&v3.days[0].items.length===2&&v3.days[0].items[0].n==='Back squat'&&v3.days[0].items[0].sets===4&&JSON.stringify(v3.days[0].items[0].v)==='["Wide",""]'&&v3.days.slice(1).every(x=>x.items.length===0),'aom.plan.v2 entries land in Day 1 of aom.plan.v3 (unknown exercise dropped)');
+ ok(ls('aom.plan.v2')===null,'aom.plan.v2 removed after migration');
+ ok(md.querySelectorAll('#plan .prow').length===2&&md.querySelector('#plan').textContent.includes('Wide')&&md.querySelector('#wstrip [data-day="0"]').textContent.includes('6')&&md.querySelectorAll('#wstrip .rest').length===6,'migrated plan shows in Day 1 (6 sets), six rest days');
+ // reload with the v3 data: names and several days survive
+ const w2=boot({store:{'aom.plan.v3':JSON.stringify({days:[{name:'Push',items:[{n:'Barbell bench press',sets:5,v:['']}]},{name:'',items:[]},{name:'Legs',items:[{n:'Back squat',sets:3,v:['Wide','Deep']}]}]})}}),d2=w2.document;
+ await waitFor(()=>!d2.getElementById('loading'),60000,'v3 reload instance');
+ ok(d2.querySelector('#wstrip [data-day="0"]').textContent.startsWith('Push')&&d2.querySelector('#wstrip [data-day="1"]').textContent.startsWith('D2')&&d2.querySelector('#wstrip [data-day="2"]').textContent.startsWith('Legs')&&d2.querySelectorAll('#wstrip [data-day]').length===7,'stored names restored (empty -> "Day 2"), missing days padded to seven');
+ d2.querySelector('#wstrip [data-day="2"]').click();
+ ok(d2.querySelector('#plan').textContent.includes('Back squat')&&d2.querySelector('#plan').textContent.includes('Wide, Deep'),'Day 3 holds Back squat (Wide, Deep)');
 }
 // ---- quality levels (main desktop instance) ----
 async function lodRun(){
@@ -362,6 +642,20 @@ async function phoneRun(){
  await waitFor(()=>lodOn(pd)==='high',30000,'phone High');
  lodBtn(pd,'low').click();await waitFor(()=>lodOn(pd)==='low',30000,'phone back to Low');
  ok(pq('#lodNote').textContent==='','phone: note cleared again on Low');
+ // training days + week overview on the phone: the overlay covers the viewport and the sheet; the gap block starts collapsed
+ pq('[data-tab="wk"]').click();pq('#qa').value='barbell bench';pq('#qa').dispatchEvent(new p.Event('input',{bubbles:true}));
+ pqa('#addres [data-add]').find(b=>b.firstChild.textContent.trim()==='+ Barbell bench press').click();
+ pq('#wstrip [data-day="1"]').click();pq('#qa').value='barbell bench';pq('#qa').dispatchEvent(new p.Event('input',{bubbles:true}));
+ pqa('#addres [data-add]').find(b=>b.firstChild.textContent.trim()==='+ Barbell bench press').click();
+ ok(pqa('#wstrip [data-day]').length===7&&pq('#wstrip [data-day="1"]').classList.contains('warn'),'phone: week strip with a conflict marker on Day 2');
+ ok(pq('#sugMore')&&!pq('#sugMore').open,'phone: "More options" starts collapsed');
+ pq('#ovOpen').click();
+ ok(!pq('#ov').hidden&&pq('#vp').contains(pq('#ov'))&&pqa('#ovGrid tr.g').length===27&&pqa('#ovGrid tr.g').every(r=>r.querySelectorAll('.cb').length===7),'phone: the overview opens (full-screen overlay in the viewport) with the 27 x 7 grid');
+ ok(pq('#ovGrid tr.g[data-g="1"] .cb[data-d="1"]').dataset.c==='1'&&/Recovery conflicts <b>1<\/b>/.test(pq('#ovSum').innerHTML),'phone: the conflict cell is flagged');
+ pq('#ovClose').click();
+ ok(pq('#ov').hidden&&sheet()!==undefined&&!!pq('#side'),'phone: "Show body" closes the overview, the sheet is untouched');
+ pq('#ovOpen').click();pd.dispatchEvent(new p.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ ok(pq('#ov').hidden,'phone: Escape closes the overview');
  p.__setPhone(false);
  ok(card.parentNode===pq('#vp')&&!side.classList.contains('has-card')&&!card.classList.contains('mini'),'phone->desktop: card moves back over the viewport');
  ok(pq('#hint').textContent.includes('right-drag')&&p.__dpr===2,'phone->desktop: mouse hint text restored, pixel ratio cap back to 2');
@@ -382,7 +676,8 @@ async function phoneRun(){
  // storage migration (legacy keys seeded above)
  const ls=k=>w.localStorage.getItem(k);
  ok(ls('myology.plan.v1')===null&&ls('myology.eq.v1')===null,'legacy "myology.*" keys removed after migration');
- ok(plan()&&plan().length===2&&plan()[0].n==='Back squat'&&plan()[0].sets===4&&JSON.stringify(plan()[0].v)==='["Wide",""]','"aom.plan.v2" holds option names for Back squat (Wide), got '+ls('aom.plan.v2'));
+ ok(plan()&&plan().length===2&&plan()[0].n==='Back squat'&&plan()[0].sets===4&&JSON.stringify(plan()[0].v)==='["Wide",""]','"aom.plan.v3" holds option names for Back squat (Wide), got '+ls('aom.plan.v3'));
+ ok(wk().days.length===7&&wk().days[0].items.length===2&&wk().days.slice(1).every(d=>d.items.length===0)&&wk().days[0].name==='Day 1'&&ls('aom.plan.v2')===null,'legacy v1 plan migrated into Day 1 of "aom.plan.v3"; seven day slots, no v2 key');
  ok(plan()[1].n==='Hip thrust'&&plan()[1].sets===2&&!plan().some(p=>p.n==='Removed exercise'),'entry without v kept, unknown exercise dropped');
  ok(JSON.stringify(JSON.parse(ls('aom.eq.v1')))===JSON.stringify(OLD_EQ),'"aom.eq.v1" holds the migrated equipment list');
  ok(qa('#plan .prow').length===2&&qa('#plan .prow')[0].textContent.includes('Back squat')&&qa('#plan .prow')[0].textContent.includes('Wide'),'plan row shows the migrated variation (Wide)');
@@ -468,7 +763,7 @@ async function phoneRun(){
  ok(rows[0].querySelector('.step span').textContent.startsWith('4 '),'incrementing gives 4 sets on the first row');
  ok(rows[1].querySelector('.step span').textContent.startsWith('3 '),'second row stays at 3 sets');
  ok(/2 exercises, 7 sets/.test(q('#plan').textContent),'total reads "2 exercises, 7 sets"');
- ok(plan()&&plan().length===2&&plan()[0].n==='Hip thrust'&&plan()[0].sets===4,'localStorage "aom.plan.v2" holds 2 entries');
+ ok(plan()&&plan().length===2&&plan()[0].n==='Hip thrust'&&plan()[0].sets===4,'localStorage "aom.plan.v3" holds 2 entries');
  // weekly volume
  const vrows=qa('#volsum tr'),glutes=vrows.find(r=>r.cells[0].textContent.trim()==='Glutes');
  ok(vrows.length===27,'weekly volume table has 27 rows (got '+vrows.length+')');
@@ -539,7 +834,7 @@ async function phoneRun(){
  const added=first.querySelector('.exlink').textContent;
  first.querySelector('[data-sadd]').click();
  const pl=plan();
- ok(pl.length===3&&pl[2].n===added&&pl[2].sets===3,'"+ Add 3 sets" appends the suggestion with 3 sets ('+added+')');
+ ok(pl.length===3&&pl.some(p=>p.n===added&&p.sets===3),'"+ Add to Day N" adds the suggestion with 3 sets ('+added+')');
  ok(!sugNames().includes(added)&&sugNames().join()!==sn.join()&&fg.every((g,k)=>rowVal(g)>before[k]),'suggestions change after adding and the listed groups went up');
  const sx=q('#sug .exlink').textContent;q('#sug .exlink').click();
  ok(q('#card h2')&&q('#card h2').textContent===sx,'a suggestion name opens its exercise card ('+sx+')');
@@ -563,6 +858,9 @@ async function phoneRun(){
  ok(w.__dpr===2&&!q('#side').classList.contains('has-card')&&q('#card').parentNode===q('#vp'),'desktop: pixel ratio capped at 2, card floats in the viewport, sheet classes unused');
  ok(q('#btnLayers').getAttribute('aria-expanded')==='false'&&q('#popLayers').contains(q('#tBones'))&&q('#popLayers').contains(q('#opM')),'desktop: layer toggles and opacity sliders live in the Layers popover, closed by default');
  ok(qa('[data-view]').length===5&&q('#toolbar').contains(q('[data-view="front"]')),'desktop: view buttons are in the floating toolbar');
+ await weekRun();
+ await sugRun();
+ await migrateRun();
  await searchRun();
  await variationRun();
  await linkRun();
