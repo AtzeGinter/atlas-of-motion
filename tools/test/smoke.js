@@ -6,21 +6,25 @@ const ok=(c,m)=>{c?pass++:fail++;console.log((c?'ok - ':'FAIL - ')+m);return !!c
 const finish=()=>{console.log(`\n${pass} passed, ${fail} failed`);process.exit(fail?1:0);};
 const die=m=>{ok(false,m);finish();};
 if(typeof DecompressionStream==='undefined'||typeof Response==='undefined') die('Node >= 18 required (DecompressionStream/Response/Blob globals missing), found '+process.version);
-const fs=require('fs');const {JSDOM,VirtualConsole}=require('jsdom');
-const html0=fs.readFileSync(require('path').join(__dirname,'..','..','index.html'),'utf8').replace(/<script src="[^"]+three[^"]+"><\/script>/,'');
+const fs=require('fs'),path=require('path');const {JSDOM,VirtualConsole}=require('jsdom');
+const ROOT=path.join(__dirname,'..','..');
+const html0=fs.readFileSync(path.join(ROOT,'index.html'),'utf8').replace(/<script src="[^"]+three[^"]+"><\/script>/,'');
 const js=html0.match(/<script>([\s\S]*?)<\/script>/)[1];
 const mi=js.indexOf('const META='),META=JSON.parse(js.slice(mi+11,js.indexOf('\n',mi)).replace(/;\s*$/,'')); // embedded data, to derive expectations
 const errs=[];
 const OLD_EQ=['Barbell','Dumbbells','Kettlebell','Cable','Machine','Bodyweight','Other'];
-// boot one page instance. opts.phone: stub matchMedia so "(max-width:760px)" and "(pointer:coarse)" match (w.__setPhone(false) flips them and fires the change listeners); otherwise matchMedia is absent (exercises the guard)
+// boot one page instance. opts.url: page URL; opts.failFetch: every fetch rejects (w.__failFetch toggles it later); opts.lod: stored "aom.lod.v1" value. opts.phone: stub matchMedia so "(max-width:760px)" and "(pointer:coarse)" match (w.__setPhone(false) flips them and fires the change listeners); otherwise matchMedia is absent (exercises the guard)
 function boot(opts){
  opts=opts||{};
  const vc=new VirtualConsole();
  vc.on('error',(...a)=>errs.push('console.error: '+a.join(' ')));vc.on('jsdomError',e=>errs.push('jsdomError: '+(e.stack||e.message)));
- const dom=new JSDOM(html0,{runScripts:'outside-only',pretendToBeVisual:true,url:'https://example.test/',virtualConsole:vc});const w=dom.window;const THREE=require('three');
+ const dom=new JSDOM(html0,{runScripts:'outside-only',pretendToBeVisual:true,url:opts.url||'https://example.test/',virtualConsole:vc});const w=dom.window;const THREE=require('three');
  w.addEventListener('error',e=>errs.push('uncaught: '+(e.message||e.error)));
- class FR{constructor(){this.domElement=w.document.createElement('canvas');}setPixelRatio(r){w.__dpr=r;}setClearColor(){}setSize(){}render(s){}}
+ class FR{constructor(){this.domElement=w.document.createElement('canvas');}setPixelRatio(r){w.__dpr=r;}setClearColor(){}setSize(){}render(s){w.__scene=s;}}
  w.THREE=Object.assign({},THREE,{WebGLRenderer:FR});w.ResizeObserver=class{observe(){}};
+ // geometry is no longer embedded: serve geo/<level>.bin from the repo root, like a web server would
+ w.__fetched=[];w.__failFetch=!!opts.failFetch;
+ w.fetch=async(u,o)=>{u=String(u).split('?')[0];w.__fetched.push(u);if(w.__failFetch)throw new TypeError('Failed to fetch');return new Response(fs.readFileSync(path.join(ROOT,u)));};
  w.DecompressionStream=DecompressionStream;w.Response=Response;w.Blob=Blob;
  w.HTMLCanvasElement.prototype.getContext=function(){return {createRadialGradient(){return{addColorStop(){}}},fillRect(){}}};
  Object.defineProperty(w.HTMLElement.prototype,'clientWidth',{get(){return 1000}});Object.defineProperty(w.HTMLElement.prototype,'clientHeight',{get(){return 800}});
@@ -35,6 +39,7 @@ function boot(opts){
   w.localStorage.setItem('myology.plan.v1',JSON.stringify([{n:'Back squat',sets:4,v:[1,0]},{n:'Hip thrust',sets:2},{n:'Removed exercise',sets:3,v:[]}]));
   w.localStorage.setItem('myology.eq.v1',JSON.stringify(OLD_EQ));
  }
+ if(opts.lod) w.localStorage.setItem('aom.lod.v1',opts.lod);
  w.eval(`(async()=>{try{${js.replace('(async function(){','await (async function(){')}}catch(e){window.__fatal=e.stack||String(e)}})()`);
  return w;
 }
@@ -48,6 +53,56 @@ const bestNames=()=>qa('#best [data-ex]').map(b=>b.textContent),bestPct=()=>qa('
 const plan=()=>JSON.parse(w.localStorage.getItem('aom.plan.v2')||'null');
 const addRes=n=>qa('#addres [data-add]').find(b=>b.firstChild.textContent.trim()==='+ '+n);
 const addEx=n=>{q('#qa').value=n.toLowerCase();ev(q('#qa'),'input');const b=addRes(n);if(!ok(b,'search offers "'+n+'"')) return;b.click();};
+// total triangle-index count over all body meshes in the three.js scene (captured by the stubbed renderer)
+const idxCount=win=>{let n=0;win.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind&&o.geometry.index)n+=o.geometry.index.count;});return n;};
+const lodBtn=(doc,l)=>doc.querySelector('[data-lod="'+l+'"]'),lodOn=doc=>[...doc.querySelectorAll('[data-lod]')].filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.dataset.lod).join(',');
+async function waitFor(f,ms,what){const t=Date.now();while(!f()){if(Date.now()-t>(ms||30000)) return ok(false,'timed out waiting for '+what);await sleep(50);}return true;}
+// ---- other start-up cases: stored choice, failed loads (network error, file://) end in a readable #loadMsg, not an exception ----
+async function otherRuns(){
+ const st=boot({lod:'"low"'}),sd=st.document;
+ await waitFor(()=>!sd.getElementById('loading'),60000,'stored-choice instance');
+ ok(lodOn(sd)==='low'&&st.__fetched.join()==='geo/low.bin','a stored "low" choice overrides the desktop default (only geo/low.bin fetched)');
+ const bad=boot({lod:'"bogus"'}),bd=bad.document;
+ await waitFor(()=>!bd.getElementById('loading'),60000,'invalid-choice instance');
+ ok(lodOn(bd)==='medium'&&bad.__fetched.join()==='geo/medium.bin','an invalid stored value is ignored (Medium on desktop)');
+ const f=boot({failFetch:true}),fd=f.document;
+ await waitFor(()=>/Network error/.test(fd.getElementById('loadMsg').textContent),15000,'network error message');
+ ok(/Network error/.test(fd.getElementById('loadMsg').textContent)&&!!fd.getElementById('loading')&&!f.__fatal,'failed fetch: #loadMsg explains the network error, no exception ("'+fd.getElementById('loadMsg').textContent+'")');
+ const g=boot({phone:true,url:'file:///C:/atlas/index.html'}),gd=g.document;
+ await waitFor(()=>/web server/.test(gd.getElementById('loadMsg').textContent),15000,'file:// message');
+ ok(/web server/.test(gd.getElementById('loadMsg').textContent)&&g.__fetched.length===0&&!g.__fatal,'file:// page: #loadMsg asks for a web server and nothing is fetched');
+}
+// ---- quality levels (main desktop instance) ----
+async function lodRun(){
+ const L=META.lod,ls=k=>w.localStorage.getItem(k);
+ ok(['low','medium','high'].every(l=>L[l]&&L[l].file.startsWith('geo/'+l+'.bin?v=')&&L[l].file.length===('geo/'+l+'.bin?v=').length+10&&L[l].bytes>0)&&L.low.faces<L.medium.faces&&L.medium.faces<L.high.faces,'META.lod describes three increasing levels ('+['low','medium','high'].map(l=>L[l].faces).join(' < ')+' triangles)');
+ ok(qa('[data-lod]').length===3&&q('#popLayers').contains(q('#segLod'))&&q('[data-lod="high"]').dataset.faces==String(L.high.faces)&&q('[data-lod="high"]').textContent.includes((L.high.bytes/1e6).toFixed(1)+' MB'),'Quality control (Low/Medium/High with sizes) lives in the Layers popover');
+ ok(lodOn(d)==='medium'&&w.__fetched.join()==='geo/medium.bin','desktop with no stored choice: Medium is pressed and only geo/medium.bin was fetched');
+ ok(idxCount(w)===L.medium.faces*3,'scene holds the Medium mesh ('+L.medium.faces+' triangles)');
+ ok(ls('aom.lod.v1')===null,'the default level is not persisted');
+ // keep the selection across a switch
+ q('[data-tab="anat"]').click();const mi=qa('#list .item').find(b=>b.dataset.kind==='muscle');mi.click();const nm=q('#card h2').textContent;
+ const mesh0=[];w.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind)mesh0.push(o);});const g0=mesh0[0].geometry;
+ lodBtn(d,'high').click();
+ ok(lodBtn(d,'high').getAttribute('aria-busy')==='true'&&lodOn(d)==='medium','while loading, High is marked busy and Medium stays pressed');
+ await waitFor(()=>lodOn(d)==='high',30000,'High to finish loading');
+ await sleep(50);
+ ok(idxCount(w)===L.high.faces*3,'switching to High swaps all geometries ('+L.high.faces+' triangles)');
+ ok(ls('aom.lod.v1')==='"high"','choice persisted in aom.lod.v1');
+ ok(mesh0[0].geometry!==g0&&mesh0[0].geometry.boundingBox&&mesh0[0].geometry.boundingSphere,'mesh keeps its object, gets a new geometry with bounds');
+ ok(q('#card h2')&&q('#card h2').textContent===nm,'selection survives the switch ('+nm+')');
+ ok(lodBtn(d,'high').getAttribute('aria-busy')==='false'&&q('#lodNote').textContent==='','busy state cleared, no note on desktop');
+ // last request wins
+ lodBtn(d,'low').click();lodBtn(d,'medium').click();
+ await waitFor(()=>lodOn(d)==='medium'&&!lodBtn(d,'medium').classList.contains('busy'),30000,'Medium to finish');
+ await sleep(300);
+ ok(lodOn(d)==='medium'&&idxCount(w)===L.medium.faces*3&&ls('aom.lod.v1')==='"medium"','Low then Medium in quick succession ends on Medium only (last request wins)');
+ // failing switch keeps the current level and reports
+ w.__failFetch=true;lodBtn(d,'low').click();
+ await waitFor(()=>q('#lodNote').textContent!=='',5000,'error note');
+ ok(/Network error/.test(q('#lodNote').textContent)&&lodOn(d)==='medium'&&idxCount(w)===L.medium.faces*3&&ls('aom.lod.v1')==='"medium"','failed switch: error note shown, Medium stays active');
+ w.__failFetch=false;
+}
 // ---- phone instance: matchMedia reports max-width:760px and a coarse pointer ----
 async function phoneRun(){
  const p=boot({phone:true}),pd=p.document,pq=x=>pd.querySelector(x),pqa=x=>[...pd.querySelectorAll(x)];
@@ -56,6 +111,7 @@ async function phoneRun(){
  const side=pq('#side'),card=pq('#card'),sheet=()=>side.dataset.sheet,grab=pq('#grab');
  const pev=(el,t,o)=>{const e=new p.Event(t,{bubbles:true});Object.assign(e,{pointerId:1,pointerType:'touch',clientX:500,clientY:400,button:0,buttons:1},o||{});el.dispatchEvent(e);};
  const toPeek=()=>{for(let i=0;i<3&&sheet()!=='peek';i++)grab.click();};
+ ok(lodOn(pd)==='low'&&p.__fetched.join()==='geo/low.bin'&&idxCount(p)===META.lod.low.faces*3,'phone: defaults to Low quality (only geo/low.bin fetched, '+META.lod.low.faces+' triangles)');
  ok(p.__dpr===1.5,'phone: renderer pixel ratio capped at 1.5 (got '+p.__dpr+')');
  ok(sheet()==='peek','phone: sheet starts in "peek"');
  ok(side.contains(card)&&card.parentNode===pq('#cslot')&&!pq('#vp').contains(card),'phone: #card lives inside the sheet, not over the viewport');
@@ -114,6 +170,12 @@ async function phoneRun(){
  await sleep(1700);
  ok(tip.style.display==='none','phone: the touch label disappears after about 1.5 s');
  // viewport grows to desktop size: card returns to the viewport, sheet classes cleared
+ // choosing High on a phone shows a short note about the download size, without a blocking dialog
+ lodBtn(pd,'high').click();
+ ok(/large download/.test(pq('#lodNote').textContent),'phone: choosing High shows a large-download note ("'+pq('#lodNote').textContent+'")');
+ await waitFor(()=>lodOn(pd)==='high',30000,'phone High');
+ lodBtn(pd,'low').click();await waitFor(()=>lodOn(pd)==='low',30000,'phone back to Low');
+ ok(pq('#lodNote').textContent==='','phone: note cleared again on Low');
  p.__setPhone(false);
  ok(card.parentNode===pq('#vp')&&!side.classList.contains('has-card')&&!card.classList.contains('mini'),'phone->desktop: card moves back over the viewport');
  ok(pq('#hint').textContent.includes('right-drag')&&p.__dpr===2,'phone->desktop: mouse hint text restored, pixel ratio cap back to 2');
@@ -125,7 +187,7 @@ async function phoneRun(){
  const msg0=q('#loadMsg').textContent,t0=Date.now();
  while(q('#loading')){
   if(w.__fatal) die('startup IIFE threw: '+w.__fatal);
-  if(q('#loadMsg')&&q('#loadMsg').textContent!==msg0) die('startup error shown in #loadMsg: '+q('#loadMsg').textContent);
+  if(q('#loadMsg')&&!/^(Loading model|Unpacking)/.test(q('#loadMsg').textContent)) die('startup error shown in #loadMsg: '+q('#loadMsg').textContent);
   if(Date.now()-t0>60000) die('startup timed out after 60 s (#loading still present, #loadMsg: "'+msg0+'")');
   await sleep(100);
  }
@@ -252,6 +314,8 @@ async function phoneRun(){
  ok(w.__dpr===2&&!q('#side').classList.contains('has-card')&&q('#card').parentNode===q('#vp'),'desktop: pixel ratio capped at 2, card floats in the viewport, sheet classes unused');
  ok(q('#btnLayers').getAttribute('aria-expanded')==='false'&&q('#popLayers').contains(q('#tBones'))&&q('#popLayers').contains(q('#opM')),'desktop: layer toggles and opacity sliders live in the Layers popover, closed by default');
  ok(qa('[data-view]').length===5&&q('#toolbar').contains(q('[data-view="front"]')),'desktop: view buttons are in the floating toolbar');
+ await lodRun();
+ await otherRuns();
  await phoneRun();
  // no errors anywhere
  ok(errs.length===0,'no console errors or uncaught exceptions'+(errs.length?':\n  '+errs.slice(0,10).join('\n  '):''));

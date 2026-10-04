@@ -20,8 +20,8 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: tools/test/package-lock.json
-      - name: Rebuild data from the committed index.html
-        run: python extract.py && python exercises.py
+      - name: Rebuild metadata from the committed meshes.json
+        run: python meta.py && python exercises.py
       - name: Lint data
         run: python lint.py
       - name: Assemble index.html
@@ -30,7 +30,7 @@ jobs:
         working-directory: .
         run: |
           git diff --exit-code --stat -- index.html || {
-            echo "::error file=index.html::index.html is out of date: run python extract.py && python exercises.py && python assemble.py in tools/ and commit"
+            echo "::error file=index.html::index.html is out of date: run python meta.py && python exercises.py && python assemble.py in tools/ and commit"
             exit 1
           }
       - name: Install test deps

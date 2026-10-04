@@ -2,7 +2,7 @@ import json
 M=json.load(open('meta2.json',encoding='utf-8'))
 DB=M['db']
 parts={}
-for k,key,side,part,nv,nf in M['meshes']:
+for k,key,side,part in M['meshes']:
     if k=='m' and part: parts.setdefault(key,set()).add(part)
 G={
  'PEC':['pectoralis major|sternocostal part','pectoralis major|clavicular part'],

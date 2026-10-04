@@ -5,29 +5,30 @@ Browser-based 3D atlas of the human muscular system plus a strength-exercise dat
 ## Golden rules
 
 - **`index.html` is generated.** Never hand-edit it. Edit `tools/template.html` (UI/JS/CSS) or the data sources in `tools/`, then run the pipeline (see below) to regenerate it.
-- `index.html` is ~7 MB because the mesh data is embedded as base64. Do not open or print it whole; grep or read `tools/template.html` instead.
+- `index.html` (~250 kB) embeds only the metadata (`META`, ~230 kB of JSON); the geometry lives in `geo/{low,medium,high}.bin` and is fetched at runtime (so the app must be served over http(s); `file://` shows an error in `#loadMsg`). Avoid printing `index.html` whole; grep or read `tools/template.html` instead.
 - Anatomy keys are lower-case English names from the source data (e.g. `"gluteus medius"`, `"pectoralis major"`). Every exercise target must reference an existing key (and, if given, an existing part). `tools/exercises.py` asserts this; keep the asserts.
 - After any change: rebuild, run `python lint.py` (in `tools/`), then run the smoke test (`tools/test`). Commit the regenerated `index.html` together with its sources, or CI fails.
 
 ## Repository layout
 
 ```
-index.html            GENERATED app (template + embedded data). Served by GitHub Pages.
+index.html            GENERATED app (template + embedded META). Served by GitHub Pages.
+geo/                  low.bin, medium.bin, high.bin: gzip mesh data per quality level (committed, fetched at runtime).
 README.md             Public description, features, credits, licensing.
 CLAUDE.md             This file.
 LICENSE               MIT: code, anatomy text, exercise data.
 LICENSE-DATA          CC BY-SA 4.0: embedded 3D mesh data.
-.gitignore            Ignores intermediates (meta*.json, geo.b64, BodyExplorer clone, node_modules).
-.github/workflows/ci.yml  CI: extract -> exercises -> lint -> assemble -> fail if index.html differs from the commit -> smoke test
+.gitignore            Ignores intermediates (meta2.json, meta3.json, BodyExplorer clone, node_modules).
+.github/workflows/ci.yml  CI: meta -> exercises -> lint -> assemble -> fail if index.html differs from the commit -> smoke test
 tools/
-  template.html       The whole app source: HTML + CSS + one inline <script>. Placeholders __GEO__ and __META__.
-  build.py            Mesh pipeline: load GLBs, decimate, transform, quantise, pack -> geo.b64 + meta.json
-  extract.py          Recover geo.b64 + meta2.json from the committed ../index.html (db/bdb rebuilt from data/*.txt + bones.py); replaces build.py + meta.py for non-mesh changes
+  template.html       The whole app source: HTML + CSS + one inline <script>. Placeholder __META__.
+  build.py            Mesh pipeline (needs BodyExplorer clone): load GLBs, decimate at three levels, transform, quantise, pack -> ../geo/*.bin + meshes.json
+  meshes.json         COMMITTED build.py output: lo/span (shared dequantisation box), mesh list [[kind,name]], per-level file/bytes/faces/counts [[nv,nf]]
   lint.py             Data linter: data/*.txt and (if meta3.json exists) exercises vs MGROUPS/EXCATS/EQCATS in template.html
   meta.py             Map each mesh to an anatomy key/side/part, attach muscle + bone info -> meta2.json
   bones.py            Bone descriptions and regions (imported by meta.py)
   exercises.py        Exercise database, variations, equipment categories -> meta3.json
-  assemble.py         Inject meta3.json + geo.b64 into template.html -> ../index.html
+  assemble.py         Inject meta3.json into template.html -> ../index.html
   data/muscles.txt    Muscle/connective-tissue info, one line per key: key|group|action;action|origin|insertion|nerve
   data/extra.txt      Optional extras per key: key|exercises text|clinical note
   test/smoke.js       jsdom smoke test (real three.js, WebGL stubbed); package.json alongside
@@ -41,14 +42,15 @@ Run from `tools/` (scripts use relative paths):
 cd tools
 git clone --depth 1 https://github.com/JohanBellander/BodyExplorer.git   # source GLBs, ~60 MB
 pip install trimesh pyfqmr numpy
-python build.py 0.45 0.35   # args: muscle and bone decimation ratios -> geo.b64, meta.json
-python meta.py              # -> meta2.json
+python build.py             # three levels -> ../geo/{low,medium,high}.bin + meshes.json (committed outputs)
+python meta.py              # reads meshes.json -> meta2.json
 python exercises.py         # -> meta3.json
+python lint.py              # data checks
 python assemble.py          # -> ../index.html
 cd test && npm install && npm test
 ```
 
-If you only changed `template.html`, `data/*.txt`, `bones.py` or `exercises.py`, skip `build.py` and `meta.py` and run `python extract.py && python exercises.py && python assemble.py` (no BodyExplorer clone needed; `extract.py` reads the mesh data and mesh list from the committed `../index.html` and rebuilds `db`/`bdb` from the text sources). Regenerating without edits reproduces `index.html` byte for byte. The full pipeline is still needed after changing `build.py` decimation or the mesh mapping in `meta.py` (`PARTPRE`, `HEADPRE`, `MERGE`). Scripts read/write UTF-8 with LF explicitly, so Windows builds are safe. Changing decimation in `build.py` changes mesh order/counts; always rerun everything after it.
+If you only changed `template.html`, `data/*.txt`, `bones.py`, `exercises.py` or the mapping in `meta.py`, skip `build.py` and run `python meta.py && python exercises.py && python lint.py && python assemble.py` (no BodyExplorer clone needed: `meshes.json` and `geo/*.bin` are committed). `build.py`, `meta.py`, `exercises.py` and `assemble.py` are deterministic, so regenerating without edits reproduces `index.html` byte for byte (CI relies on this); `build.py` gzips with `mtime=0` for the same reason. Rerun everything after changing `LODS` in `build.py`.
 
 ### Source data
 
@@ -58,15 +60,16 @@ If you only changed `template.html`, `data/*.txt`, `bones.py` or `exercises.py`,
 
 ### build.py
 
-- Decimates each mesh with pyfqmr to `max(min(faces,300), faces*ratio)`; total ~770k triangles.
-- Transforms to scene space in metres: `x = X`, `y = Z` (up), `z = -Y` (front faces +z). Shifts so x/z are centred and the feet sit at y = 0. Height ≈ 1.71.
-- Reorders vertices by first use, quantises positions to uint16 over the global bbox (`lo`, `span` in meta).
-- Binary layout (all little-endian uint16, gzip-compressed, then base64), per mesh in meta order: x-plane[nv], y-plane[nv], z-plane[nv], then indices[nf*3]. Each stream is delta-coded (wrap-around mod 65536) and zigzag-encoded. Decoder: `prev = (prev + ((z>>>1) ^ -(z&1))) & 0xFFFF`. Max 65535 vertices per mesh (asserted).
+- Builds all levels in one run from the `LODS` table `{level: (muscle ratio, bone ratio, face floor, preserve_border)}`: **low** 0.16/0.12 (~362k triangles, 2.3 MB), **medium** 0.45/0.35 (769k, 5.2 MB; the original setting), **high** untouched source (1.59M, 9.9 MB). Each mesh is decimated with pyfqmr to `max(min(faces,floor), faces*ratio)`. Low needs `preserve_border=False` (with it pyfqmr stalls near 600k faces because the meshes have many open borders); because that can erode thin open meshes, `simplify()` redoes a mesh with borders kept when its bbox diagonal shrinks >7% or its area >20%. All levels have the identical mesh list/order (asserted).
+- Transforms to scene space in metres: `x = X`, `y = Z` (up), `z = -Y` (front faces +z). Shifts so x/z are centred and the feet sit at y = 0 (shift taken from the undecimated set, applied to all levels). Height ≈ 1.71.
+- Reorders vertices by first use, quantises positions to uint16 over one global bbox shared by all levels (`lo`, `span` in meshes.json = union over the levels).
+- `../geo/<level>.bin` layout (all little-endian uint16, gzip-compressed, no base64), per mesh in meshes.json order: x-plane[nv], y-plane[nv], z-plane[nv], then indices[nf*3]. Each stream is delta-coded (wrap-around mod 65536) and zigzag-encoded. Decoder: `prev = (prev + ((z>>>1) ^ -(z&1))) & 0xFFFF`. Max 65535 vertices per mesh and level (asserted). The per-mesh vertex/face counts are in `meshes.json` (`lod[level].counts`) and are the only thing the decoder needs.
 
 ### meta.py
 
 - Canonicalises names: strips left/right (stored as side `"L"`/`"R"`), `(2)` suffixes, `" of hand"`/`" of foot"` → `" (hand)"`/`" (foot)"`.
 - Derives the info **key** by stripping part/head prefixes (`PARTPRE`, `HEADPRE`, e.g. `"acromial part of deltoid"` → key `"deltoid"`, part `"acromial part"`) and merging series via `MERGE` (lumbricals, multifidus, iliocostalis, levator ani parts, thoracolumbar fascia layers, ...).
+- Reads `meshes.json`; emits META mesh rows as `[kind,key,side,part]` (no counts) and passes `lo`, `span`, `lod` through to meta2.json. `bdb` keys are sorted, so output is reproducible.
 - Fails loudly if a key has no entry in `data/muscles.txt`, or a bone has no entry in `bones.py`.
 
 ### exercises.py
@@ -83,7 +86,8 @@ If you only changed `template.html`, `data/*.txt`, `bones.py` or `exercises.py`,
 ```js
 {
   lo:[x,y,z], span:[x,y,z],                 // dequantisation
-  meshes:[[kind,key,side,part,nv,nf], ...], // kind "m" (muscle/tissue) or "b" (bone); same order as the binary
+  meshes:[[kind,key,side,part], ...],        // kind "m" (muscle/tissue) or "b" (bone); same order as every geo/*.bin
+  lod:{low:{file:"geo/low.bin",bytes,faces,counts:[[nv,nf],...]}, medium:{...}, high:{...}},
   db:{ key:{g:group, a:[actions], o:origin, i:insertion, n:nerve, t?:exercisesText, x?:note} },
   bdb:{ boneKey:[region, description] },
   ex:[{ n:name, c:category, e:equipment, q:cue, t:[[key,part,level],...], v?:[[group,[[option,[[key,part,level],...]],...]]], eq:[categories] }]
@@ -98,9 +102,12 @@ Single `async` IIFE, no modules, no framework. Three.js **r128** UMD from cdnjs 
 
 ### Startup
 1. Create renderer/scene/lights, materials.
-2. Decode `#geo` (atob → `DecompressionStream('gzip')` → Uint16Array) and build one `THREE.Mesh` per META row (`computeVertexNormals`, `DoubleSide`, `matrixAutoUpdate=false`).
+2. Pick the quality level (`localStorage` `aom.lod.v1` if valid, else `low` on phones/coarse pointers, `medium` otherwise), `fetchLod()` the file with byte progress in `#loadMsg` ("Loading model · 2.1 MB / 4.2 MB"; `file://` and network failures write an explanatory message there and stop), `DecompressionStream('gzip')` → Uint16Array, `decodeLod()` with that level's `counts`, and build one `THREE.Mesh` per META row (`makeGeo`: `computeVertexNormals`, bounds; `DoubleSide`, `matrixAutoUpdate=false`). `allMeshes` keeps META order.
 3. Index: `muscleMeshes`, `boneMeshes`, `byKey[key]`, `byBone[key]`. `mesh.userData = {kind:"muscle"|"bone", key, side, part, group, tissue}`.
 4. Build UI lists, restore localStorage, `applyVisuals()`, remove loading overlay.
+
+### Mesh quality
+Segmented control `#segLod` (Low/Medium/High with sizes, `data-lod`, `data-faces`, `aria-pressed`) in the Layers popover. `setLod(level)`: fetch + decode the new file (the pressed button shows a progress fill, `aria-busy`), then swap `mesh.geometry` on every mesh in `allMeshes` (old one disposed); materials, `userData`, visibility, selection and heat mode are untouched; then `applyVisuals()`. Last request wins (`lodReq` counter + `AbortController`); a failed switch keeps the current level and writes the error into `#lodNote`. Choosing High on a phone/coarse pointer shows a large-download note. The choice is persisted only when the user picks a level.
 
 ### Camera and rendering
 - Custom orbit (`orbit` current, `goal` target; theta/phi/r/ty) with pointer events, pinch, wheel; damped in `tick()`.
@@ -142,14 +149,14 @@ selected structure (`M_SEL`) → heat mode material (`HM` levels, `CM` compariso
 `renderCard()` dispatches to `renderCmpCard()`, `renderExCard()` or the muscle/bone card. Click handling is delegated on `#card` via `data-act`, `data-ex`, `data-key`, `data-var`. Sidebar tabs: Anatomy (`buildList`, region chips, per-structure checkboxes), Exercises (`buildEq`, `buildBest`, `buildExList`, comparison banner), Workout (`renderPlan`, `buildAdd`, `renderVolSum`, `#tVol`).
 
 ### Persistence
-localStorage, all wrapped in try/catch. `aom.plan.v2`: `[{n:exerciseName, sets, v:[optionName per variation group]}]` (`""` or missing = default option; unknown names fall back to the default, entries for exercises that no longer exist are dropped). `aom.eq.v1`: array of enabled equipment categories. In memory `plan[].v` and `exVars` are option-index arrays; conversion happens only in `loadPlan()`/`savePlan()` (`varNames`/`varIdx`), so reordering `VARS` options is safe but renaming one resets it to the default. Legacy keys `myology.plan.v1` (variation indices, validated against the current `EX[i].v`) and `myology.eq.v1` are migrated on first load and then removed. Bump the version suffix if the format changes.
+localStorage, all wrapped in try/catch. `aom.lod.v1`: `"low"|"medium"|"high"` (written only on an explicit choice; anything else is ignored). `aom.plan.v2`: `[{n:exerciseName, sets, v:[optionName per variation group]}]` (`""` or missing = default option; unknown names fall back to the default, entries for exercises that no longer exist are dropped). `aom.eq.v1`: array of enabled equipment categories. In memory `plan[].v` and `exVars` are option-index arrays; conversion happens only in `loadPlan()`/`savePlan()` (`varNames`/`varIdx`), so reordering `VARS` options is safe but renaming one resets it to the default. Legacy keys `myology.plan.v1` (variation indices, validated against the current `EX[i].v`) and `myology.eq.v1` are migrated on first load and then removed. Bump the version suffix if the format changes.
 
 ## Testing
 
-`tools/test/smoke.js` (needs Node >= 18) loads `index.html` in jsdom with real three@0.128.0, stubs `WebGLRenderer`, waits until the loading overlay is gone, then clicks through: best-for list, exercise selection, variations, add to plan, comparison and swap, equipment filter, workout plan, volume mode, then boots a second instance with `matchMedia` stubbed to a coarse phone (sheet states, card-in-sheet flow, popovers, touch tap, phone/desktop switch). It asserts on each step (`ok - ...` / `FAIL - ...`), treats startup errors, `console.error` and uncaught exceptions as failures, and exits non-zero if anything fails. Keep assertions in step with exercise data (e.g. Back squat / Wide stance / Hip thrust) when you change it.
+`tools/test/smoke.js` (needs Node >= 18) loads `index.html` in jsdom with real three@0.128.0, stubs `WebGLRenderer`, waits until the loading overlay is gone, then clicks through: best-for list, exercise selection, variations, add to plan, comparison and swap, equipment filter, workout plan, volume mode, then the quality levels (default Medium, switch to High changes the triangle count in the scene and persists `aom.lod.v1`, last request wins, failed switch keeps the level), start-up cases (stored choice, invalid value, failed fetch, `file://`), then boots another instance with `matchMedia` stubbed to a coarse phone (defaults to Low) (sheet states, card-in-sheet flow, popovers, touch tap, phone/desktop switch). It asserts on each step (`ok - ...` / `FAIL - ...`), treats startup errors, `console.error` and uncaught exceptions as failures, and exits non-zero if anything fails. Keep assertions in step with exercise data (e.g. Back squat / Wide stance / Hip thrust) when you change it.
 It does not test rendering or raycasting accuracy; check those manually in a browser.
 
-CI (GitHub Actions, `.github/workflows/ci.yml`) runs on push and PR to `main`: `extract.py`, `exercises.py`, `lint.py`, `assemble.py` in `tools/`, then `git diff --exit-code -- index.html`, then `npm ci && npm test`. GitHub Pages deploys from `main` / root separately.
+CI (GitHub Actions, `.github/workflows/ci.yml`) runs on push and PR to `main`: `meta.py`, `exercises.py`, `lint.py`, `assemble.py` in `tools/`, then `git diff --exit-code -- index.html`, then `npm ci && npm test`. GitHub Pages deploys from `main` / root separately.
 
 ## Known limitations and open issues
 
@@ -167,7 +174,7 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs on push and PR to `main`: `
 3. Left/right and per-part toggles in the Index.
 4. Replace three levels with cited per-muscle percentages.
 5. Rebuild meshes directly from BodyParts3D + Z-Anatomy (needs own alignment of the 66 Z-Anatomy meshes).
-6. Now that hosting is GitHub Pages rather than a single-file artifact: move geometry to a separate binary file (`fetch`) to cut HTML parse time, and add a service worker for offline use.
+6. Service worker for offline use (geometry is already a separate fetched file per quality level).
 
 ## Licensing
 

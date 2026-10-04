@@ -16,7 +16,7 @@ An interactive 3D atlas of the human muscular system that runs entirely in the b
 
 ## Run it
 
-It is a single self-contained `index.html` (about 7 MB, geometry embedded). Open it in a current browser, or serve the folder with any static server. It needs WebGL and `DecompressionStream` (Chrome, Edge, Firefox, Safari from 2023 on). Three.js r128 and Google Fonts load from CDNs.
+It is a static site: a small `index.html` (about 250 kB) plus the mesh files in `geo/` (`low.bin` 2.3 MB, `medium.bin` 5.2 MB, `high.bin` 9.9 MB, fetched at runtime). Serve the folder with any static web server (for example `python -m http.server` in the repo root); opening `index.html` straight from disk (`file://`) does not work because browsers block `fetch` there. The Layers menu has a **Mesh quality** switch (Low about 360k triangles, Medium 770k, High 1.6M, the unreduced source); the default is Medium on desktop and Low on phones, and your choice is remembered. It needs WebGL and `DecompressionStream` (Chrome, Edge, Firefox, Safari from 2023 on). Three.js r128 and Google Fonts load from CDNs.
 
 ### GitHub Pages
 
@@ -30,21 +30,22 @@ The `tools/` folder contains the pipeline that produced `index.html`:
 cd tools
 git clone --depth 1 https://github.com/JohanBellander/BodyExplorer.git
 pip install trimesh pyfqmr numpy
-python build.py 0.45 0.35   # decimate + quantise meshes -> geo.b64, meta.json
-python meta.py              # map meshes to anatomy entries -> meta2.json
+python build.py             # decimate + quantise, three levels -> ../geo/{low,medium,high}.bin + meshes.json (committed)
+python meta.py              # map meshes to anatomy entries (reads meshes.json) -> meta2.json
 python exercises.py         # exercise database + variations -> meta3.json
-python assemble.py          # -> ../index.html
+python lint.py              # data checks
+python assemble.py          # -> ../index.html (embeds only the metadata)
 cd test && npm install && npm test   # optional smoke test
 ```
 
-To rebuild after editing only `template.html`, `exercises.py`, `bones.py` or `data/*.txt`, skip the clone and recover the mesh data from the committed `index.html`:
+`tools/meshes.json` and `geo/*.bin` are committed, so after editing only `template.html`, `exercises.py`, `bones.py`, `data/*.txt` or the mapping in `meta.py` (`PARTPRE`/`HEADPRE`/`MERGE`) you can skip the clone and `build.py`:
 
 ```bash
 cd tools
-python extract.py && python exercises.py && python assemble.py
+python meta.py && python exercises.py && python assemble.py
 ```
 
-The full pipeline above is still needed after changing decimation in `build.py` or the mesh-to-key mapping in `meta.py` (`PARTPRE`/`HEADPRE`/`MERGE`).
+Run `build.py` (needs the clone) only after changing the decimation settings (`LODS` in `build.py`) or the source meshes.
 
 Anatomy text lives in `tools/data/muscles.txt` (`key|group|action|origin|insertion|nerve`) and `tools/data/extra.txt`; bone text in `tools/bones.py`; exercises in `tools/exercises.py`.
 

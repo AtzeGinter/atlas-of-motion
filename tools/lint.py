@@ -53,7 +53,7 @@ if os.path.exists(P('meta3.json')):
         for g, opts in e.get('v', []):
             if len(opts) < 2: err.append(f'{w}: variation group {g!r} has {len(opts)} option(s), need >=2')
             for o, t in opts: tg(f'{w} / {g} / {o}', t, True)
-else: print('NOTE: meta3.json missing, exercise checks skipped (run extract.py && exercises.py first)')
+else: print('NOTE: meta3.json missing, exercise checks skipped (run meta.py && exercises.py first)')
 if err:
     print('\n'.join('LINT: ' + x for x in err)); print(f'{len(err)} problem(s)'); sys.exit(1)
 print(f'lint OK: {len(mus)} muscles, ' + (f'{nex} exercises checked' if nex is not None else 'exercise checks skipped'))

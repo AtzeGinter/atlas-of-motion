@@ -32,9 +32,9 @@ def canon(n):
     return n,side
 if __name__=='__main__':
     db=load_db()
-    M=json.load(open('meta.json',encoding='utf-8'))
+    M=json.load(open('meshes.json',encoding='utf-8'))
     out=[]; missing=set(); bnames=set()
-    for kind,name,nv,nf in M['meshes']:
+    for kind,name in M['meshes']:
         c,side=canon(name)
         if kind=='m':
             k=re.sub(PARTPRE,'',c); k=re.sub(HEADPRE,'',k); k=re.sub(r' muscle$','',k)
@@ -44,11 +44,11 @@ if __name__=='__main__':
             c2=re.sub(r' muscle$','',c)
             part='' if (c2==k or c2.startswith('set of ')) else c2
             part=re.sub(r' of '+re.escape(k)+'$','',part) if part else ''
-            out.append([kind,k,side,part,nv,nf])
+            out.append([kind,k,side,part])
         else:
-            c=c.replace(' of foot',' (foot)'); out.append([kind,c,side,'',nv,nf]); bnames.add(c)
+            c=c.replace(' of foot',' (foot)'); out.append([kind,c,side,'']); bnames.add(c)
     print('missing',missing)
-    M['meshes']=out; M['db']=db; M['bdb']={b:B.info(b) for b in bnames}
+    M['meshes']=out; M['db']=db; M['bdb']={b:B.info(b) for b in sorted(bnames)}
     json.dump(M,open('meta2.json','w',encoding='utf-8',newline='\n'),separators=(',',':'))
     from collections import Counter
     print(Counter(db[o[1]]['g'] for o in out if o[0]=='m'))
