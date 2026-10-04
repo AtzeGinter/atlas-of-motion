@@ -345,6 +345,11 @@ async function phoneRun(){
  const sn=sugNames(),first=qa('#sug li')[0],fg=sugGroups(first),before=fg.map(rowVal);
  ok(sn.length>=1&&sn.length<=3&&!sn.some(n=>plan().some(p=>p.n===n))&&!/starter set/.test(q('#sug').textContent),'plan of squat + bench: '+sn.length+' suggestions, none already in the plan ('+sn.join(', ')+')');
  ok(fg.length>=1&&fg.length<=3&&before.every(v=>v<8),'first suggestion lists groups that are below target before adding: '+first.querySelector('small').textContent+' '+JSON.stringify(before));
+ // intended behaviour of the scoring: complement the plan like a coach (a pull for squat + bench, no technical full-body lift), +N = useful sets capped at the gap to the goal's lower bound
+ const exOf=n=>META.ex.find(e=>e.n===n),prime=(n,k,p)=>exOf(n).t.some(t=>t[0]===k&&(!p||!t[1]||t[1]===p)&&t[2]===3);
+ ok(sn.some(n=>exOf(n).c==='Back'&&(prime(n,'latissimus dorsi')||prime(n,'trapezius','transverse part')))&&!sn.some(n=>exOf(n).c==='Full body'),'squat + bench: suggestions include a horizontal or vertical pull and no "Full body" lift ('+sn.join(', ')+')');
+ const capped=qa('#sug li').every(li=>li.querySelector('small').textContent.split(' · ').slice(1).every(x=>{const m=x.match(/^(.*) \+([\d.]+)$/);return m&&+m[2]>0&&+m[2]<=8-rowVal(m[1])+1e-9;}));
+ ok(capped,'each "+N" is the useful part: positive and at most the gap to 8 sets ('+qa('#sug li small').map(x=>x.textContent).join(' / ')+')');
  const added=first.querySelector('.exlink').textContent;
  first.querySelector('[data-sadd]').click();
  const pl=plan();
@@ -359,6 +364,10 @@ async function phoneRun(){
  const bw=qa('#sug li .exlink').map(b=>b.textContent);
  ok(bw.length>=1&&bw.every(n=>META.ex.find(e=>e.n===n).eq.includes('Bodyweight')),'Bodyweight only: every suggestion is bodyweight-compatible ('+bw.join(', ')+')');
  q('#eqAll').click();
+ // push/pull/legs plan without calf or rear-delt work: the gap filler offers one
+ q('#wkClear').click();['Barbell bench press','Overhead press','Pull-up','Barbell row','Back squat','Romanian deadlift'].forEach(addEx);
+ const ppl=sugNames();
+ ok(ppl.some(n=>prime(n,'gastrocnemius')||prime(n,'soleus')||prime(n,'deltoid','spinal part'))&&!ppl.some(n=>exOf(n).c==='Full body'),'push/pull/legs plan: a calf or rear-delt exercise is suggested, no "Full body" lift ('+ppl.join(', ')+')');
  // when every group reaches the target the block says so (1–40 sets: add suggestions until done)
  q('#wkClear').click();cust(1,null);cg=cust(null,40);
  let guard=0;while(q('#sug [data-sadd]')&&guard++<40) q('#sug [data-sadd]').click();

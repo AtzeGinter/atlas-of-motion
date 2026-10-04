@@ -1047,8 +1047,8 @@ document.querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{bestSort=b.da
 $("#best").addEventListener("click",e=>{const t=e.target.closest("[data-ex]"); if(t) selectEx(+t.dataset.ex);});
 
 /* workout builder */
-// row = [label, "key[|part],key[|part],..."]: weekly sets = max over the listed members; clicking the row selects the first key. Hip flexors omit rectus femoris (a quad exercise would otherwise count as hip-flexor work)
-const SUMMARY=[["Upper chest","pectoralis major|clavicular part"],["Mid and lower chest","pectoralis major|sternocostal part"],["Front delts","deltoid|clavicular part"],["Side delts","deltoid|acromial part"],["Rear delts","deltoid|spinal part"],["Upper traps","trapezius|descending part"],["Mid traps","trapezius|transverse part"],["Rhomboids","rhomboid major,rhomboid minor"],["Lats","latissimus dorsi"],["Rotator cuff (infraspinatus)","infraspinatus"],["Biceps","biceps brachii"],["Brachialis","brachialis"],["Triceps","triceps brachii"],["Forearm flexors","flexor digitorum superficialis,flexor digitorum profundus,flexor carpi radialis,flexor carpi ulnaris"],["Forearm extensors","extensor carpi radialis longus,extensor carpi radialis brevis,extensor carpi ulnaris,extensor digitorum"],["Abs","rectus abdominis"],["Obliques","external oblique,internal oblique"],["Lower back","iliocostalis,longissimus,multifidus"],["Glutes","gluteus maximus"],["Glute medius","gluteus medius"],["Hip flexors","psoas major,iliacus"],["Quadriceps","vastus lateralis,vastus medialis,vastus intermedius,rectus femoris"],["Hamstrings","biceps femoris,semitendinosus,semimembranosus"],["Adductors","adductor magnus,adductor longus,adductor brevis"],["Calves (gastrocnemius)","gastrocnemius"],["Soleus","soleus"],["Tibialis anterior","tibialis anterior"]];
+// row = [label, "key[|part],key[|part],...", gap-filler weight (default 1; .33 = minor group: gets indirect work, usually trained last)]: weekly sets = max over the listed members; clicking the row selects the first key. Hip flexors omit rectus femoris (a quad exercise would otherwise count as hip-flexor work)
+const SUMMARY=[["Upper chest","pectoralis major|clavicular part"],["Mid and lower chest","pectoralis major|sternocostal part"],["Front delts","deltoid|clavicular part",.33],["Side delts","deltoid|acromial part"],["Rear delts","deltoid|spinal part"],["Upper traps","trapezius|descending part",.33],["Mid traps","trapezius|transverse part"],["Rhomboids","rhomboid major,rhomboid minor",.33],["Lats","latissimus dorsi"],["Rotator cuff (infraspinatus)","infraspinatus",.33],["Biceps","biceps brachii"],["Brachialis","brachialis",.33],["Triceps","triceps brachii"],["Forearm flexors","flexor digitorum superficialis,flexor digitorum profundus,flexor carpi radialis,flexor carpi ulnaris",.33],["Forearm extensors","extensor carpi radialis longus,extensor carpi radialis brevis,extensor carpi ulnaris,extensor digitorum",.33],["Abs","rectus abdominis",.33],["Obliques","external oblique,internal oblique",.33],["Lower back","iliocostalis,longissimus,multifidus",.33],["Glutes","gluteus maximus"],["Glute medius","gluteus medius",.33],["Hip flexors","psoas major,iliacus",.33],["Quadriceps","vastus lateralis,vastus medialis,vastus intermedius,rectus femoris"],["Hamstrings","biceps femoris,semitendinosus,semimembranosus"],["Adductors","adductor magnus,adductor longus,adductor brevis",.33],["Calves (gastrocnemius)","gastrocnemius"],["Soleus","soleus",.33],["Tibialis anterior","tibialis anterior",.33]];
 function savePlan(){ store.set(PLAN_KEY,plan.map(p=>({n:p.n,sets:p.sets,v:varNames(EXI[p.n],p.v)}))); }
 function addToPlan(i,v){ plan.push({n:EX[i].n,sets:3,v:(v||[]).slice()}); planChanged(); }
 function planChanged(){ savePlan(); volCache=null; renderPlan(); renderVolSum(); renderSuggest(); if(mode==="vol") setMode("vol"); }
@@ -1083,10 +1083,23 @@ function renderVolSum(){
   $("#volsum").innerHTML='<table class="vsum"><tbody>'+rows.map(r=>{const s=r[2], b=volBand(s);
     return '<tr><td><button class="exlink" data-key="'+r[1]+'">'+r[0]+'</button></td><td><div class="vbar">'+(s>0?'<i class="v'+b+'" style="width:'+Math.min(100,s/full*100)+'%"></i>':'')+mk+'</div></td><td>'+fmt(s)+' · '+volStatus(s)+'</td></tr>';}).join("")+'</tbody></table>';
 }
-/* gap filler: greedy top 3 default-variation exercises (3 sets each) that lift the most groups up to the goal's lower bound without overshooting its upper bound */
+/* gap filler: greedy top 3 default-variation exercises (3 sets each, rescored after each pick). Concave value per SUMMARY group: a set at s weekly sets is worth w*(1-s/lo) (w = row weight; nothing past lo),
+   so filling s->n gains w*(U(n)-U(s)) with U(x)=x-x^2/(2lo), x capped at lo: the first sets into an empty group count most. An exercise is credited 100% for its largest group gain, 50% for the next, 25%...
+   (a broad lift can't win on many small spills), times (1 - waste/sets it adds to SUMMARY groups) where waste = SPILL per set landing in a group already at lo (up to hi) + OVER per set above hi; category "Full body" x FULLF */
+const SPILL=0.5, OVER=1, FULLF=0.6;
 let sumG=null; const sugC={};
-function sumMeshes(){ return sumG||(sumG=SUMMARY.map(r=>{const s=new Set(); r[1].split(",").forEach(x=>{const [k,p]=x.split("|"); (byKey[k]||[]).forEach(m=>{if(!p||m.userData.part===p) s.add(m);});}); return [r[0],[...s]];})); }
+function sumMeshes(){ return sumG||(sumG=SUMMARY.map(r=>{const s=new Set(); r[1].split(",").forEach(x=>{const [k,p]=x.split("|"); (byKey[k]||[]).forEach(m=>{if(!p||m.userData.part===p) s.add(m);});}); return [r[0],[...s],r[2]||1];})); }
 function sugAdd(i){ if(!sugC[i]){const mp=new Map(); meshLevels(effTargets(i,[])).forEach((l,m)=>{if(VOLF[l]) mp.set(m,3*VOLF[l]);}); sugC[i]=mp;} return sugC[i]; }
+// -> {i, sc, gs:[[label, sets toward lo, weighted gain]] top 3}
+function sugScore(i,s,val,G,lo,hi){
+  const U=x=>{x=Math.min(x,lo); return x-x*x/(2*lo);}, c=sugAdd(i), gs=[]; let add=0, waste=0, sc=0;
+  G.forEach((g,gi)=>{ const a=s[gi], n=val(g[1],c); if(n===a) return; add+=n-a;
+    waste+=(a>=lo?SPILL*(Math.min(n,hi)-a):0)+OVER*Math.max(0,n-Math.max(a,hi));
+    const gn=g[2]*(U(n)-U(a)); if(gn>0) gs.push([g[0],Math.min(n,lo)-a,gn]); });
+  gs.sort((x,y)=>y[2]-x[2]).forEach((x,k)=>sc+=x[2]/(1<<k));
+  if(add) sc*=1-waste/add; if(EX[i].c==="Full body") sc*=FULLF;
+  return {i:i,sc:sc,gs:gs.slice(0,3)};
+}
 function suggestions(){
   if(!volCache) volCache=volumeByMesh();
   const G=sumMeshes(), vol=new Map(volCache), lo=tg.lo, hi=tg.hi, used=new Set(plan.map(p=>p.n)), out=[];
@@ -1095,10 +1108,7 @@ function suggestions(){
   while(gaps&&out.length<3){
     const s=G.map(g=>val(g[1])); if(!s.some(x=>x<lo)) break;
     let best=null;
-    EX.forEach((e,i)=>{ if(used.has(e.n)||!eqOK(i)) return; const c=sugAdd(i); let sc=0; const gs=[];
-      G.forEach((g,gi)=>{ const n=val(g[1],c); if(n===s[gi]) return; const f=Math.min(n,lo)-Math.min(s[gi],lo);
-        sc+=f-0.5*(Math.max(0,n-hi)-Math.max(0,s[gi]-hi)); if(f>0) gs.push([g[0],n-s[gi],f]); });
-      if(sc>1e-9&&(!best||sc>best.sc)) best={i:i,sc:sc,gs:gs.sort((a,b)=>b[2]-a[2]).slice(0,3)}; });
+    EX.forEach((e,i)=>{ if(used.has(e.n)||!eqOK(i)) return; const r=sugScore(i,s,val,G,lo,hi); if(r.sc>1e-9&&(!best||r.sc>best.sc)) best=r; });
     if(!best) break;
     used.add(EX[best.i].n); out.push(best); sugAdd(best.i).forEach((v,m)=>vol.set(m,(vol.get(m)||0)+v));
   }
@@ -1107,7 +1117,7 @@ function suggestions(){
 function renderSuggest(){
   const r=suggestions(), t=rng(tg.lo,tg.hi);
   $("#sug").innerHTML=!r.gaps?'<p class="empty">Every muscle group is at or above its target.</p>':
-    '<p class="fine" style="margin-top:0!important">'+(plan.length?'Exercises that fill the biggest gaps below '+t+' sets per muscle group.':'Your week is empty, so these make a starter set toward '+t+' sets per muscle group.')+'</p>'+
+    '<p class="fine" style="margin-top:0!important">'+(plan.length?'Exercises that fill the biggest gaps below '+t+' sets per muscle group.':'Your week is empty, so these make a starter set toward '+t+' sets per muscle group.')+' +N = sets toward '+tg.lo+'.</p>'+
     (r.out.length?'<ul class="sug">'+r.out.map(x=>'<li><div><button class="exlink" data-ex="'+x.i+'">'+EX[x.i].n+'</button><small>'+EX[x.i].e.toLowerCase()+' · '+x.gs.map(g=>g[0]+' +'+fmt(g[1])).join(' · ')+'</small></div><button class="btn" data-sadd="'+x.i+'">+ Add 3 sets</button></li>').join("")+'</ul>':'<p class="empty">No exercise with your equipment fills the remaining gaps.</p>');
 }
 $("#sug").addEventListener("click",e=>{const t=e.target.closest("button"); if(!t) return; if(t.dataset.sadd!==undefined) addToPlan(+t.dataset.sadd,[]); else if(t.dataset.ex!==undefined) selectEx(+t.dataset.ex);});
