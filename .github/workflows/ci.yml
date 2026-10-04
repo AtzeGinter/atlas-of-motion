@@ -1,0 +1,41 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request: { branches: [main] }
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/test/package-lock.json
+      - name: Rebuild data from the committed index.html
+        run: python extract.py && python exercises.py
+      - name: Lint data
+        run: python lint.py
+      - name: Assemble index.html
+        run: python assemble.py
+      - name: index.html must be up to date
+        working-directory: .
+        run: |
+          git diff --exit-code --stat -- index.html || {
+            echo "::error file=index.html::index.html is out of date: run python extract.py && python exercises.py && python assemble.py in tools/ and commit"
+            exit 1
+          }
+      - name: Install test deps
+        run: npm ci
+        working-directory: tools/test
+      - name: Smoke test
+        run: npm test
+        working-directory: tools/test
