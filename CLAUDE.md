@@ -137,7 +137,8 @@ localStorage keys `myology.plan.v1` and `myology.eq.v1`, wrapped in try/catch. B
 
 ## Testing
 
-`tools/test/smoke.js` loads `index.html` in jsdom with real three@0.128.0, stubs `WebGLRenderer`, then clicks through: best-for list, exercise selection, variations, add to plan, comparison and swap, equipment filter, workout plan, volume mode. It prints card text; check for `THROW`/`ERR` lines. It does not test rendering or raycasting accuracy; check those manually in a browser.
+`tools/test/smoke.js` (needs Node >= 18) loads `index.html` in jsdom with real three@0.128.0, stubs `WebGLRenderer`, waits until the loading overlay is gone, then clicks through: best-for list, exercise selection, variations, add to plan, comparison and swap, equipment filter, workout plan, volume mode. It asserts on each step (`ok - ...` / `FAIL - ...`), treats startup errors, `console.error` and uncaught exceptions as failures, and exits non-zero if anything fails. Keep assertions in step with exercise data (e.g. Back squat / Wide stance / Hip thrust) when you change it.
+It does not test rendering or raycasting accuracy; check those manually in a browser.
 
 ## Known limitations and open issues
 

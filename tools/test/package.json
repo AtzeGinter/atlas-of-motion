@@ -1,6 +1,7 @@
 {
   "name": "myology-smoke-test",
   "private": true,
+  "engines": { "node": ">=18" },
   "scripts": { "test": "node smoke.js" },
   "dependencies": { "jsdom": "^24.0.0", "three": "0.128.0" }
 }
