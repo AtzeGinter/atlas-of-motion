@@ -33,9 +33,22 @@ for w, r in mus:
     elif r[1] not in MG: err.append(f'{w}: unknown group {r[1]!r}')
 for w, r in rows('extra.txt', 3):
     if r[0] not in keys: err.append(f'{w}: key {r[0]!r} not in muscles.txt')
+als = rows('aliases.txt', 2)
+for w, r in als:
+    if r[0] != r[0].lower(): err.append(f'{w}: alias {r[0]!r} must be lower-case')
+    if not r[1]: err.append(w + ': no keys')
+    for e in r[1].split(','):
+        if e.partition(':')[0] not in keys: err.append(f'{w}: key {e.partition(":")[0]!r} not in muscles.txt')
 nex = None
 if os.path.exists(P('meta3.json')):
     M = json.loads(rd(P('meta3.json'))); db = M['db']; names = set(); nex = len(M['ex'])
+    pts = {}
+    for o in M['meshes']:
+        if o[0] == 'm' and o[3]: pts.setdefault(o[1], set()).add(o[3])
+    for w, r in als:
+        for e in r[1].split(','):
+            k, _, p = e.partition(':')
+            if p and p not in pts.get(k, ()): err.append(f'{w}: {k!r} has no part {p!r}')
     def tg(w, t, zero=False):
         for k, part, lv in t:
             if k not in db: err.append(f'{w}: unknown muscle {k!r}')
@@ -56,4 +69,4 @@ if os.path.exists(P('meta3.json')):
 else: print('NOTE: meta3.json missing, exercise checks skipped (run meta.py && exercises.py first)')
 if err:
     print('\n'.join('LINT: ' + x for x in err)); print(f'{len(err)} problem(s)'); sys.exit(1)
-print(f'lint OK: {len(mus)} muscles, ' + (f'{nex} exercises checked' if nex is not None else 'exercise checks skipped'))
+print(f'lint OK: {len(mus)} muscles, {len(als)} aliases, ' + (f'{nex} exercises checked' if nex is not None else 'exercise checks skipped'))

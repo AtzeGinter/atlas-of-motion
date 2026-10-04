@@ -1,0 +1,98 @@
+lats|latissimus dorsi
+lat|latissimus dorsi
+latissimus|latissimus dorsi
+teres|teres major,teres minor
+pecs|pectoralis major,pectoralis minor
+pec|pectoralis major,pectoralis minor
+chest|pectoralis major,pectoralis minor
+upper chest|pectoralis major:clavicular part
+lower chest|pectoralis major:sternocostal part
+quads|rectus femoris,vastus lateralis,vastus medialis,vastus intermedius
+quad|rectus femoris,vastus lateralis,vastus medialis,vastus intermedius
+quadriceps|rectus femoris,vastus lateralis,vastus medialis,vastus intermedius
+thighs|rectus femoris,vastus lateralis,vastus medialis,vastus intermedius,biceps femoris,semitendinosus,semimembranosus
+hamstrings|biceps femoris,semitendinosus,semimembranosus
+hamstring|biceps femoris,semitendinosus,semimembranosus
+hammies|biceps femoris,semitendinosus,semimembranosus
+hams|biceps femoris,semitendinosus,semimembranosus
+glutes|gluteus maximus,gluteus medius,gluteus minimus
+glute|gluteus maximus,gluteus medius,gluteus minimus
+butt|gluteus maximus,gluteus medius,gluteus minimus
+booty|gluteus maximus,gluteus medius,gluteus minimus
+bum|gluteus maximus,gluteus medius,gluteus minimus
+glute max|gluteus maximus
+glute med|gluteus medius
+glute min|gluteus minimus
+delts|deltoid
+delt|deltoid
+deltoids|deltoid
+shoulders|deltoid
+shoulder|deltoid
+front delts|deltoid:clavicular part
+front delt|deltoid:clavicular part
+anterior delts|deltoid:clavicular part
+side delts|deltoid:acromial part
+side delt|deltoid:acromial part
+lateral delts|deltoid:acromial part
+middle delts|deltoid:acromial part
+rear delts|deltoid:spinal part
+rear delt|deltoid:spinal part
+back delts|deltoid:spinal part
+posterior delts|deltoid:spinal part
+traps|trapezius
+trap|trapezius
+upper traps|trapezius:descending part
+mid traps|trapezius:transverse part
+middle traps|trapezius:transverse part
+lower traps|trapezius:ascending part
+rhomboids|rhomboid major,rhomboid minor
+upper back|trapezius,rhomboid major,rhomboid minor,teres major,infraspinatus
+back|latissimus dorsi,trapezius,rhomboid major,rhomboid minor,teres major,iliocostalis,longissimus,spinalis
+lower back|iliocostalis,longissimus,spinalis,multifidus,quadratus lumborum
+erectors|iliocostalis,longissimus,spinalis
+erector spinae|iliocostalis,longissimus,spinalis
+spinal erectors|iliocostalis,longissimus,spinalis
+abs|rectus abdominis,external oblique,internal oblique,transversus abdominis
+abdominals|rectus abdominis,external oblique,internal oblique,transversus abdominis
+six pack|rectus abdominis
+six-pack|rectus abdominis
+sixpack|rectus abdominis
+lower abs|rectus abdominis
+obliques|external oblique,internal oblique
+love handles|external oblique,internal oblique
+core|rectus abdominis,external oblique,internal oblique,transversus abdominis,multifidus,quadratus lumborum
+calves|gastrocnemius,soleus
+calf|gastrocnemius,soleus
+shins|tibialis anterior
+achilles|calcaneal tendon
+forearms|brachioradialis,pronator teres,flexor carpi radialis,flexor carpi ulnaris,flexor digitorum superficialis,flexor digitorum profundus,extensor carpi radialis longus,extensor carpi radialis brevis,extensor carpi ulnaris,extensor digitorum
+forearm|brachioradialis,pronator teres,flexor carpi radialis,flexor carpi ulnaris,flexor digitorum superficialis,flexor digitorum profundus,extensor carpi radialis longus,extensor carpi radialis brevis,extensor carpi ulnaris,extensor digitorum
+wrist flexors|flexor carpi radialis,flexor carpi ulnaris,palmaris longus
+wrist extensors|extensor carpi radialis longus,extensor carpi radialis brevis,extensor carpi ulnaris
+grip|flexor digitorum superficialis,flexor digitorum profundus,flexor pollicis longus
+biceps|biceps brachii,brachialis
+bicep|biceps brachii,brachialis
+bis|biceps brachii,brachialis
+triceps|triceps brachii
+tricep|triceps brachii
+tris|triceps brachii
+arms|biceps brachii,triceps brachii,brachialis,brachioradialis
+hip flexors|iliacus,psoas major,rectus femoris,sartorius,tensor fasciae latae
+hip flexor|iliacus,psoas major,rectus femoris,sartorius,tensor fasciae latae
+iliopsoas|iliacus,psoas major
+adductors|adductor longus,adductor brevis,adductor magnus,adductor minimus,gracilis,pectineus
+adductor|adductor longus,adductor brevis,adductor magnus,adductor minimus,gracilis,pectineus
+groin|adductor longus,adductor brevis,gracilis,pectineus
+inner thigh|adductor longus,adductor brevis,adductor magnus,gracilis,pectineus
+abductors|gluteus medius,gluteus minimus,tensor fasciae latae
+abductor|gluteus medius,gluteus minimus,tensor fasciae latae
+hip abductors|gluteus medius,gluteus minimus,tensor fasciae latae
+outer thigh|gluteus medius,gluteus minimus,tensor fasciae latae
+it band|iliotibial tract,tensor fasciae latae
+hip rotators|piriformis,gemellus superior,gemellus inferior,obturator internus,obturator externus,quadratus femoris
+rotator cuff|supraspinatus,infraspinatus,teres minor,subscapularis
+cuff|supraspinatus,infraspinatus,teres minor,subscapularis
+neck|sternocleidomastoid,splenius capitis,splenius cervicis,scalenus anterior,scalenus medius,scalenus posterior,longus colli,levator scapulae
+pelvic floor|levator ani,coccygeus
+kegel|levator ani,coccygeus
+jaw|masseter,temporalis,medial pterygoid,lateral pterygoid

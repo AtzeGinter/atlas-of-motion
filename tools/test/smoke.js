@@ -103,6 +103,163 @@ async function lodRun(){
  ok(/Network error/.test(q('#lodNote').textContent)&&lodOn(d)==='medium'&&idxCount(w)===L.medium.faces*3&&ls('aom.lod.v1')==='"medium"','failed switch: error note shown, Medium stays active');
  w.__failFetch=false;
 }
+// ---- colloquial-name search + typo tolerance ----
+async function searchRun(){
+ ok(META.al&&Object.keys(META.al).length>50&&Object.values(META.al).every(a=>a.every(e=>META.db[e.split(':')[0]])),'META.al holds the alias table and every alias points at an existing muscle key ('+Object.keys(META.al).length+' aliases)');
+ const idx=s=>{q('#q').value=s;ev(q('#q'),'input');return qa('#list .item').map(b=>b.dataset.key);};
+ const exq=s=>{q('#qe').value=s;ev(q('#qe'),'input');return exNames();};
+ const addq=s=>{q('#qa').value=s;ev(q('#qa'),'input');return qa('#addres [data-add]').map(b=>b.firstChild.textContent.trim().slice(2));};
+ q('[data-tab="anat"]').click();
+ ok(idx('lats').includes('latissimus dorsi'),'Index: "lats" finds latissimus dorsi');
+ ok(['pecs','chest'].every(s=>idx(s).includes('pectoralis major')),'Index: "pecs" and "chest" find pectoralis major');
+ ok(idx('hammies').includes('semitendinosus')&&idx('hammies').includes('biceps femoris'),'Index: "hammies" finds the hamstrings');
+ ok(idx('rear delts').join()==='deltoid','Index: "rear delts" finds deltoid ('+idx('rear delts').join()+')');
+ ok(['gluteus maximus','gluteus medius'].every(k=>idx('butt').includes(k)),'Index: "butt" finds the gluteals');
+ ok(idx('six-pack').includes('rectus abdominis')&&idx('lower back').includes('iliocostalis')&&idx('hip flexors').includes('iliacus'),'Index: "six-pack", "lower back" and "hip flexors" resolve');
+ ok(idx('deltiod').includes('deltoid'),'Index: the typo "deltiod" still finds deltoid');
+ ok(idx('hamstrng').includes('semitendinosus'),'Index: the typo "hamstrng" finds the hamstrings via the alias');
+ ok(idx('gluteus maxmus').includes('gluteus maximus'),'Index: a typo in a multi-word name ("gluteus maxmus") works');
+ ok(idx('xyzq').length===0&&/No match/.test(q('#list').textContent),'Index: nonsense gives the usual "No match" text');
+ ok(idx('del').length>0&&idx('abc').length===0,'Index: queries under 4 characters get no typo fallback ("abc" finds nothing)');
+ ok(idx('deltoid').join()==='deltoid'&&idx('').length>100,'Index: an exact name and the empty query behave as before');
+ q('#q').value='';ev(q('#q'),'input');
+ q('[data-tab="ex"]').click();
+ const hasT=(e,k,p)=>e.t.some(r=>r[0]===k&&(!p||r[1]===p));
+ const lat=META.ex.filter(e=>hasT(e,'latissimus dorsi')).map(e=>e.n),latR=exq('lats');
+ ok(lat.length>3&&lat.every(n=>latR.includes(n))&&latR.includes('Pull-up'),'Exercises: "lats" lists the '+lat.length+' exercises that target latissimus dorsi (incl. Pull-up)');
+ const rear=META.ex.filter(e=>hasT(e,'deltoid','spinal part')).map(e=>e.n),rearR=exq('rear delts');
+ const frontOnly=META.ex.find(e=>hasT(e,'deltoid')&&!hasT(e,'deltoid','spinal part')&&!/rear|delt/i.test(e.n));
+ ok(rear.length>0&&rear.every(n=>rearR.includes(n))&&frontOnly&&!rearR.includes(frontOnly.n),'Exercises: "rear delts" uses the deltoid spinal part (not '+(frontOnly&&frontOnly.n)+')');
+ const dt=exq('deltiod');
+ ok(dt.length>0&&dt.includes('Lateral raise'),'Exercises: the typo "deltiod" finds deltoid exercises ('+dt.length+')');
+ ok(exq('gluts').length>0&&exq('gluts').includes('Hip thrust'),'Exercises: "gluts" (typo of glutes) finds Hip thrust');
+ ok(exq('qqqq').length===0&&/No match/.test(q('#exlist').textContent),'Exercises: nonsense gives the "No match" text');
+ ok(exq('barbell').length>5&&exq('').length===META.ex.length,'Exercises: plain equipment search and the empty query are unchanged');
+ q('#qe').value='';ev(q('#qe'),'input');
+ q('[data-tab="wk"]').click();
+ const glutes=addq('glutes');
+ ok(glutes.length>0&&glutes.every(n=>META.ex.find(e=>e.n===n).t.some(r=>/^gluteus/.test(r[0]))),'Add search: "glutes" offers gluteal exercises ('+glutes.slice(0,3).join(', ')+'...)');
+ const gz=addq('glutez');
+ ok(gz.length>0&&gz.every(n=>META.ex.find(e=>e.n===n).t.some(r=>/^gluteus/.test(r[0]))),'Add search: the typo "glutez" still offers gluteal exercises');
+ ok(addq('zzzz').length===0&&/No match/.test(q('#addres').textContent),'Add search: nonsense gives "No match"');
+ q('#qa').value='';ev(q('#qa'),'input');
+}
+// ---- variations as separate entries in the ranked lists ----
+async function variationRun(){
+ q('[data-tab="anat"]').click();
+ const open=k=>{q('#q').value=k;ev(q('#q'),'input');qa('#list .item').find(b=>b.dataset.key===k).click();q('#q').value='';ev(q('#q'),'input');};
+ const rows=()=>qa('#card .ext tbody tr').map(r=>({n:r.querySelector('.exlink').textContent,tds:[...r.cells].slice(1).map(c=>c.textContent.trim()).join('|')+'|'+(r.cells[0].querySelector('small')?r.cells[0].querySelector('small').textContent:''),b:r.querySelector('.exlink')}));
+ open('adductor magnus');
+ const am=rows(),wideRow=am.find(r=>r.n==='Back squat (Wide)');
+ ok(wideRow,'adductor magnus card lists "Back squat (Wide)" as its own row');
+ const plainRow=am.find(r=>r.n==='Back squat');
+ ok(!plainRow||plainRow.tds!==wideRow.tds,'... and it differs from the plain Back squat row ('+(plainRow?plainRow.tds+' vs ':'not listed vs ')+wideRow.tds+')');
+ ok(new Set(am.map(r=>r.n)).size===am.length,'no duplicate rows in the adductor magnus table');
+ ok(am.filter(r=>/\)$/.test(r.n)).every(r=>/\(([^()]+)\)$/.test(r.n)),'variation rows are labelled "Exercise (Option)"');
+ // clicking opens the exercise with that option pressed
+ wideRow.b.click();
+ ok(q('#card h2').textContent==='Back squat'&&qa('[data-var]').find(b=>b.textContent==='Wide').getAttribute('aria-pressed')==='true','clicking "Back squat (Wide)" opens Back squat with Wide pressed');
+ ok(roleKeys('Prime movers').includes('adductor magnus'),'... and the heat map follows (adductor magnus is a prime mover)');
+ // a base entry resets earlier variation choices
+ open('gluteus maximus');
+ const gm=rows(),base=gm.find(r=>r.n==='Back squat');
+ ok(base,'gluteus maximus card has the plain Back squat row');
+ base.b.click();
+ ok(q('#card h2').textContent==='Back squat'&&qa('[data-var]').filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.textContent).join()==='Shoulder-width,Parallel','opening the plain "Back squat" row selects its default variation (was Wide)');
+ // dedupe: a variation row never repeats the base row's level and specificity
+ const bad=[];
+ qa('#bestM option').map(o=>o.value).forEach(k=>{
+  open(k);const rs=rows(),by={};rs.forEach(r=>by[r.n]=r.tds);
+  rs.forEach(r=>{const m=r.n.match(/^(.*) \(([^()]+)\)$/);if(m&&by[m[1]]!==undefined&&by[m[1]]===r.tds)bad.push(k+': '+r.n);});
+ });
+ ok(bad.length===0,'no variation row duplicates its base row for any muscle'+(bad.length?': '+bad.slice(0,4).join('; '):''));
+ // Best-for: some muscle ranks a variation entry in its top 8; clicking it opens that variation
+ q('[data-tab="ex"]').click();
+ const withVar=qa('#bestM option').map(o=>o.value).filter(k=>{q('#bestM').value=k;ev(q('#bestM'),'change');return bestNames().some(n=>/\)$/.test(n));});
+ ok(withVar.length>0,'Best-for ranks variation entries for '+withVar.length+' muscles (e.g. '+withVar.slice(0,3).join(', ')+')');
+ const tfl=['tensor fasciae latae','adductor magnus'].find(k=>withVar.includes(k))||withVar[0];
+ q('#bestM').value=tfl;ev(q('#bestM'),'change');q('[data-sort="eff"]').click();
+ const vb=qa('#best [data-ex]').find(b=>/\)$/.test(b.textContent)),label=vb.textContent,mm=label.match(/^(.*) \((.*)\)$/);
+ const pcts=bestPct();ok(pcts.length===bestNames().length,'Best-for ('+tfl+'): entry "'+label+'" shows level dots and a percentage');
+ vb.click();
+ ok(q('#card h2').textContent===mm[1].split(' (')[0].trim()||q('#card h2').textContent===mm[1],'Best-for: clicking "'+label+'" opens that exercise');
+ const pressed=qa('[data-var][aria-pressed="true"]').map(b=>b.textContent);
+ ok(pressed.join(', ').includes(mm[2]),'... with its variation pressed ('+pressed.join(' / ')+')');
+ q('[data-sort="eff"]').click();
+ // ordering stays level desc, then specificity desc
+ const lv=(()=>{q('#bestM').value='adductor magnus';ev(q('#bestM'),'change');return qa('#best li').map(li=>({l:li.querySelectorAll('.lv i[class]').length,s:parseFloat(li.querySelector('small').textContent)}));})();
+ ok(lv.every((x,i)=>!i||x.l<lv[i-1].l||(x.l===lv[i-1].l&&x.s<=lv[i-1].s)),'Best-for sort order is still level, then specificity');
+ q('#exClear').click();
+}
+// ---- deep links ----
+async function linkRun(){
+ const boot1=async(hash)=>{const x=boot({url:'https://example.test/'+hash});const xd=x.document;
+  const t=Date.now();while(xd.getElementById('loading')){if(x.__fatal)return {x,xd,fatal:x.__fatal};if(Date.now()-t>60000)return {x,xd,fatal:'timeout'};await sleep(100);}
+  return {x,xd};};
+ const C1=xd=>xd.getElementById('card').textContent.replace(/\s+/g,' ');
+ const tabOn=xd=>[...xd.querySelectorAll('[data-tab]')].filter(b=>b.getAttribute('aria-selected')==='true').map(b=>b.dataset.tab).join();
+ // exercise + variation
+ let {x,xd,fatal}=await boot1('#ex=Back%20squat&v=Wide');
+ ok(!fatal,'deep link #ex=Back%20squat&v=Wide boots'+(fatal?': '+fatal:''));
+ ok(xd.querySelector('#card h2')&&xd.querySelector('#card h2').textContent==='Back squat'&&[...xd.querySelectorAll('[data-var]')].find(b=>b.textContent==='Wide').getAttribute('aria-pressed')==='true','... opens the Back squat card with Wide pressed');
+ ok(tabOn(xd)==='ex'&&[...xd.querySelectorAll('#exlist .item.active')].map(b=>b.textContent).join()==='Back squat','... shows the Exercises tab with Back squat active');
+ ok(x.location.hash==='#ex=Back%20squat&v=Wide&tab=ex','... and the hash is normalised ('+x.location.hash+')');
+ // selecting a muscle in that instance updates the hash; closing clears the selection part
+ xd.querySelector('[data-tab="anat"]').click();
+ ok(x.location.hash==='#ex=Back%20squat&v=Wide','back on the Anatomy tab the tab part disappears ('+x.location.hash+')');
+ xd.querySelector('#card [data-key]').click();
+ const mk=xd.querySelector('#card h2').textContent;
+ ok(x.location.hash==='#m='+encodeURIComponent(mk)+'&ex=Back%20squat&v=Wide','selecting the muscle "'+mk+'" from the exercise card adds m= ('+x.location.hash+')');
+ xd.querySelector('#card [data-act="back"]').click();
+ ok(x.location.hash==='#ex=Back%20squat&v=Wide'&&x.history.length===1,'Back removes m= again; replaceState adds no history entries ('+x.location.hash+', history '+x.history.length+')');
+ // hashchange restores state
+ x.location.hash='#m=biceps%20brachii';
+ await waitFor(()=>xd.querySelector('#card h2')&&xd.querySelector('#card h2').textContent==='biceps brachii',5000,'hashchange');
+ ok(xd.querySelector('#card h2').textContent==='biceps brachii','a hashchange to #m=biceps%20brachii selects that muscle');
+ // copy link: async clipboard
+ let clip=null;Object.defineProperty(x.navigator,'clipboard',{configurable:true,value:{writeText:async t=>{clip=t;}}});
+ xd.querySelector('#card [data-act="copy"]').click();await sleep(30);
+ ok(clip&&clip.includes('#m=biceps%20brachii')&&clip.startsWith('https://example.test/')&&xd.querySelector('#card [data-act="copy"]').textContent==='Copied','Copy link writes the full URL to the clipboard and shows "Copied" ('+clip+')');
+ await sleep(1900);
+ ok(xd.querySelector('#card [data-act="copy"]').textContent==='Copy link','... and the label returns to "Copy link"');
+ // copy link: no clipboard API, execCommand unavailable -> link shown selected
+ Object.defineProperty(x.navigator,'clipboard',{configurable:true,value:undefined});
+ xd.querySelector('#card [data-act="copy"]').click();
+ const cu=xd.querySelector('#card .copyurl');
+ ok(cu&&cu.value.includes('#m=biceps%20brachii')&&xd.querySelector('#card [data-act="copy"]').textContent==='Select and copy','fallback: the link appears in a field for manual copy ("'+(cu&&cu.value)+'")');
+ // exercise card has the button too
+ xd.querySelector('[data-tab="ex"]').click();[...xd.querySelectorAll('#exlist .item')].find(b=>b.textContent==='Leg press').click();
+ ok(!!xd.querySelector('#card [data-act="copy"]'),'exercise card has a Copy link button');
+ // clearing everything removes the hash
+ xd.querySelector('#exClear').click();
+ ok(x.location.hash===''||x.location.hash==='#tab=ex','clearing the exercise clears the link ('+x.location.hash+')');
+ // comparison
+ ({x,xd,fatal}=await boot1('#cmp=Back%20squat:Wide|Leg%20press'));
+ const h2s=[...xd.querySelectorAll('#card h2')].map(h=>h.textContent);
+ ok(!fatal&&C1(xd).includes('Comparison')&&h2s.length===2&&h2s[0].includes('Back squat')&&h2s[0].includes('Wide')&&h2s[1].includes('Leg press'),'deep link #cmp=A:Wide|B opens the comparison with A (Wide) and B ('+h2s.join(' / ')+')');
+ ok(x.location.hash==='#cmp=Back%20squat:Wide|Leg%20press&tab=ex'||x.location.hash==='#cmp=Back%20squat:Wide|Leg%[...]'||/^#cmp=Back%20squat:Wide\|Leg%20press/.test(x.location.hash),'comparison hash is kept ('+x.location.hash+')');
+ ok(!!xd.querySelector('#card [data-act="copy"]'),'comparison card has a Copy link button');
+ xd.querySelector('[data-act="swap"]').click();
+ ok(/^#cmp=Leg%20press\|Back%20squat:Wide/.test(x.location.hash),'swapping A and B updates the hash ('+x.location.hash+')');
+ // muscle / bone / tab
+ ({x,xd,fatal}=await boot1('#m=gluteus%20maximus'));
+ ok(!fatal&&xd.querySelector('#card h2').textContent==='gluteus maximus'&&x.location.hash==='#m=gluteus%20maximus','deep link #m=gluteus%20maximus selects the muscle');
+ const bone=Object.keys(META.bdb)[0];
+ ({x,xd,fatal}=await boot1('#b='+encodeURIComponent(bone)+'&tab=wk'));
+ ok(!fatal&&xd.querySelector('#card h2').textContent===bone&&tabOn(xd)==='wk'&&!!xd.querySelector('#card [data-act="copy"]'),'deep link #b=<bone>&tab=wk selects the bone and opens the Workout tab ("'+bone+'")');
+ // invalid values are ignored without throwing
+ for(const bad of ['#ex=Nope&v=Wide','#m=zzz&b=&ex=&cmp=a|b&tab=bogus','#cmp=Back%20squat|','#ex=Back%20squat&v=%E0%A4%A,Nonsense','#%','#=&&=','#m=constructor&b=__proto__&ex=constructor','#ex=%E0%A4%A']){
+  const r=await boot1(bad);
+  ok(!r.fatal&&!r.xd.getElementById('loading'),'invalid hash "'+bad+'" starts normally');
+  if(bad==='#ex=Back%20squat&v=%E0%A4%A,Nonsense') ok(r.xd.querySelector('#card h2').textContent==='Back squat'&&[...r.xd.querySelectorAll('[data-var][aria-pressed="true"]')].map(b=>b.textContent).join()==='Shoulder-width,Parallel','... a valid exercise with unknown options opens with the defaults');
+  else ok(!r.xd.querySelector('#card.show'),'... and shows no card');
+ }
+ // main instance: selection mirrors into the hash
+ q('[data-tab="anat"]').click();q('#q').value='gluteus maximus';ev(q('#q'),'input');qa('#list .item').find(b=>b.dataset.key==='gluteus maximus').click();q('#q').value='';ev(q('#q'),'input');
+ ok(w.location.hash==='#m=gluteus%20maximus','selecting a muscle sets location.hash ('+w.location.hash+')');
+ q('#card .close').click();
+ ok(w.location.hash==='','closing the card clears the hash');
+}
 // ---- phone instance: matchMedia reports max-width:760px and a coarse pointer ----
 async function phoneRun(){
  const p=boot({phone:true}),pd=p.document,pq=x=>pd.querySelector(x),pqa=x=>[...pd.querySelectorAll(x)];
@@ -377,6 +534,9 @@ async function phoneRun(){
  ok(w.__dpr===2&&!q('#side').classList.contains('has-card')&&q('#card').parentNode===q('#vp'),'desktop: pixel ratio capped at 2, card floats in the viewport, sheet classes unused');
  ok(q('#btnLayers').getAttribute('aria-expanded')==='false'&&q('#popLayers').contains(q('#tBones'))&&q('#popLayers').contains(q('#opM')),'desktop: layer toggles and opacity sliders live in the Layers popover, closed by default');
  ok(qa('[data-view]').length===5&&q('#toolbar').contains(q('[data-view="front"]')),'desktop: view buttons are in the floating toolbar');
+ await searchRun();
+ await variationRun();
+ await linkRun();
  await lodRun();
  await otherRuns();
  await phoneRun();
