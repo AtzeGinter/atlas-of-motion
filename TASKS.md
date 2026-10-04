@@ -61,7 +61,8 @@ Goal: less clutter on desktop, and a phone layout that actually works. The curre
 
 | # | Task | Size | Agent |
 |---|------|------|-------|
-| 2.1 | Roadmap #6: move geometry out of the HTML into `geo.bin` (raw gzip, no base64; ~25 % smaller), `fetch()` it with a progress bar. HTML drops from 7 MB to ~70 kB. Smoke test must load the file too. | M | sonnet |
+| 2.1 | 🔄 Being done together with 2.7. Roadmap #6: move geometry out of the HTML into `geo.bin` (raw gzip, no base64; ~25 % smaller), `fetch()` it with a progress bar. HTML drops from 7 MB to ~70 kB. Smoke test must load the file too. | M | sonnet |
+| 2.7 | **Mesh quality levels Low / Medium / High** (user request 2026-10-04): switch in the Layers popover, persisted. Low ≈ 300–380k faces is the phone default, Medium (today, 769k faces, 5.2 MB) the desktop default, High = full detail (1.59M faces, 9.9 MB) loaded on demand. Combined with 2.1: geometry moves to `geo/<level>.bin`, `tools/meshes.json` is committed, `extract.py` is dropped. 🔄 In progress. | L | sonnet |
 | 2.2 | ★ **Self-host Google Fonts and three.js.** Embedding Google Fonts sends visitor IPs to Google (ruled a GDPR violation, LG München 2022). Self-hosting also enables offline use and lets us drop CDN risk (or at least add SRI hashes). | S | sonnet |
 | 2.3 | Service worker + web manifest → installable offline PWA (depends on 2.1, 2.2). | M | sonnet |
 | 2.4 | ★ **Hover raycasting cost:** every mouse move raycasts ~670 meshes / 770k triangles. Add `three-mesh-bvh` or a coarse bounding-sphere prefilter; measure on a low-end laptop/phone first. | M | sonnet |
