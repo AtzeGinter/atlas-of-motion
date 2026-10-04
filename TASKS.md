@@ -73,8 +73,8 @@ Goal: less clutter on desktop, and a phone layout that actually works. The curre
 |---|------|------|-------|
 | 2.1 | ✅ **Done 2026-10-04** (with 2.7). Roadmap #6: move geometry out of the HTML into `geo.bin` (raw gzip, no base64; ~25 % smaller), `fetch()` it with a progress bar. HTML drops from 7 MB to ~70 kB. Smoke test must load the file too. | M | sonnet |
 | 2.7 | **Mesh quality levels Low / Medium / High** (user request 2026-10-04): switch in the Layers popover, persisted. Low ≈ 300–380k faces is the phone default, Medium (today, 769k faces, 5.2 MB) the desktop default, High = full detail (1.59M faces, 9.9 MB) loaded on demand. Combined with 2.1: geometry moves to `geo/<level>.bin`, `tools/meshes.json` is committed, `extract.py` is dropped. ✅ **Done 2026-10-04**: Low 362k faces / 2.3 MB, Medium 769k / 5.2 MB, High 1.59M / 9.9 MB; index.html 7.1 MB → 0.25 MB; file URLs carry a content hash for cache busting. | L | sonnet |
-| 2.2 | ★ **Self-host Google Fonts and three.js.** Embedding Google Fonts sends visitor IPs to Google (ruled a GDPR violation, LG München 2022). Self-hosting also enables offline use and lets us drop CDN risk (or at least add SRI hashes). | S | sonnet |
-| 2.3 | Service worker + web manifest → installable offline PWA (depends on 2.1, 2.2). | M | sonnet |
+| 2.2 | ✅ **Done 2026-10-04.** ★ **Self-host Google Fonts and three.js.** Embedding Google Fonts sends visitor IPs to Google (ruled a GDPR violation, LG München 2022). Self-hosting also enables offline use and lets us drop CDN risk (or at least add SRI hashes). | S | sonnet |
+| 2.3 | ✅ **Done 2026-10-04.** Service worker + web manifest → installable offline PWA (depends on 2.1, 2.2). | M | sonnet |
 | 2.4 | ★ **Hover raycasting cost:** every mouse move raycasts ~670 meshes / 770k triangles. Add `three-mesh-bvh` or a coarse bounding-sphere prefilter; measure on a low-end laptop/phone first. | M | sonnet |
 | 2.5 | ★ Upgrade three.js r128 (2021) → current release via import map (ES modules; `outputColorSpace`, colour management changes, light intensity units). Do after 2.1 so the diff is reviewable. | M | opus |
 | 2.6 | ★ Startup: decode geometry in a Web Worker and transfer buffers; precompute normals in the pipeline instead of `computeVertexNormals()` on the main thread (trade-off: bigger file, test both). | M | sonnet |
@@ -83,7 +83,7 @@ Goal: less clutter on desktop, and a phone layout that actually works. The curre
 
 | # | Task | Size | Agent |
 |---|------|------|-------|
-| 3.1 | Roadmap #1: rank variations as separate entries in "Best exercises for" and in the muscle card (fixes the `EXK` gap). | M | sonnet |
+| 3.1 | ✅ **Done 2026-10-04.** Roadmap #1: rank variations as separate entries in "Best exercises for" and in the muscle card (fixes the `EXK` gap). | M | sonnet |
 | 3.2 | Roadmap #2: plan export/import (JSON file) + training days with per-session volume. | M | sonnet |
 | 3.3 | Roadmap #3: left/right and per-part toggles in the Index; unilateral exercises light one side (needs a `unilateral` flag in `exercises.py`). | M | sonnet |
 | 3.4 | Roadmap #4: replace 3 levels with cited per-muscle percentages (research task first: build a sources table, then data format change). | L | opus |
@@ -93,8 +93,8 @@ Goal: less clutter on desktop, and a phone layout that actually works. The curre
 
 | # | Idea | Size | Agent |
 |---|------|------|-------|
-| 4.1 | **Deep links / shareable state** in the URL hash: `#m=deltoid`, `#ex=back-squat&v=wide`, `#cmp=…`, `#plan=<compressed>`. Makes it linkable from forums and lets users share a plan without a backend. | M | sonnet |
-| 4.2 | **Colloquial names and synonyms** in search: "lats", "pecs", "quads", "abs", "traps", "glutes", "hammies", "rear delts" → keys. Plus fuzzy matching (typos). | S | sonnet |
+| 4.1 | ✅ **Done 2026-10-04.** **Deep links / shareable state** in the URL hash: `#m=deltoid`, `#ex=back-squat&v=wide`, `#cmp=…`, `#plan=<compressed>`. Makes it linkable from forums and lets users share a plan without a backend. | M | sonnet |
+| 4.2 | ✅ **Done 2026-10-04.** **Colloquial names and synonyms** in search: "lats", "pecs", "quads", "abs", "traps", "glutes", "hammies", "rear delts" → keys. Plus fuzzy matching (typos). | S | sonnet |
 | 4.3 | **Search by action/movement**: "elbow flexion", "hip abduction" → highlight all muscles with that action (data is already in `db[key].a`). Good learning feature. | M | sonnet |
 | 4.4 | **Antagonist / agonist info** on the muscle card and a "balance" warning in the planner (e.g. pressing vs pulling sets, quad vs hamstring ratio). | M | opus |
 | 4.5 | **Quiz mode**: highlight a random muscle, pick its name / function / nerve; spaced-repetition score in localStorage. | M | sonnet |

@@ -3,7 +3,7 @@
    - Navigations: network first (so updates arrive), cache fallback when offline or slow.
    - geo/*.bin: cache first; they are content-hashed via ?v=, cached on first use only (the High level is ~10 MB).
    All URLs are relative to this file so the site works from a sub-path (GitHub Pages project sites). */
-const BUILD = "67e86ba717";
+const BUILD = "d1fe91c848";
 const SHELL = "aom-shell-" + BUILD;
 const GEO = "aom-geo-b3a651cdef";   // changes only when a geo/*.bin changes, so shell-only updates keep downloaded meshes
 const PRECACHE = [
