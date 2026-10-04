@@ -26,11 +26,11 @@ jobs:
         run: python lint.py
       - name: Assemble index.html
         run: python assemble.py
-      - name: index.html must be up to date
+      - name: index.html and sw.js must be up to date
         working-directory: .
         run: |
-          git diff --exit-code --stat -- index.html || {
-            echo "::error file=index.html::index.html is out of date: run python meta.py && python exercises.py && python assemble.py in tools/ and commit"
+          git diff --exit-code --stat -- index.html sw.js || {
+            echo "::error file=index.html::index.html or sw.js is out of date: run python meta.py && python exercises.py && python assemble.py in tools/ and commit"
             exit 1
           }
       - name: Install test deps
