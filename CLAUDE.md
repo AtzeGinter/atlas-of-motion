@@ -7,7 +7,7 @@ Browser-based 3D atlas of the human muscular system plus a strength-exercise dat
 - **`index.html` is generated.** Never hand-edit it. Edit `tools/template.html` (UI/JS/CSS) or the data sources in `tools/`, then run the pipeline (see below) to regenerate it.
 - `index.html` is ~7 MB because the mesh data is embedded as base64. Do not open or print it whole; grep or read `tools/template.html` instead.
 - Anatomy keys are lower-case English names from the source data (e.g. `"gluteus medius"`, `"pectoralis major"`). Every exercise target must reference an existing key (and, if given, an existing part). `tools/exercises.py` asserts this; keep the asserts.
-- After any change: rebuild, then run the smoke test (`tools/test`).
+- After any change: rebuild, run `python lint.py` (in `tools/`), then run the smoke test (`tools/test`). Commit the regenerated `index.html` together with its sources, or CI fails.
 
 ## Repository layout
 
@@ -18,10 +18,12 @@ CLAUDE.md             This file.
 LICENSE               MIT: code, anatomy text, exercise data.
 LICENSE-DATA          CC BY-SA 4.0: embedded 3D mesh data.
 .gitignore            Ignores intermediates (meta*.json, geo.b64, BodyExplorer clone, node_modules).
+.github/workflows/ci.yml  CI: extract -> exercises -> lint -> assemble -> fail if index.html differs from the commit -> smoke test
 tools/
   template.html       The whole app source: HTML + CSS + one inline <script>. Placeholders __GEO__ and __META__.
   build.py            Mesh pipeline: load GLBs, decimate, transform, quantise, pack -> geo.b64 + meta.json
   extract.py          Recover geo.b64 + meta2.json from the committed ../index.html (db/bdb rebuilt from data/*.txt + bones.py); replaces build.py + meta.py for non-mesh changes
+  lint.py             Data linter: data/*.txt and (if meta3.json exists) exercises vs MGROUPS/EXCATS/EQCATS in template.html
   meta.py             Map each mesh to an anatomy key/side/part, attach muscle + bone info -> meta2.json
   bones.py            Bone descriptions and regions (imported by meta.py)
   exercises.py        Exercise database, variations, equipment categories -> meta3.json
@@ -113,7 +115,7 @@ Single `async` IIFE, no modules, no framework. Three.js **r128** UMD from cdnjs 
 | `sel` | selected structure `{kind,key}` or null |
 | `selEx`, `exVars` | selected exercise index; chosen variation per exercise `{i:[optIdx per group]}` |
 | `cmp`, `cmpPick` | comparison `[{i,v},{i,v}]`; waiting for the second pick |
-| `plan`, `volOn` | workout plan `[{n:name, sets, v}]`; volume heatmap toggle |
+| `plan`, `volOn` | workout plan `[{n:name, sets, v:[optionIdx per variation group]}]` (indices in memory, option names on disk); volume heatmap toggle (selecting an exercise/comparison turns it off) |
 | `eqOn` | enabled equipment categories |
 | `mode` | heat mode: `null`, `"ex"`, `"cmp"`, `"vol"`. Set only via `setMode()` |
 | `heat`, `heatTip` | Map mesh → material / tooltip text for the current mode |
@@ -127,18 +129,20 @@ selected structure (`M_SEL`) → heat mode material (`HM` levels, `CM` compariso
 - `perOf(targets)` → `{per:{key:{l,parts}}, tot}`; weights `W = {3:1, 2:0.45, 1:0.15}`. Specificity of a muscle = `W[level] / tot`.
 - `EXK[key]`: precomputed list of exercises per muscle **from base targets only** (variations are ignored there; known gap).
 - `meshLevels(targets)`: Map mesh → level, respecting part-specific targets.
-- Volume: `VOLF = {3:1, 2:0.5, 1:0}` sets per weekly set; `volumeByMesh()`, `volOfKey(key, part)`; bands <4, 4–9, 10–20, >20 (`volBand`, `volStatus`). `SUMMARY` lists the 27 rows of the weekly table.
+- Volume: `VOLF = {3:1, 2:0.5, 1:0}` sets per weekly set; `volumeByMesh()`, `volOfKey(key, part)`; bands <4, 4–9, 10–20, >20 (`volBand`, `volStatus`). `SUMMARY` lists the 27 rows of the weekly table; a row is `[label, "key[|part],key[|part],..."]` and shows the MAX weekly sets over its members (e.g. Quadriceps = four heads; Hip flexors = psoas major + iliacus, rectus femoris deliberately omitted). Clicking a row selects its first key.
 
 ### Cards and lists
 `renderCard()` dispatches to `renderCmpCard()`, `renderExCard()` or the muscle/bone card. Click handling is delegated on `#card` via `data-act`, `data-ex`, `data-key`, `data-var`. Sidebar tabs: Anatomy (`buildList`, region chips, per-structure checkboxes), Exercises (`buildEq`, `buildBest`, `buildExList`, comparison banner), Workout (`renderPlan`, `buildAdd`, `renderVolSum`, `#tVol`).
 
 ### Persistence
-localStorage keys (still named after the old project name) `myology.plan.v1` and `myology.eq.v1`, wrapped in try/catch. Bump the version suffix if the format changes.
+localStorage, all wrapped in try/catch. `aom.plan.v2`: `[{n:exerciseName, sets, v:[optionName per variation group]}]` (`""` or missing = default option; unknown names fall back to the default, entries for exercises that no longer exist are dropped). `aom.eq.v1`: array of enabled equipment categories. In memory `plan[].v` and `exVars` are option-index arrays; conversion happens only in `loadPlan()`/`savePlan()` (`varNames`/`varIdx`), so reordering `VARS` options is safe but renaming one resets it to the default. Legacy keys `myology.plan.v1` (variation indices, validated against the current `EX[i].v`) and `myology.eq.v1` are migrated on first load and then removed. Bump the version suffix if the format changes.
 
 ## Testing
 
 `tools/test/smoke.js` (needs Node >= 18) loads `index.html` in jsdom with real three@0.128.0, stubs `WebGLRenderer`, waits until the loading overlay is gone, then clicks through: best-for list, exercise selection, variations, add to plan, comparison and swap, equipment filter, workout plan, volume mode. It asserts on each step (`ok - ...` / `FAIL - ...`), treats startup errors, `console.error` and uncaught exceptions as failures, and exits non-zero if anything fails. Keep assertions in step with exercise data (e.g. Back squat / Wide stance / Hip thrust) when you change it.
 It does not test rendering or raycasting accuracy; check those manually in a browser.
+
+CI (GitHub Actions, `.github/workflows/ci.yml`) runs on push and PR to `main`: `extract.py`, `exercises.py`, `lint.py`, `assemble.py` in `tools/`, then `git diff --exit-code -- index.html`, then `npm ci && npm test`. GitHub Pages deploys from `main` / root separately.
 
 ## Known limitations and open issues
 

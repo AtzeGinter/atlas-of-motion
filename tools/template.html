@@ -410,17 +410,33 @@ function perOf(t){
   const per={}; t.forEach(r=>{const o=per[r[0]]||(per[r[0]]={l:0,parts:[]}); o.l=Math.max(o.l,r[2]); if(r[1]&&o.parts.indexOf(r[1])<0) o.parts.push(r[1]);});
   let tot=0; Object.keys(per).forEach(k=>tot+=W[per[k].l]); return {per:per,tot:tot};
 }
-const varText=(i,v)=>(EX[i].v&&v)?EX[i].v.map((g,gi)=>v[gi]?g[1][v[gi]][0]:"").filter(Boolean).join(", "):"";
+const varText=(i,v)=>(EX[i].v&&v)?EX[i].v.map((g,gi)=>{const o=v[gi]?g[1][v[gi]]:null; return o?o[0]:"";}).filter(Boolean).join(", "):"";
+// persisted variations are option NAMES (""/missing = default); internally index arrays. Unknown names/indices fall back to the default (0)
+const varNames=(i,v)=>(EX[i].v||[]).map((g,gi)=>{const o=(v&&v[gi]>0)?g[1][v[gi]]:null; return o?o[0]:"";});
+const varIdx=(i,nm,legacy)=>(EX[i].v||[]).map((g,gi)=>{const x=nm&&nm[gi]; const ix=legacy?(Number.isInteger(x)&&g[1][x]?x:0):g[1].findIndex(o=>o[0]===x&&x!==""); return ix>0?ix:0;});
 const EXK={};
 EX.forEach((e,i)=>{const r=perOf(e.t); e.per=r.per; e.tot=r.tot;
   Object.keys(r.per).forEach(k=>(EXK[k]=EXK[k]||[]).push({i:i,l:r.per[k].l,parts:r.per[k].parts,s:W[r.per[k].l]/r.tot}));});
 Object.keys(EXK).forEach(k=>EXK[k].sort((a,b)=>b.l-a.l||b.s-a.s));
-const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}},del(k){try{localStorage.removeItem(k);}catch(e){}}};
+const PLAN_KEY="aom.plan.v2", EQ_KEY="aom.eq.v1", OLD_PLAN="myology.plan.v1", OLD_EQ="myology.eq.v1";
 const EQCATS=["Barbell","Dumbbells","Kettlebell","Cable","Machine","Bodyweight","Band","Other"];
-let eqOn=new Set(store.get("myology.eq.v1",EQCATS).filter(c=>EQCATS.indexOf(c)>=0));
+function loadEq(){
+  let a=store.get(EQ_KEY,null);
+  if(!Array.isArray(a)){const o=store.get(OLD_EQ,null); if(Array.isArray(o)){store.set(EQ_KEY,o); store.del(OLD_EQ); a=o;}}
+  return Array.isArray(a)?a.filter(c=>EQCATS.indexOf(c)>=0):EQCATS;
+}
+let eqOn=new Set(loadEq());
 const eqOK=i=>EX[i].eq.some(c=>eqOn.has(c));
 const eqFiltered=()=>eqOn.size<EQCATS.length;
-let plan=store.get("myology.plan.v1",[]).filter(p=>p&&EXI[p.n]!==undefined&&p.sets>0);
+function loadPlan(){
+  let a=store.get(PLAN_KEY,null), legacy=false;
+  if(!Array.isArray(a)){const o=store.get(OLD_PLAN,null); if(Array.isArray(o)){a=o; legacy=true;} else a=[];}
+  const pl=a.filter(p=>p&&EXI[p.n]!==undefined&&p.sets>0).map(p=>({n:p.n,sets:Math.min(30,Math.round(p.sets)),v:varIdx(EXI[p.n],p.v,legacy)})).filter(p=>p.sets>0);
+  if(legacy){store.set(PLAN_KEY,pl.map(p=>({n:p.n,sets:p.sets,v:varNames(EXI[p.n],p.v)}))); store.del(OLD_PLAN);}
+  return pl;
+}
+let plan=loadPlan();
 let selEx=null, exVars={}, cmp=null, cmpPick=false, volOn=false, view="sel", mode=null, heat=null, heatTip=null;
 
 /* ---------- state ---------- */
@@ -490,9 +506,7 @@ function focusOn(kind,k){
   const box=new THREE.Box3(); ms.forEach(m=>box.union(m.geometry.boundingBox));
   const c=box.getCenter(new THREE.Vector3()), size=box.getSize(new THREE.Vector3());
   // which side of the body is this on? compare with the body's depth centre at the same height
-  let zs=0,n=0;
-  for(const m of muscleMeshes){const b=m.geometry.boundingBox; if(b.min.y<=c.y&&b.max.y>=c.y&&Math.abs((b.min.x+b.max.x)/2)<0.2){zs+=(b.min.z+b.max.z)/2;n++;}}
-  const zc=n?zs/n:0;
+  const zc=bodyZ(c.y);
   if(kind==="muscle"||size.x<0.3){
     if(c.z<zc-0.015) goal.theta=nearestAngle(orbit.theta,Math.PI);
     else if(c.z>zc+0.015) goal.theta=nearestAngle(orbit.theta,0);
@@ -702,6 +716,7 @@ function syncModeUI(){ $("#exClear").disabled=selEx===null&&!cmp; $("#tVol").che
 function syncBanner(){ const b=$("#cmpBanner"); b.hidden=!cmpPick; if(cmpPick&&selEx!==null) $("#cmpText").textContent="Pick a second exercise to compare with "+EX[selEx].n+"."; }
 $("#cmpCancel").onclick=()=>{cmpPick=false; syncBanner(); if(view==="ex") renderCard();};
 function selectEx(i){
+  volOn=false;
   if(cmpPick&&selEx!==null&&i!==selEx){
     cmpPick=false; cmp=[{i:selEx,v:(exVars[selEx]||[]).slice()},{i:i,v:(exVars[i]||[]).slice()}]; sel=null; view="cmp";
     setMode("cmp"); renderCard(); syncList(); syncExList(); return;
@@ -713,7 +728,7 @@ function selectEx(i){
   goal.phi=1.5; goal.r=baseRadius(); goal.ty=0.88;
   renderCard(); syncList(); syncExList();
 }
-function clearEx(){selEx=null;cmp=null;cmpPick=false;view="sel";setMode(volOn?"vol":null);renderCard();syncList();syncExList();}
+function clearEx(){selEx=null;cmp=null;cmpPick=false;view="sel";setMode(null);renderCard();syncList();syncExList();}
 $("#exClear").onclick=clearEx;
 const EXCATS=["Chest & shoulders","Back","Arms","Legs","Hinge","Full body","Core","Grip & carry","Neck"];
 function buildExList(){
@@ -739,7 +754,7 @@ document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>openTab(b.datas
 
 /* equipment */
 function buildEq(){ $("#eqchips").innerHTML=EQCATS.map(c=>'<button class="chip" data-eq="'+c+'" aria-pressed="'+eqOn.has(c)+'">'+c+'</button>').join(""); }
-function eqChanged(){ store.set("myology.eq.v1",[...eqOn]); buildEq(); buildExList(); buildBest(); buildAdd(); if(sel&&view==="sel") renderCard(); }
+function eqChanged(){ store.set(EQ_KEY,[...eqOn]); buildEq(); buildExList(); buildBest(); buildAdd(); if(sel&&view==="sel") renderCard(); }
 $("#eqchips").addEventListener("click",e=>{const c=e.target.closest("[data-eq]"); if(!c) return; const k=c.dataset.eq; eqOn.has(k)?eqOn.delete(k):eqOn.add(k); eqChanged();});
 $("#eqAll").onclick=()=>{eqOn=new Set(EQCATS); eqChanged();};
 
@@ -761,8 +776,9 @@ document.querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{bestSort=b.da
 $("#best").addEventListener("click",e=>{const t=e.target.closest("[data-ex]"); if(t) selectEx(+t.dataset.ex);});
 
 /* workout builder */
-const SUMMARY=[["Upper chest","pectoralis major","clavicular part"],["Mid and lower chest","pectoralis major","sternocostal part"],["Front delts","deltoid","clavicular part"],["Side delts","deltoid","acromial part"],["Rear delts","deltoid","spinal part"],["Upper traps","trapezius","descending part"],["Mid traps","trapezius","transverse part"],["Rhomboids","rhomboid major",""],["Lats","latissimus dorsi",""],["Rotator cuff (infraspinatus)","infraspinatus",""],["Biceps","biceps brachii",""],["Brachialis","brachialis",""],["Triceps","triceps brachii",""],["Forearm flexors","flexor digitorum superficialis",""],["Forearm extensors","extensor carpi radialis brevis",""],["Abs","rectus abdominis",""],["Obliques","external oblique",""],["Lower back","iliocostalis",""],["Glutes","gluteus maximus",""],["Glute medius","gluteus medius",""],["Hip flexors","psoas major",""],["Quadriceps","vastus lateralis",""],["Hamstrings","semitendinosus",""],["Adductors","adductor magnus",""],["Calves (gastrocnemius)","gastrocnemius",""],["Soleus","soleus",""],["Tibialis anterior","tibialis anterior",""]];
-function savePlan(){ store.set("myology.plan.v1",plan); }
+// row = [label, "key[|part],key[|part],..."]: weekly sets = max over the listed members; clicking the row selects the first key. Hip flexors omit rectus femoris (a quad exercise would otherwise count as hip-flexor work)
+const SUMMARY=[["Upper chest","pectoralis major|clavicular part"],["Mid and lower chest","pectoralis major|sternocostal part"],["Front delts","deltoid|clavicular part"],["Side delts","deltoid|acromial part"],["Rear delts","deltoid|spinal part"],["Upper traps","trapezius|descending part"],["Mid traps","trapezius|transverse part"],["Rhomboids","rhomboid major,rhomboid minor"],["Lats","latissimus dorsi"],["Rotator cuff (infraspinatus)","infraspinatus"],["Biceps","biceps brachii"],["Brachialis","brachialis"],["Triceps","triceps brachii"],["Forearm flexors","flexor digitorum superficialis,flexor digitorum profundus,flexor carpi radialis,flexor carpi ulnaris"],["Forearm extensors","extensor carpi radialis longus,extensor carpi radialis brevis,extensor carpi ulnaris,extensor digitorum"],["Abs","rectus abdominis"],["Obliques","external oblique,internal oblique"],["Lower back","iliocostalis,longissimus,multifidus"],["Glutes","gluteus maximus"],["Glute medius","gluteus medius"],["Hip flexors","psoas major,iliacus"],["Quadriceps","vastus lateralis,vastus medialis,vastus intermedius,rectus femoris"],["Hamstrings","biceps femoris,semitendinosus,semimembranosus"],["Adductors","adductor magnus,adductor longus,adductor brevis"],["Calves (gastrocnemius)","gastrocnemius"],["Soleus","soleus"],["Tibialis anterior","tibialis anterior"]];
+function savePlan(){ store.set(PLAN_KEY,plan.map(p=>({n:p.n,sets:p.sets,v:varNames(EXI[p.n],p.v)}))); }
 function addToPlan(i,v){ plan.push({n:EX[i].n,sets:3,v:(v||[]).slice()}); planChanged(); }
 function planChanged(){ savePlan(); volCache=null; renderPlan(); renderVolSum(); if(mode==="vol") setMode("vol"); }
 function renderPlan(){
@@ -778,7 +794,7 @@ $("#plan").addEventListener("click",e=>{
   if(d.inc!==undefined){plan[+d.inc].sets=Math.min(30,plan[+d.inc].sets+1); planChanged();}
   else if(d.dec!==undefined){const p=plan[+d.dec]; p.sets--; if(p.sets<=0) plan.splice(+d.dec,1); planChanged();}
   else if(d.rm!==undefined){plan.splice(+d.rm,1); planChanged();}
-  else if(d.open!==undefined){const p=plan[+d.open], i=EXI[p.n]; exVars[i]=p.v.slice(); selectEx(i);}
+  else if(d.open!==undefined){const p=plan[+d.open], i=EXI[p.n]; exVars[i]=(p.v||[]).slice(); selectEx(i);}
 });
 $("#wkClear").onclick=()=>{ if(!plan.length) return; plan=[]; planChanged(); };
 function buildAdd(){
@@ -791,7 +807,7 @@ $("#qa").addEventListener("input",buildAdd);
 $("#addres").addEventListener("click",e=>{const t=e.target.closest("[data-add]"); if(!t) return; addToPlan(+t.dataset.add,exVars[+t.dataset.add]); $("#qa").value=""; buildAdd(); $("#qa").focus();});
 function renderVolSum(){
   if(!plan.length){$("#volsum").innerHTML='<p class="empty">Add exercises to see your weekly volume.</p>'; return;}
-  const rows=SUMMARY.map(r=>[r[0],r[1],volOfKey(r[1],r[2])]);
+  const rows=SUMMARY.map(r=>{const ms=r[1].split(",").map(x=>x.split("|")); return [r[0],ms[0][0],Math.max(...ms.map(x=>volOfKey(x[0],x[1]||"")))];});
   $("#volsum").innerHTML='<table class="vsum"><tbody>'+rows.map(r=>{const s=r[2], b=volBand(s);
     return '<tr><td><button class="exlink" data-key="'+r[1]+'">'+r[0]+'</button></td><td><div class="vbar">'+(s>0?'<i class="v'+b+'" style="width:'+Math.min(100,s/25*100)+'%"></i>':'')+'</div></td><td>'+fmt(s)+' · '+volStatus(s)+'</td></tr>';}).join("")+'</tbody></table>';
 }

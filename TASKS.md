@@ -15,17 +15,17 @@ Legend: **S/M/L** = rough size. **Agent** = suggested executor (`sonnet` for wel
 | 0.3 | ✅ **Done 2026-10-04** (Node 24.19; smoke test 53/53 passing). ★ **Node is v16 here; the smoke test needs ≥18** (jsdom 24, global `DecompressionStream`/`Response`/`Blob`). Upgrade Node to LTS (22) and add `"engines": {"node": ">=18"}` to `tools/test/package.json`. | S | you |
 | 0.4 | ✅ **Done 2026-10-04.** ★ **Make the smoke test actually fail.** `smoke.js` only prints and always `process.exit(0)`; THROW/ERR lines don't fail the run. Add asserts (expected card text, counts, localStorage content), non-zero exit on error, and replace the fixed 8 s `setTimeout` with polling for `#loading` removal. | M | sonnet |
 | 0.5 | ✅ **Done 2026-10-04.** ★ **Template-only rebuild without the 60 MB BodyExplorer clone.** `geo.b64`/`meta*.json` are git-ignored, so a fresh clone can't rebuild after a template edit. Either commit the geometry as a binary asset (see 2.1) or add `tools/extract.py` that recovers `geo.b64` + `meta3.json` from the current `index.html`. | S | sonnet |
-| 0.6 | ★ **CI (GitHub Actions):** on push/PR run `exercises.py` asserts, `assemble.py`, the smoke test; fail if committed `index.html` is out of sync with sources. Deploy Pages from the workflow. | M | sonnet |
+| 0.6 | ✅ **Done 2026-10-04.** ★ **CI (GitHub Actions):** on push/PR run `exercises.py` asserts, `assemble.py`, the smoke test; fail if committed `index.html` is out of sync with sources. Deploy Pages from the workflow. | M | sonnet |
 
 ## P1: Correctness and robustness
 
 | # | Task | Size | Agent |
 |---|------|------|-------|
-| 1.1 | ★ **Plan storage fragility.** Plan entries store variation *indices* (`v:[1,0]`) and exercise *names*. Reordering options in `VARS` or renaming an exercise silently changes or drops plan entries. Store option names, migrate `myology.plan.v1` → `aom.plan.v2` (and `myology.eq.v1` → `aom.eq.v1`, dropping the old project name from storage keys). Also guard `p.v` being undefined (`p.v.slice()` throws in the `data-open` handler). | S | sonnet |
-| 1.2 | ★ Volume toggle stays checked when an exercise is selected (`volOn` remains true while `mode==="ex"`). Decide on behaviour and make the UI consistent. | S | sonnet |
-| 1.3 | ★ Weekly summary rows use a single representative muscle (Quadriceps = vastus lateralis only, Hamstrings = semitendinosus only, Lower back = iliocostalis). Use the max/avg over the whole group so rectus femoris-only or biceps-femoris-biased work shows up. | S | sonnet |
-| 1.4 | ★ Data lint script: field count per line in `muscles.txt`/`extra.txt`, duplicate keys, duplicate exercise names, every `EQ`/category value valid, `EXCATS` in template == categories in `exercises.py`. Run in CI. | S | sonnet |
-| 1.5 | ★ Refactor duplicated body-depth logic (`focusOn` re-implements `bodyZ`). | S | sonnet |
+| 1.1 | ✅ **Done 2026-10-04.** ★ **Plan storage fragility.** Plan entries store variation *indices* (`v:[1,0]`) and exercise *names*. Reordering options in `VARS` or renaming an exercise silently changes or drops plan entries. Store option names, migrate `myology.plan.v1` → `aom.plan.v2` (and `myology.eq.v1` → `aom.eq.v1`, dropping the old project name from storage keys). Also guard `p.v` being undefined (`p.v.slice()` throws in the `data-open` handler). | S | sonnet |
+| 1.2 | ✅ **Done 2026-10-04.** ★ Volume toggle stays checked when an exercise is selected (`volOn` remains true while `mode==="ex"`). Decide on behaviour and make the UI consistent. | S | sonnet |
+| 1.3 | ✅ **Done 2026-10-04.** ★ Weekly summary rows use a single representative muscle (Quadriceps = vastus lateralis only, Hamstrings = semitendinosus only, Lower back = iliocostalis). Use the max/avg over the whole group so rectus femoris-only or biceps-femoris-biased work shows up. | S | sonnet |
+| 1.4 | ✅ **Done 2026-10-04.** ★ Data lint script: field count per line in `muscles.txt`/`extra.txt`, duplicate keys, duplicate exercise names, every `EQ`/category value valid, `EXCATS` in template == categories in `exercises.py`. Run in CI. | S | sonnet |
+| 1.5 | ✅ **Done 2026-10-04.** ★ Refactor duplicated body-depth logic (`focusOn` re-implements `bodyZ`). | S | sonnet |
 | 1.6 | Anatomy review pass, focusing on innervation of small hand/foot/laryngeal muscles (flagged as most error-prone). Ideally an anatomist; otherwise cross-check against Gray's/TA2 and record sources. | L | opus + you |
 
 ## P1b: UI cleanup and mobile experience (requested 2026-10-04)
@@ -38,13 +38,22 @@ Goal: less clutter on desktop, and a phone layout that actually works. The curre
 
 | # | Task | Size | Agent |
 |---|------|------|-------|
-| 5.1 | **Audit first**: screenshots at 375×812, 768×1024 and desktop (browser pane mobile emulation + a real phone). List concrete problems; agree on a target layout before coding. | S | opus + you |
+| 5.1 | ✅ **Done 2026-10-04** (findings and decisions below). **Audit first**: screenshots at 375×812, 768×1024 and desktop (browser pane mobile emulation + a real phone). List concrete problems; agree on a target layout before coding. | S | opus + you |
 | 5.2 | **Desktop declutter / progressive disclosure**: move Layers, opacity sliders and View into a compact floating toolbar or "Display" popover on the viewport. Collapse rarely used sections by default. Sidebar keeps only the tabs and their content. Remember open/closed state per viewer. | M | sonnet |
 | 5.3 | **Mobile layout**: full-screen 3D view + a draggable **bottom sheet** (peek / half / full snap points). Tabs become a bottom nav. The selected muscle/exercise card lives *in* the sheet instead of floating over the model. Use `100dvh` and safe-area insets. | L | sonnet (opus to review) |
 | 5.4 | **Touch interaction**: tap shows a name label (replaces hover tooltip), double-tap to focus/zoom, larger tap-vs-drag threshold on touch, two-finger pan hint, touch-specific hint text. | M | sonnet |
 | 5.5 | **Touch targets and inputs**: ≥ 44 px hit areas (checkboxes, steppers, chips, × buttons). Inputs at 16 px font so iOS doesn't zoom on focus. Bigger variation buttons. | S | sonnet |
 | 5.6 | **Phone performance**: cap pixel ratio at ~1.5 on small screens, measure load and FPS on a mid-range phone, consider lower-detail geometry for mobile (ties in with 2.1/2.4/2.6). | M | sonnet |
 | 5.7 | Extend the smoke test with a mobile-width run (layout classes and the sheet open/close flow), plus manual check on iOS Safari and Android Chrome. | S | sonnet |
+
+**5.1 decisions (user, 2026-10-04):** phone = **bottom sheet** (peek / half / full, tabs in the sheet header, cards inside the sheet, model re-centres above it); desktop = **floating toolbar** on the 3D view (layers, opacity, views as icon buttons with popovers), sidebar = one-line title + tabs.
+
+**5.1 audit findings (2026-10-04, browser emulation at 375×812 and 1366×768):**
+- Phone: the 3D view gets the top 471 px and the panel the bottom 341 px. The panel scrolls 1,842 px of content, and the **tabs start 504 px down**: you scroll through the intro (109 px), Layers (250 px) and View before reaching Anatomy/Exercises/Workout.
+- Phone, exercise view: the card opens at y=122 with 339 px height (929 px of content). It **covers the whole body except the head**, so the heatmap, the main point of the exercise view, is invisible.
+- Phone, tapping: tapping the chest selected the manubrium (a tiny bone). Small structures win fat-finger taps, and nothing shows what will be picked before the tap.
+- Phone: no horizontal overflow (good). The canvas renders at DPR 2 (750×942), so cap it. The Index checkboxes are 15×15 px.
+- Desktop: works, but Layers + opacity + View take about 40 % of the sidebar height above the tabs. The card overlaps the right part of the model (acceptable on wide screens).
 
 (This replaces the earlier ideas 4.11 partly and 4.12 fully. Do 5.1 first; 5.2 and 5.3 share the same refactor of the sidebar markup, so one agent should do them sequentially.)
 

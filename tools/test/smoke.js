@@ -18,6 +18,10 @@ w.DecompressionStream=DecompressionStream;w.Response=Response;w.Blob=Blob;
 w.HTMLCanvasElement.prototype.getContext=function(){return {createRadialGradient(){return{addColorStop(){}}},fillRect(){}}};
 Object.defineProperty(w.HTMLElement.prototype,'clientWidth',{get(){return 1000}});Object.defineProperty(w.HTMLElement.prototype,'clientHeight',{get(){return 800}});
 w.HTMLCanvasElement.prototype.getBoundingClientRect=()=>({left:0,top:0,width:1000,height:800});w.HTMLElement.prototype.setPointerCapture=()=>{};
+// seed legacy (pre-rename) storage to exercise the migration: variation INDEX arrays (Back squat Stance=Wide), an entry without v, an exercise that no longer exists, equipment minus Band
+const OLD_EQ=['Barbell','Dumbbells','Kettlebell','Cable','Machine','Bodyweight','Other'];
+w.localStorage.setItem('myology.plan.v1',JSON.stringify([{n:'Back squat',sets:4,v:[1,0]},{n:'Hip thrust',sets:2},{n:'Removed exercise',sets:3,v:[]}]));
+w.localStorage.setItem('myology.eq.v1',JSON.stringify(OLD_EQ));
 const js=html.match(/<script>([\s\S]*?)<\/script>/)[1];
 const mi=js.indexOf('const META='),META=JSON.parse(js.slice(mi+11,js.indexOf('\n',mi)).replace(/;\s*$/,'')); // embedded data, to derive expectations
 w.eval(`(async()=>{try{${js.replace('(async function(){','await (async function(){')}}catch(e){window.__fatal=e.stack||String(e)}})()`);
@@ -27,7 +31,7 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const exItem=n=>qa('#exlist .item').find(b=>b.textContent===n),exNames=()=>qa('#exlist .item').map(b=>b.textContent);
 const roleKeys=r=>{const h=qa('#card h3').find(x=>x.textContent===r);return h?[...h.nextElementSibling.querySelectorAll('[data-key]')].map(b=>b.dataset.key):[];};
 const bestNames=()=>qa('#best [data-ex]').map(b=>b.textContent),bestPct=()=>qa('#best small').map(s=>parseFloat(s.textContent));
-const plan=()=>JSON.parse(w.localStorage.getItem('myology.plan.v1')||'null');
+const plan=()=>JSON.parse(w.localStorage.getItem('aom.plan.v2')||'null');
 const addRes=n=>qa('#addres [data-add]').find(b=>b.firstChild.textContent.trim()==='+ '+n);
 const addEx=n=>{q('#qa').value=n.toLowerCase();ev(q('#qa'),'input');const b=addRes(n);if(!ok(b,'search offers "'+n+'"')) return;b.click();};
 (async()=>{
@@ -41,6 +45,17 @@ const addEx=n=>{q('#qa').value=n.toLowerCase();ev(q('#qa'),'input');const b=addR
  }
  ok(!w.__fatal,'startup finished, loading overlay removed in '+(Date.now()-t0)+' ms');
  ok(qa('#list .item').length>100&&q('#foot').textContent.includes('muscles in'),'anatomy index and footer built');
+ // storage migration (legacy keys seeded above)
+ const ls=k=>w.localStorage.getItem(k);
+ ok(ls('myology.plan.v1')===null&&ls('myology.eq.v1')===null,'legacy "myology.*" keys removed after migration');
+ ok(plan()&&plan().length===2&&plan()[0].n==='Back squat'&&plan()[0].sets===4&&JSON.stringify(plan()[0].v)==='["Wide",""]','"aom.plan.v2" holds option names for Back squat (Wide), got '+ls('aom.plan.v2'));
+ ok(plan()[1].n==='Hip thrust'&&plan()[1].sets===2&&!plan().some(p=>p.n==='Removed exercise'),'entry without v kept, unknown exercise dropped');
+ ok(JSON.stringify(JSON.parse(ls('aom.eq.v1')))===JSON.stringify(OLD_EQ),'"aom.eq.v1" holds the migrated equipment list');
+ ok(qa('#plan .prow').length===2&&qa('#plan .prow')[0].textContent.includes('Back squat')&&qa('#plan .prow')[0].textContent.includes('Wide'),'plan row shows the migrated variation (Wide)');
+ ok(q('[data-eq="Band"]').getAttribute('aria-pressed')==='false'&&q('[data-eq="Barbell"]').getAttribute('aria-pressed')==='true','migrated equipment selection applied (Band off)');
+ q('#plan [data-open="1"]').click();
+ ok(q('#card h2')&&q('#card h2').textContent==='Hip thrust','opening a plan row without v selects that exercise (no throw)');
+ q('#eqAll').click();
  // best exercises for a muscle
  q('[data-tab="ex"]').click();
  ok(!q('#paneEx').hidden&&q('#paneAnat').hidden,'Exercises tab is shown');
@@ -69,9 +84,9 @@ const addEx=n=>{q('#qa').value=n.toLowerCase();ev(q('#qa'),'input');const b=addR
  ok(roleKeys('Prime movers').includes('adductor magnus'),'Wide stance makes adductor magnus a prime mover');
  ok(qa('[data-var]').find(b=>b.textContent==='Wide').getAttribute('aria-pressed')==='true','Wide button is marked pressed');
  // add to plan
- ok(q('[data-act="add"]').textContent.includes('Add to my week'),'add button reads "Add to my week"');
+ ok(q('[data-act="add"]').textContent.includes('Add again'),'add button reads "Add again" (migrated Back squat / Wide entry is already in the plan)');
  q('[data-act="add"]').click();
- ok(plan()&&plan().length===1&&plan()[0].n==='Back squat'&&plan()[0].sets===3,'one plan entry (Back squat, 3 sets) stored');
+ ok(plan()&&plan().length===3&&plan()[2].n==='Back squat'&&plan()[2].sets===3&&JSON.stringify(plan()[2].v)==='["Wide",""]','third plan entry (Back squat, 3 sets, Wide) stored');
  ok(q('[data-act="add"]').textContent.includes('Add again'),'add button now reads "Add again"');
  // compare
  ok(q('#cmpBanner').hidden,'comparison banner hidden before comparing');
@@ -119,7 +134,7 @@ const addEx=n=>{q('#qa').value=n.toLowerCase();ev(q('#qa'),'input');const b=addR
  ok(rows[0].querySelector('.step span').textContent.startsWith('4 '),'incrementing gives 4 sets on the first row');
  ok(rows[1].querySelector('.step span').textContent.startsWith('3 '),'second row stays at 3 sets');
  ok(/2 exercises, 7 sets/.test(q('#plan').textContent),'total reads "2 exercises, 7 sets"');
- ok(plan()&&plan().length===2&&plan()[0].n==='Hip thrust'&&plan()[0].sets===4,'localStorage "myology.plan.v1" holds 2 entries');
+ ok(plan()&&plan().length===2&&plan()[0].n==='Hip thrust'&&plan()[0].sets===4,'localStorage "aom.plan.v2" holds 2 entries');
  // weekly volume
  const vrows=qa('#volsum tr'),glutes=vrows.find(r=>r.cells[0].textContent.trim()==='Glutes');
  ok(vrows.length===27,'weekly volume table has 27 rows (got '+vrows.length+')');
@@ -127,6 +142,26 @@ const addEx=n=>{q('#qa').value=n.toLowerCase();ev(q('#qa'),'input');const b=addR
  q('#tVol').checked=true;ev(q('#tVol'),'change');
  q('#volsum [data-key="gluteus maximus"]').click();
  ok(C().includes('Your week')&&q('#card h2').textContent==='gluteus maximus','volume mode: gluteus maximus card shows "Your week"');
+ // volume toggle stays consistent with the selected exercise
+ ok(q('#tVol').checked,'volume toggle is on before selecting an exercise');
+ q('[data-tab="ex"]').click();exItem('Hip thrust').click();
+ ok(!q('#tVol').checked&&C().includes('Hip thrust'),'selecting an exercise turns the volume toggle off');
+ q('#exClear').click();
+ ok(!q('#tVol').checked,'clearing the exercise leaves volume mode off');
+ q('#tVol').checked=true;ev(q('#tVol'),'change');exItem('Pull-up').click();q('[data-act="cmp"]').click();exItem('Hip thrust').click();
+ ok(!q('#tVol').checked&&C().includes('Comparison'),'volume toggle is off during a comparison');
+ q('#exClear').click();
+ // summary rows aggregate several muscles (max over members)
+ q('[data-tab="wk"]').click();q('#wkClear').click();
+ const rowVal=n=>{const r=qa('#volsum tr').find(r=>r.cells[0].textContent.trim()===n);return r?parseFloat(r.cells[2].textContent):NaN;};
+ addEx('Copenhagen plank');
+ ok(rowVal('Adductors')===3,'Adductors row counts adductor longus (prime, 3 sets) not just magnus (synergist 1.5): '+rowVal('Adductors'));
+ ok(rowVal('Obliques')>0&&rowVal('Hip flexors')===0,'Copenhagen plank trains Obliques (via internal oblique too) but not Hip flexors');
+ q('#wkClear').click();addEx('Wrist curl');
+ ok(rowVal('Forearm flexors')===3,'Forearm flexors row counts flexor carpi radialis/ulnaris (prime, 3 sets): '+rowVal('Forearm flexors'));
+ ok(q('#volsum [data-key="flexor digitorum superficialis"]'),'summary row still selects its first key');
+ q('#wkClear').click();addEx('Leg extension');
+ ok(rowVal('Quadriceps')===3,'Quadriceps row: '+rowVal('Quadriceps'));
  // no errors anywhere
  ok(errs.length===0,'no console errors or uncaught exceptions'+(errs.length?':\n  '+errs.slice(0,10).join('\n  '):''));
  finish();
