@@ -33,6 +33,25 @@ def load_acts(db):  # data/activities.txt: id|name|group|MET|profile "key[:part]
                 r,w=e.rsplit(':',1); k,_,part=r.partition(':'); assert k in db,(i,k); p.append([k,part,float(w)])
         kd,mn=d.split(':'); out.append({'id':i,'n':n,'g':g,'met':float(met),'p':p,'s':s,'d':[kd,int(mn)]})
     return out
+def load_nerves(db):  # data/nerves.txt: id|name|roots|kind|parent|waypoints|note|match -> (defs, nv)
+    # defs: [{id,n,r,k,p,w:[anchor,...],x}] = the schematic nerve paths; nv: {id:[muscle keys]} = muscles whose nerve text (db[key]['n']) contains
+    # one of the nerve's substrings (match column, ';'-separated, case-insensitive; "-" = none). A muscle that also matches a descendant of
+    # that nerve is listed only under the descendant (the most specific nerve wins), e.g. extensor digitorum -> PIN, not radial.
+    defs=[]
+    for l in open('data/nerves.txt',encoding='utf-8'):
+        l=l.rstrip('\n')
+        if not l: continue
+        i,n,r,k,p,w,x,m=l.split('|')
+        defs.append({'id':i,'n':n,'r':r,'k':k,'p':'' if p=='-' else p,'w':w.split(';'),'x':x,'m':[] if m=='-' else [s.strip().lower() for s in m.split(';')]})
+    raw={d['id']:[k for k in db if db[k]['g']!='Connective tissue' and any(s in db[k]['n'].lower() for s in d['m'])] for d in defs}
+    kids={}
+    for d in defs: kids.setdefault(d['p'],[]).append(d['id'])
+    def desc(i): return [j for c in kids.get(i,[]) for j in [c]+desc(c)]
+    nv={}
+    for d in defs:
+        taken={k for j in desc(d['id']) for k in raw[j]}
+        nv[d['id']]=[k for k in raw[d['id']] if k not in taken]
+    return [{a:b for a,b in d.items() if a!='m'} for d in defs],nv
 PARTPRE=r'^(abdominal|acromial|clavicular|spinal|sternocostal|descending|ascending|transverse|orbital|palpebral|deep|superficial|oblique|straight|inferior oblique|superior oblique|vertical intermediate) part of '
 HEADPRE=r'^(long|short|lateral|medial|humeral|ulnar|oblique|transverse|superior|inferior|superficial) head of '
 MERGE=[(r'^(first|second|third|fourth) lumbrical \(foot\)$','lumbricals (foot)'),
@@ -75,6 +94,9 @@ if __name__=='__main__':
         for e in ks:
             k,_,p=e.partition(':'); assert not p or p in pts.get(k,()),(a,e)
     M['al']=al; M['act']=load_acts(db)
+    M['nd'],M['nv']=load_nerves(db)
+    nsup={k for v in M['nv'].values() for k in v}
+    print('nerves:',len(M['nd']),'; muscles supplied by a drawn nerve:',len(nsup),'; nerve text matched no nerve (info):',sorted(k for k in db if db[k]['g']!='Connective tissue' and db[k]['n'] and k not in nsup))
     for a in M['act']:
         for k,p,w in a['p']: assert not p or p in pts.get(k,()),(a['id'],k,p)
     M['meshes']=out; M['db']=db; M['bdb']={b:B.info(b) for b in sorted(bnames)}

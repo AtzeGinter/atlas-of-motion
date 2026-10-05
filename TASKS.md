@@ -73,7 +73,7 @@ Goal: less clutter on desktop, and a phone layout that actually works. The curre
 
 | # | Task | Size | Agent |
 |---|------|------|-------|
-| 7.1 | **Schematic nerves** (user request 2026-10-05): procedural tube paths for the major peripheral and some cranial nerves (brachial and lumbosacral plexus branches, phrenic, intercostal, pudendal, facial, V3, accessory), "Nerves" layer, nerve card with roots and supplied muscles (mapped from the muscle data), links muscle ↔ nerve, #n= deep links. Clearly labelled schematic. 🔄 In progress (v1.3). | M | sonnet |
+| 7.1 | **Schematic nerves** (user request 2026-10-05): procedural tube paths for the major peripheral and some cranial nerves (brachial and lumbosacral plexus branches, phrenic, intercostal, pudendal, facial, V3, accessory), "Nerves" layer, nerve card with roots and supplied muscles (mapped from the muscle data), links muscle ↔ nerve, #n= deep links. Clearly labelled schematic. ✅ **Done 2026-10-05 (v1.4)**: 53 nerves, all 176 muscles covered; waypoints need an anatomy pass in a real browser. | M | sonnet |
 | 7.2 | Real nerve meshes from BodyParts3D or Z-Anatomy instead of the schematic paths (download, alignment to the BodyExplorer frame, decimation, licence attribution). | L | – |
 
 ## P2: Performance and hosting (now that it's GitHub Pages)

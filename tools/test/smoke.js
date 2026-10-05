@@ -58,9 +58,95 @@ const addEx=n=>{q('#qa').value=n.toLowerCase();ev(q('#qa'),'input');const b=addR
 const days=()=>wk().days,names=i=>days()[i].items.map(p=>p.n),nameOf=i=>days()[i].name,dayBtn=i=>q('#wstrip [data-day="'+i+'"]'),selDay=i=>dayBtn(i).click();
 const clearAll=()=>{for(let i=6;i>=0;i--){selDay(i);if(!q('#wkClear').disabled)q('#wkClear').click();}selDay(0);}; // empty every day
 // total triangle-index count over all body meshes in the three.js scene (captured by the stubbed renderer)
-const idxCount=win=>{let n=0;win.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind&&o.geometry.index)n+=o.geometry.index.count;});return n;};
+const idxCount=win=>{let n=0;win.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind&&o.userData.kind!=='nerve'&&o.geometry.index)n+=o.geometry.index.count;});return n;};
 const lodBtn=(doc,l)=>doc.querySelector('[data-lod="'+l+'"]'),lodOn=doc=>[...doc.querySelectorAll('[data-lod]')].filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.dataset.lod).join(',');
 async function waitFor(f,ms,what){const t=Date.now();while(!f()){if(Date.now()-t>(ms||30000)) return ok(false,'timed out waiting for '+what);await sleep(50);}return true;}
+// ---- schematic nerves: data, Nerves layer, picking-independent selection flows, deep link, LOD rebuild ----
+async function nerveRun(){
+ const NV=META.nv,ND=META.nd,has=(id,k)=>(NV[id]||[]).includes(k);
+ ok(Array.isArray(ND)&&ND.length>=40&&NV&&ND.every(n=>Array.isArray(NV[n.id])&&n.w.length>=1&&n.n&&n.r&&n.x),'META.nd lists the nerves ('+ND.length+') and META.nv has a muscle list for each');
+ ok(['phrenic','dscap','lthor','sscap','latpec','medpec','usub','lsub','thdors','axillary','musculo','radial','pin','median','ain','ulnar','intercostal','femoral','obturator','sgluteal','igluteal','sciatic','tibial','cfibular','dfibular','sfibular','pudendal','facial','v3','accessory'].every(id=>ND.some(n=>n.id===id)),'all required nerves exist');
+ ok(has('median','pronator teres')&&has('median','flexor digitorum superficialis')&&has('radial','triceps brachii')&&['rectus femoris','vastus lateralis','vastus medialis','vastus intermedius'].every(k=>has('femoral',k))&&has('tibial','semitendinosus')&&has('phrenic','diaphragm')&&has('axillary','deltoid')&&has('ulnar','flexor carpi ulnaris'),'nerve to muscle mapping: median -> pronator teres + FDS, radial -> triceps, femoral -> quadriceps, tibial -> semitendinosus, ...');
+ ok(has('pin','extensor digitorum')&&!has('radial','extensor digitorum')&&NV.sciatic.length===0&&has('cfibular','biceps femoris')&&has('tibial','biceps femoris'),'most specific nerve wins (extensor digitorum is PIN, not radial); sciatic is a trunk; biceps femoris has both parts');
+ ok(ND.every(n=>NV[n.id].every(k=>META.db[k]))&&ND.every(n=>!n.p||ND.findIndex(m=>m.id===n.p)>=0),'every listed muscle exists, every parent exists');
+ const x=boot({store:{}}),xd=x.document,xq=s=>xd.querySelector(s),xqa=s=>[...xd.querySelectorAll(s)],ex=(el,t)=>el.dispatchEvent(new x.Event(t,{bubbles:true}));
+ await waitFor(()=>!xd.getElementById('loading'),60000,'nerve test instance');
+ const nm=()=>{const a=[];x.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind==='nerve'&&!o.userData.owner)a.push(o);});return a;};
+ const XC=()=>xd.getElementById('card').textContent.replace(/\s+/g,' ');
+ const bodyMesh=(kind,k)=>{let r=null;x.__scene.traverse(o=>{if(!r&&o.isMesh&&o.userData.kind===kind&&o.userData.key===k)r=o;});return r;};
+ ok(xq('#popLayers').contains(xq('#tNerves'))&&!xq('#tNerves').checked&&nm().length===0,'Nerves toggle is in the Layers popover, off by default, and nothing is built yet');
+ ok(xq('#opM').value==='100'&&x.localStorage.getItem('aom.nerves.v1')===null,'muscles are opaque, nothing stored');
+ xq('#tNerves').checked=true;ex(xq('#tNerves'),'change');
+ let ns=nm();
+ ok(ns.length>=2*ND.length*0.8&&ns.some(m=>m.userData.side==='L')&&ns.some(m=>m.userData.side==='R')&&ns.every(m=>m.visible),'switching Nerves on builds tube meshes for both sides ('+ns.length+')');
+ ok(ns.every(m=>m.geometry.attributes.position.array.every(Number.isFinite)&&m.geometry.index.count>0),'all nerve geometry is finite');
+ const mid=ns.find(m=>m.userData.key==='median'&&m.userData.side==='L'),mir=ns.find(m=>m.userData.key==='median'&&m.userData.side==='R');
+ ok(mid&&mir&&mid.geometry.boundingBox.min.x>0&&mir.geometry.boundingBox.max.x<0,'median nerve runs along the left arm (+x) and its mirror along the right arm');
+ ok(xq('#opM').value==='45'&&xq('#opMo').textContent==='45%'&&JSON.parse(x.localStorage.getItem('aom.nerves.v1'))===true,'opaque muscles become translucent (45%) and the choice is stored');
+ xq('#tNerves').checked=false;ex(xq('#tNerves'),'change');
+ ok(xq('#opM').value==='100'&&nm().every(m=>!m.visible)&&JSON.parse(x.localStorage.getItem('aom.nerves.v1'))===false,'switching off restores 100% and hides the nerves');
+ xq('#tNerves').checked=true;ex(xq('#tNerves'),'change');xq('#opM').value='70';ex(xq('#opM'),'input');
+ xq('#tNerves').checked=false;ex(xq('#tNerves'),'change');
+ ok(xq('#opM').value==='70','a muscle opacity the user changed meanwhile is kept when Nerves goes off');
+ xq('#opM').value='100';ex(xq('#opM'),'input');
+ // index
+ xq('#q').value='median';ex(xq('#q'),'input');
+ const it=xqa('#list .item').find(b=>b.dataset.kind==='nerve'&&b.dataset.key==='median');
+ ok(!!it&&it.textContent.includes('Median nerve')&&xqa('#list summary').some(s=>/Nerves/.test(s.textContent)),'the Index has a Nerves group and finds "median"');
+ it.click();
+ ok(xq('#card h2').textContent.includes('Median nerve')&&xq('#tNerves').checked&&nm().length>0&&x.location.hash==='#n=median','selecting a nerve switches the layer on, opens its card and sets #n=median');
+ const chips=xqa('#card .chips [data-key]').map(b=>b.dataset.key);
+ ok(chips.includes('pronator teres')&&chips.includes('flexor digitorum superficialis')&&/Roots C6–T1/.test(XC())&&/Branch of Brachial plexus/.test(XC())&&/Schematic: approximate course/.test(XC())&&/wrist/i.test(XC()),'nerve card: roots, parent, schematic notice, supplied-muscle chips, note');
+ ok(xqa('#card [data-nerve]').some(b=>b.dataset.nerve==='ain')&&xqa('#card [data-nerve]').some(b=>b.dataset.nerve==='bplex'),'nerve card links to its branches and its parent');
+ const sm=bodyMesh('muscle','pronator teres'),sm2=bodyMesh('muscle','flexor digitorum superficialis'),om=bodyMesh('muscle','biceps brachii');
+ ok(sm.material===sm2.material&&sm.material!==om.material&&sm.visible,'supplied muscles are highlighted with the selection material');
+ const nmed=nm().filter(m=>m.userData.key==='median'),noth=nm().find(m=>m.userData.key!=='median');
+ ok(nmed.length===2&&nmed.every(m=>m.material!==noth.material),'the selected nerve (both sides) gets a highlight material');
+ xqa('#card .chips [data-key]').find(b=>b.dataset.key==='pronator teres').click();
+ ok(xq('#card h2').textContent==='pronator teres'&&x.location.hash==='#m=pronator%20teres','clicking a supplied-muscle chip opens that muscle');
+ const link=xqa('#card dd [data-nerve]');
+ ok(link.length>=1&&link[0].dataset.nerve==='median'&&nmed.some(m=>m.material!==noth.material),'muscle card: the Nerve field links to the nerve (and the nerve is highlighted)');
+ link[0].click();
+ ok(xq('#card h2').textContent.includes('Median nerve')&&x.location.hash==='#n=median','... and the link opens the nerve card');
+ ok(xqa('#card dd').length===0&&nm().length>0,'nerve card has no muscle definition list');
+ xq('#card .close').click();
+ ok(!xq('#card').classList.contains('show')&&x.location.hash==='','closing the nerve card clears the selection and the hash');
+ // picking: click on a point of the median nerve (seen from the front) while the muscles in front are translucent
+ {
+  const T=x.THREE,mm=nm().find(m=>m.userData.key==='median'&&m.userData.side==='L'),pa=mm.geometry.attributes.position,cam=x.__cam;
+  await sleep(1800); cam.updateMatrixWorld(); // let the camera settle
+  const pickAt=i=>{const v=new T.Vector3(pa.getX(i),pa.getY(i),pa.getZ(i)).project(cam),px=(v.x+1)/2*1000,py=(1-v.y)/2*800,cv=xq('#vp canvas');
+   const mk=(t)=>{const e=new x.Event(t,{bubbles:true});Object.assign(e,{pointerId:1,clientX:px,clientY:py,button:0,buttons:1,pointerType:'mouse'});return e;};
+   cv.dispatchEvent(mk('pointerdown'));cv.dispatchEvent(mk('pointerup'));return xq('#card h2')&&xq('#card.show')?xq('#card h2').textContent:'';};
+  let got='';for(const f of [0.45,0.5,0.4,0.55,0.35]){const i=Math.floor(pa.count*f);got=pickAt(i);if(/nerve/i.test(got))break;if(xq('#card.show'))xq('#card .close').click();}
+  ok(/nerve|plexus/i.test(got),'clicking a nerve in the 3D view (muscles translucent) selects it: "'+got+'"');
+ }
+ // hide with H
+ xq('#list .item[data-kind="nerve"][data-key="median"]').click();
+ xd.dispatchEvent(new x.KeyboardEvent('keydown',{key:'h',bubbles:true}));
+ ok(nm().filter(m=>m.userData.key==='median').every(m=>!m.visible)&&nm().filter(m=>m.userData.key==='ulnar').every(m=>m.visible),'H hides only the selected nerve');
+ xq('#unhide').click();
+ // LOD switch rebuilds
+ const before=nm().map(m=>m.geometry);
+ lodBtn(xd,'low').click();await waitFor(()=>lodOn(xd)==='low',30000,'Low in the nerve instance');await sleep(50);
+ const after=nm();
+ ok(after.length===before.length&&after.every(m=>!before.includes(m.geometry))&&after.every(m=>m.geometry.attributes.position.array.every(Number.isFinite)),'a mesh quality switch rebuilds the nerve tubes ('+after.length+')');
+ ok(xq('#tNerves').checked&&after.every(m=>m.visible)&&xq('#opM').value==='45','nerves stay on after the switch');
+ // switching off, then a quality switch, then on again builds fresh
+ xq('#tNerves').checked=false;ex(xq('#tNerves'),'change');
+ lodBtn(xd,'medium').click();await waitFor(()=>lodOn(xd)==='medium',30000,'Medium in the nerve instance');await sleep(50);
+ ok(nm().length===0,'with Nerves off, a quality switch discards the old tubes');
+ xq('#tNerves').checked=true;ex(xq('#tNerves'),'change');
+ ok(nm().length===after.length,'switching on again builds them for the new mesh');
+ // persisted layer + deep link
+ const y=boot({url:'https://example.test/#n=median',store:{'aom.nerves.v1':'true'}}),yd=y.document;
+ await waitFor(()=>!yd.getElementById('loading'),60000,'deep-link nerve instance');
+ ok(!y.__fatal&&yd.querySelector('#card h2')&&yd.querySelector('#card h2').textContent.includes('Median nerve')&&yd.querySelector('#tNerves').checked,'#n=median boots straight into the nerve card with the layer on'+(y.__fatal?': '+y.__fatal:''));
+ const z=boot({url:'https://example.test/#n=nonsense',store:{'aom.nerves.v1':'true'}}),zd=z.document;
+ await waitFor(()=>!zd.getElementById('loading'),60000,'stored-layer instance');
+ let zn=0;z.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind==='nerve'&&!o.userData.owner)zn++;});
+ ok(zd.querySelector('#tNerves').checked&&zn>0&&!zd.querySelector('#card.show')&&zd.querySelector('#opM').value==='45','a stored "on" restores the layer at start-up; an unknown #n= id is ignored');
+}
 // ---- other start-up cases: stored choice, failed loads (network error, file://) end in a readable #loadMsg, not an exception ----
 async function otherRuns(){
  const st=boot({lod:'"low"'}),sd=st.document;
@@ -1229,6 +1315,7 @@ async function boardRun(){
  ok(/^v\d+\.\d+ · [0-9a-f]{7}$/.test(q('#ver').textContent)&&q('#vp').contains(q('#ver')),'version display in the viewport corner: '+q('#ver').textContent);
  await camRun();
  await lodRun();
+ await nerveRun();
  await otherRuns();
  await phoneRun();
  // no errors anywhere

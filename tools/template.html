@@ -172,6 +172,9 @@ aside{background:var(--panel);border-right:1px solid var(--line);overflow:hidden
 .ext small{display:block;color:var(--muted);font-size:11.5px;}
 .exlink{background:none;border:0;padding:0;color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px;cursor:pointer;text-align:left;}
 .exlink:hover{text-decoration-color:var(--accent);}
+.nlinks{display:block;margin-top:4px;font-size:12.5px;color:var(--muted);}
+.nlinks .exlink{color:var(--ink);}
+.sw.nvs{background:#e6c229;}
 .lv{display:inline-flex;gap:3px;vertical-align:middle;margin-right:5px;}
 .lv i{width:7px;height:7px;border-radius:50%;background:var(--line);}
 .lv i.l3{background:#d62f1f;}.lv i.l2{background:#f08a3c;}.lv i.l1{background:#e9c25a;}
@@ -665,6 +668,7 @@ input.num{width:66px;border:1px solid var(--line);background:var(--bg);border-ra
           <label class="toggle"><span>Skeleton</span><input type="checkbox" id="tBones" checked></label>
           <label class="toggle"><span>Muscles</span><input type="checkbox" id="tMuscles" checked></label>
           <label class="toggle"><span>Tendons and fascia<small>Hide to see the deep back muscles</small></span><input type="checkbox" id="tTendons" checked></label>
+          <label class="toggle"><span>Nerves<small>Schematic course, not exact anatomy</small></span><input type="checkbox" id="tNerves"></label>
           <label class="toggle"><span>Isolate selection<small>Fade everything else</small></span><input type="checkbox" id="tIso"></label>
           <div class="slider"><label for="opM">Muscle opacity</label><input type="range" id="opM" min="5" max="100" value="100"><output id="opMo">100%</output></div>
           <div class="slider"><label for="opB">Bone opacity</label><input type="range" id="opB" min="5" max="100" value="100"><output id="opBo">100%</output></div>
@@ -770,7 +774,13 @@ const B_MAT=stdMat(lin(0xe7e0cf),{roughness:0.75});
 const B_SEL=stdMat(lin(0x5fc7d1),{emissive:lin(0x0b2a2e),roughness:0.5});
 const B_HOV=stdMat(lin(0xf3ead6),{emissive:lin(0x1c2a30),roughness:0.75});
 const B_FADE=stdMat(lin(0xe7e0cf),{transparent:true,opacity:0.12,depthWrite:false});
-const FADED=new Set([M_FADE,B_FADE,M_GREY]);
+const M_SEL2=stdMat(lin(0x8fdbe4),{emissive:lin(0x0a3238),roughness:0.45}); // muscles a selected nerve reaches only through its branches
+const N_MAT=stdMat(lin(0xe3be1f),{emissive:lin(0x2b2200),roughness:0.4});
+const N_HOV=stdMat(lin(0xfff07a),{emissive:lin(0x4a3d00),roughness:0.4});
+const N_SEL=stdMat(lin(0xffcf00),{emissive:lin(0x6e4d00),roughness:0.35});
+const N_REL=stdMat(lin(0xf5a028),{emissive:lin(0x4a2a00),roughness:0.4}); // nerves of the selected muscle
+const N_FADE=stdMat(lin(0xe3be1f),{transparent:true,opacity:0.1,depthWrite:false});
+const FADED=new Set([M_FADE,B_FADE,M_GREY,N_FADE]);
 
 /* ---------- geometry: one gzip file per quality level, fetched at runtime ---------- */
 const nextFrame=()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));
@@ -1005,10 +1015,116 @@ const syncPlan=()=>{ plan=[].concat(...week.map(d=>d.items)); }; syncPlan();
 let selEx=null, exVars={}, cmp=null, cmpPick=false, volOn=false, view="sel", mode=null, heat=null, heatTip=null;
 
 /* ---------- state ---------- */
-const state={bones:true,muscles:true,tendons:true,isolate:false,opM:1,opB:1,groups:new Set(MGROUPS)};
+const state={bones:true,muscles:true,tendons:true,nerves:false,isolate:false,opM:1,opB:1,groups:new Set(MGROUPS)};
 const hidden=new Set();
 let sel=null, hoverKey=null, dirty=true;
 const keyId=(kind,k)=>kind+":"+k;
+
+/* ---------- nerves: schematic paths drawn at runtime ---------- */
+// The source data has no nerve meshes. META.nd (tools/data/nerves.txt) gives each nerve a list of anchors that are resolved against the
+// loaded meshes (bounding boxes, a slab of vertices at a given height, vertebra positions), so the paths follow the bones and muscles at
+// every mesh quality. META.nv = {nerveId: [muscle keys]} is derived from the nerve text of each muscle (meta.py). Everything is approximate.
+const NVD={}, NVM=META.nv||{}, NVK={}, NIDS=(META.nd||[]).map(n=>n.id), NV_KEY="aom.nerves.v1", NV_OP=0.45;
+(META.nd||[]).forEach(n=>{NVD[n.id]=n;});
+NIDS.forEach(id=>(NVM[id]||[]).forEach(k=>(NVK[k]=NVK[k]||[]).push(id)));   // muscle key -> nerve ids
+const nvKids=id=>NIDS.filter(j=>NVD[j].p===id);
+const nvDesc=id=>nvKids(id).reduce((a,c)=>a.concat([c],nvDesc(c)),[]);
+const nvSupply=id=>{ const m=new Map(); nvDesc(id).forEach(j=>(NVM[j]||[]).forEach(k=>m.set(k,2))); (NVM[id]||[]).forEach(k=>m.set(k,1)); return m; }; // muscle key -> 1 direct / 2 through a branch
+const nerveGrp=new THREE.Group(); scene.add(nerveGrp);
+const nerveMeshes=[], nerveHits=[], byNerve={}; let nerveBuilt=false, nvAuto=false, NC=new Map();
+const ORDW=["first","second","third","fourth","fifth","sixth","seventh","eighth","ninth","tenth","eleventh","twelfth"];
+function vertKey(l){ if(l==="C1") return "atlas"; if(l==="C2") return "axis"; return ORDW[+l.slice(1)-1]+" "+({C:"cervical",T:"thoracic",L:"lumbar"})[l[0]]+" vertebra"; }
+// the data labels one pair of meshes with the wrong side (flexor pollicis brevis), so the side is taken from where the mesh is
+function effSide(m){ const s=m.userData.side; if(!s) return ""; const b=m.geometry.boundingBox, cx=(b.min.x+b.max.x)/2; return Math.abs(cx)>0.005&&(cx>0)!==(s==="L")?(s==="L"?"R":"L"):s; }
+// meshes of a structure on one side; unsided structures (vertebrae, diaphragm) are used whole and mirrored for the right side
+function nset(kind,key,side){
+  const ck=kind+"|"+key+"|"+side; if(NC.has(ck)) return NC.get(ck);
+  const all=(kind==="m"?byKey[key]:byBone[key])||[]; let ms=all.filter(m=>effSide(m)===side), r=null;
+  if(!ms.length){ ms=all.filter(m=>!effSide(m)); if(!ms.length&&side==="R") ms=all.filter(m=>effSide(m)==="L"); }
+  if(ms.length){ const box=new THREE.Box3(); ms.forEach(m=>box.union(m.geometry.boundingBox)); r={ms:ms,box:box,mirror:side==="R"&&!all.some(m=>effSide(m)==="R")}; }
+  NC.set(ck,r); return r;
+}
+function slabPt(ms,box,t){ // centre of the vertices in a thin slab at fraction t of the height, measured from the top
+  const y=box.max.y-t*(box.max.y-box.min.y), h=Math.max(0.005,0.04*(box.max.y-box.min.y)); let sx=0,sz=0,n=0;
+  ms.forEach(m=>{ const p=m.geometry.attributes.position.array; for(let i=0;i<p.length;i+=3) if(Math.abs(p[i+1]-y)<=h){ sx+=p[i]; sz+=p[i+2]; n++; } });
+  return n?new THREE.Vector3(sx/n,y,sz/n):new THREE.Vector3((box.min.x+box.max.x)/2,y,(box.min.z+box.max.z)/2);
+}
+// anchors (written for the subject's left; the right side is the mirror image): xyz:x,y,z | spine:C5[:dx,dy,dz] | bone|muscle:key:fx,fy,fz|sT[:dx,dy,dz]
+function resolveAnchor(a,side){
+  const t=a.split(":"), sg=side==="R"?-1:1, num=s=>s.split(",").map(Number);
+  if(t[0]==="xyz"){ const c=num(t[1]); return new THREE.Vector3(sg*c[0],c[1],c[2]); }
+  if(t[0]==="spine"){ // a point beside the vertebra where the spinal nerve leaves (the sacrum is not in the model: S1-S4 are placed below L5)
+    const lv=t[1], o=t[2]?num(t[2]):[0,0,0], isS=lv[0]==="S", n=nset("b",vertKey(isS?"L5":lv),"L"); if(!n) return null;
+    const b=n.box, P=isS?new THREE.Vector3(0.022,b.min.y-0.012-0.034*(+lv.slice(1)-1),-0.074):new THREE.Vector3(b.max.x*0.6,(b.min.y+b.max.y)/2,b.min.z+0.42*(b.max.z-b.min.z));
+    P.x+=o[0]; P.y+=o[1]; P.z+=o[2]; if(side==="R") P.x=-P.x; return P;
+  }
+  const n=nset(t[0]==="muscle"?"m":"b",t[1],side); if(!n) return null;
+  const off=t[3]?num(t[3]):[0,0,0], b=n.box; let P;
+  if(t[2][0]==="s") P=slabPt(n.ms,b,+t[2].slice(1));
+  else { const f=num(t[2]); P=new THREE.Vector3(b.min.x+f[0]*(b.max.x-b.min.x),b.min.y+f[1]*(b.max.y-b.min.y),b.min.z+f[2]*(b.max.z-b.min.z)); }
+  if(n.mirror){ P.x=-(P.x+off[0]); } else P.x+=sg*off[0];
+  P.y+=off[1]; P.z+=off[2]; return P;
+}
+function muscleTarget(k,side){ // where a branch ends: the middle of the muscle (the middle of the hemidiaphragm for the single diaphragm mesh)
+  const n=nset("m",k,side); if(!n) return null; const b=n.box, c=b.getCenter(new THREE.Vector3());
+  if(n.ms.every(m=>!effSide(m))&&b.max.x-b.min.x>0.08) c.x=b.min.x+0.75*(b.max.x-b.min.x);
+  if(n.mirror) c.x=-c.x; return c;
+}
+function mergeGeos(gs){
+  let nv=0, ni=0; gs.forEach(g=>{ nv+=g.attributes.position.count; ni+=g.index.count; });
+  const pos=new Float32Array(nv*3), nor=new Float32Array(nv*3), idx=nv>65535?new Uint32Array(ni):new Uint16Array(ni); let vo=0, io=0;
+  gs.forEach(g=>{ const c=g.attributes.position.count, ix=g.index.array; pos.set(g.attributes.position.array,vo*3); if(g.attributes.normal) nor.set(g.attributes.normal.array,vo*3);
+    for(let i=0;i<ix.length;i++) idx[io+i]=ix[i]+vo; vo+=c; io+=ix.length; g.dispose(); });
+  const r=new THREE.BufferGeometry(); r.setAttribute("position",new THREE.BufferAttribute(pos,3)); r.setAttribute("normal",new THREE.BufferAttribute(nor,3)); r.setIndex(new THREE.BufferAttribute(idx,1));
+  r.computeBoundingSphere(); r.computeBoundingBox(); return r;
+}
+const NV_R={top:0.003,kid:0.0022,ctop:0.002,ckid:0.0016,br:0.0014}, HITF=2.6;
+function clearNerves(){
+  nerveMeshes.forEach(m=>{ nerveGrp.remove(m); m.geometry.dispose(); }); nerveHits.forEach(h=>h.geometry.dispose());
+  nerveMeshes.length=0; nerveHits.length=0; Object.keys(byNerve).forEach(k=>delete byNerve[k]); nerveBuilt=false;
+}
+function buildNerves(){
+  clearNerves(); NC=new Map();
+  const rec={}, hitMat=new THREE.MeshBasicMaterial({visible:false}), V=THREE.Vector3;
+  const nearest=(S,p)=>{ let bi=0,bd=Infinity; for(let i=0;i<S.length;i++){ const d=S[i].distanceToSquared(p); if(d<bd){bd=d;bi=i;} } return {i:bi,d:bd}; };
+  NIDS.forEach(id=>{
+    const def=NVD[id];
+    ["L","R"].forEach(side=>{
+      let pts=[]; def.w.forEach(a=>{ const p=resolveAnchor(a,side); if(p) pts.push(p); });
+      const par=def.p?rec[def.p+"|"+side]:null;
+      if(par&&pts.length) pts.unshift(par.S[nearest(par.S,pts[0]).i].clone());   // a branch leaves its parent where the parent passes closest
+      pts=pts.filter((p,i)=>i===0||p.distanceTo(pts[i-1])>0.004);
+      if(pts.length<2) return;
+      const curve=new THREE.CatmullRomCurve3(pts,false,"centripetal"), len=curve.getLength(), S=curve.getPoints(Math.max(16,Math.round(len/0.005)));
+      const chain=[{S:S}]; for(let q=par;q;q=q.par) chain.push(q);   // branches to muscles may also leave an ancestor (hamstring branches leave the sciatic nerve)
+      rec[id+"|"+side]={S:S,par:par};
+      const rad=def.k==="cranial"?(def.p?NV_R.ckid:NV_R.ctop):(def.p?NV_R.kid:NV_R.top), vis=[new THREE.TubeGeometry(curve,Math.max(8,Math.round(len/0.008)),rad,6,false)], hit=[new THREE.TubeGeometry(curve,Math.max(6,Math.round(len/0.02)),rad*HITF,4,false)];
+      (NVM[id]||[]).forEach(k=>{
+        const tg=muscleTarget(k,side); if(!tg) return;
+        let best=null; chain.forEach(c=>{ const n=nearest(c.S,tg); if(!best||n.d<best.d) best={d:n.d,i:n.i,S:c.S}; });
+        const p0=best.S[best.i], d=p0.distanceTo(tg); if(d<0.003) return;
+        const T=best.S[Math.min(best.i+1,best.S.length-1)].clone().sub(best.S[Math.max(best.i-1,0)]).normalize();
+        if(T.dot(tg.clone().sub(p0))<0) T.negate();
+        const br=new THREE.QuadraticBezierCurve3(p0.clone(),p0.clone().addScaledVector(T,0.4*d),tg);   // leaves along the nerve, then bends to the muscle
+        vis.push(new THREE.TubeGeometry(br,Math.max(4,Math.round(d/0.01)),NV_R.br,5,false)); hit.push(new THREE.TubeGeometry(br,Math.max(3,Math.round(d/0.02)),NV_R.br*HITF,4,false));
+      });
+      const m=new THREE.Mesh(mergeGeos(vis),N_MAT), h=new THREE.Mesh(mergeGeos(hit),hitMat);
+      m.matrixAutoUpdate=false; h.matrixAutoUpdate=false; m.userData={kind:"nerve",key:id,side:side}; h.userData={kind:"nerve",key:id,side:side,owner:m};
+      nerveGrp.add(m); nerveMeshes.push(m); nerveHits.push(h); (byNerve[id]=byNerve[id]||[]).push(m);
+    });
+  });
+  nerveBuilt=true;
+}
+const nvLinks=k=>(NVK[k]||[]).length?'<span class="nlinks">Drawn on the body (schematic): '+NVK[k].map(id=>'<button class="exlink" data-nerve="'+id+'">'+NVD[id].n+'</button>').join(", ")+'</span>':"";
+function setMuscleOp(o){ state.opM=o; $("#opM").value=Math.round(o*100); $("#opMo").textContent=Math.round(o*100)+"%"; }
+// Nerves layer: built on first use; switching it on makes opaque muscles translucent (nerves sit inside them), switching it off undoes that unless the slider was touched
+function setNerves(on){
+  on=!!on; if(state.nerves===on) return;
+  state.nerves=on; $("#tNerves").checked=on;
+  if(on){ if(!nerveBuilt) buildNerves(); if(state.opM>0.999){ setMuscleOp(NV_OP); nvAuto=true; } else nvAuto=false; }
+  else{ if(nvAuto&&Math.abs(state.opM-NV_OP)<0.005) setMuscleOp(1); nvAuto=false; if(sel&&sel.kind==="nerve"){ sel=null; renderCard(); } }
+  store.set(NV_KEY,on); applyVisuals(); syncList();
+}
 
 function setOpacity(mat,o){
   const tr=o<0.999;
@@ -1019,13 +1135,20 @@ function applyVisuals(){
   Object.keys(keyMats).forEach(k=>setOpacity(keyMats[k],state.opM));
   setOpacity(B_MAT,state.opB);
   const selId=sel?keyId(sel.kind,sel.key):null;
+  const ns=sel&&sel.kind==="nerve"?nvSupply(sel.key):null;   // a selected nerve lights up the muscles it supplies
   muscleMeshes.forEach(m=>{
-    const d=m.userData, id=keyId("muscle",d.key), isSel=id===selId;
+    const d=m.userData, id=keyId("muscle",d.key), isSel=id===selId, nsv=ns?ns.get(d.key):0;
     const layer=d.tissue?state.tendons:state.muscles;
     const grpOn=d.tissue||state.groups.has(d.group);
     const hm=heat?heat.get(m):null;
-    m.visible=isSel||(!!hm&&state.muscles)||(layer&&grpOn&&!hidden.has(id));
-    m.material=isSel?M_SEL:(heat?(hm||M_GREY):(hoverKey===id?M_HOV:((state.isolate&&sel)?M_FADE:keyMat(d.key))));
+    m.visible=isSel||!!nsv||(!!hm&&state.muscles)||(layer&&grpOn&&!hidden.has(id));
+    m.material=isSel||nsv===1?M_SEL:(nsv===2?M_SEL2:(heat?(hm||M_GREY):(hoverKey===id?M_HOV:((state.isolate&&sel)?M_FADE:keyMat(d.key)))));
+  });
+  const rel=sel&&sel.kind==="muscle"?(NVK[sel.key]||[]):[];   // a selected muscle lights up its nerves
+  nerveMeshes.forEach(m=>{
+    const id=keyId("nerve",m.userData.key), isSel=id===selId;
+    m.visible=state.nerves&&!hidden.has(id);
+    m.material=isSel?N_SEL:(rel.indexOf(m.userData.key)>=0?N_REL:(hoverKey===id?N_HOV:((state.isolate&&sel)?N_FADE:N_MAT)));
   });
   boneMeshes.forEach(m=>{
     const d=m.userData, id=keyId("bone",d.key), isSel=id===selId;
@@ -1044,7 +1167,12 @@ function pick(cx,cy){
   const objs=[];
   for(const m of muscleMeshes) if(m.visible&&!FADED.has(m.material)&&m.material.opacity>0.15) objs.push(m);
   for(const m of boneMeshes) if(m.visible&&!FADED.has(m.material)&&m.material.opacity>0.15) objs.push(m);
-  const hit=ray.intersectObjects(objs,false)[0];
+  const nobjs=nerveHits.filter(h=>h.userData.owner.visible&&!FADED.has(h.userData.owner.material));
+  const hits=ray.intersectObjects(objs.concat(nobjs),false); let hit=hits[0];
+  if(hit&&hit.object.userData.kind!=="nerve"){   // a nerve behind translucent muscles can still be picked (an opaque muscle or bone in front blocks it)
+    const nh=hits.find(h=>h.object.userData.kind==="nerve");
+    if(nh&&hits.every(h=>h===nh||h.distance>=nh.distance||(h.object.userData.kind==="muscle"?(!heat&&state.opM<0.999):h.object.material.transparent))) hit=nh;
+  }
   return hit?hit.object:null;
 }
 
@@ -1069,7 +1197,7 @@ function faceTowards(ms){
   s/=Math.max(1,ms.length);
   if(s<-0.008) goal.theta=nearestAngle(orbit.theta,Math.PI); else if(s>0.008) goal.theta=nearestAngle(orbit.theta,0);
 }
-function meshesOf(kind,k){return kind==="muscle"?byKey[k]:byBone[k];}
+function meshesOf(kind,k){return kind==="muscle"?byKey[k]:(kind==="nerve"?byNerve[k]:byBone[k]);}
 const TB={x:0.6,y0:0.02,y1:1.8,z:0.45}; // pan/pivot limits around the body
 function setTarget(x,y,z){goal.tx=clamp(x,-TB.x,TB.x); goal.ty=clamp(y,TB.y0,TB.y1); goal.tz=clamp(z,-TB.z,TB.z);}
 // paired structures: the side that was clicked, else the side nearer the camera (subject's left when viewed straight on)
@@ -1147,7 +1275,7 @@ function hideTip(){clearTimeout(tipTimer); tip.style.display="none";}
 function showTipAt(o,cx,cy,touch){
   const h=o&&o.userData; if(!h) return hideTip();
   clearTimeout(tipTimer);
-  const r=vp.getBoundingClientRect(); tip.textContent=h.key+(h.part?" ("+h.part+")":"")+(heatTip&&heatTip.get(o)?", "+heatTip.get(o):""); tip.style.display="block";
+  const r=vp.getBoundingClientRect(); tip.textContent=(h.kind==="nerve"?NVD[h.key].n:h.key)+(h.part?" ("+h.part+")":"")+(heatTip&&heatTip.get(o)?", "+heatTip.get(o):""); tip.style.display="block";
   tip.style.left=Math.max(4,Math.min(cx-r.left+(touch?-20:14),r.width-tip.offsetWidth-8))+"px"; tip.style.top=Math.max(4,cy-r.top+(touch?-48:14))+"px";
   if(touch) tipTimer=setTimeout(hideTip,1500);
 }
@@ -1251,6 +1379,7 @@ async function setLod(lv){
     if(req!==lodReq) return;
     const dec=decodeLod(lv,u16);
     allMeshes.forEach((m,i)=>{ const old=m.geometry; m.geometry=makeGeo(dec[i]); old.dispose(); });
+    if(nerveBuilt){ if(state.nerves) buildNerves(); else clearNerves(); }   // the nerve paths are anchored to the mesh bounding boxes
     lod=lv; store.set(LOD_KEY,lv);
   }catch(e){ if(req!==lodReq) return; lodErr=(e&&e.message)||"Could not load that quality level."; }
   lodTo=null; lodAbort=null; syncLodUI(); applyVisuals(); dirty=true;
@@ -1344,7 +1473,7 @@ function renderCard0(clicked){
     if(d.g===TISSUE){ h+='<h3>What it is</h3><p>'+d.a.join("; ")+'</p>'; }
     else{
       h+='<h3>Function</h3><ul>'+d.a.map(a=>'<li>'+cap(a)+'</li>').join("")+'</ul>';
-      h+='<dl><dt>Origin</dt><dd>'+d.o+'</dd><dt>Insertion</dt><dd>'+d.i+'</dd><dt>Nerve</dt><dd>'+d.n+'</dd></dl>';
+      h+='<dl><dt>Origin</dt><dd>'+d.o+'</dd><dt>Insertion</dt><dd>'+d.i+'</dd><dt>Nerve</dt><dd>'+d.n+nvLinks(sel.key)+'</dd></dl>';
       const xs=(EXK[sel.key]||[]).filter(x=>eqOK(x.i));
       if(xs.length){
         h+='<h3>Exercises that train it ('+xs.length+(eqFiltered()?', filtered by your equipment':'')+')</h3><table class="ext"><thead><tr><th>Exercise</th><th>Involvement</th><th>Specificity</th></tr></thead><tbody>'+
@@ -1354,6 +1483,17 @@ function renderCard0(clicked){
       else if(d.t) h+='<h3>Exercises</h3><p>'+d.t+'</p>';
     }
     if(d.x) h+='<h3>Note</h3><p class="note">'+d.x+'</p>';
+  } else if(sel.kind==="nerve"){
+    const n=NVD[sel.key], dm=NVM[sel.key]||[], kids=nvKids(sel.key), via=[...new Set(nvDesc(sel.key).reduce((a,c)=>a.concat(NVM[c]||[]),[]))].filter(k=>dm.indexOf(k)<0);
+    const chips=ks=>'<div class="chips">'+ks.map(k=>'<button class="mchip" data-key="'+k+'"><i class="sw nvs"></i>'+k+'</button>').join("")+'</div>';
+    h+='<div class="top"><span class="tag">Nerve, '+({motor:"motor",mixed:"mixed motor and sensory",cranial:"cranial"})[n.k]+'</span><button class="close" aria-label="Close">×</button></div>';
+    h+='<h2>'+n.n+'</h2><p class="sub">Roots '+n.r+(n.p?'. Branch of <button class="exlink" data-nerve="'+n.p+'">'+NVD[n.p].n+'</button>':'')+'</p>';
+    h+='<p class="role"><span>Schematic: approximate course, not exact anatomy.</span></p>';
+    if(dm.length) h+='<h3>Supplies ('+dm.length+')</h3>'+chips(dm);
+    if(via.length) h+='<h3>'+(dm.length?'Also, through its branches':'Supplies, through its branches')+' ('+via.length+')</h3>'+chips(via);
+    if(kids.length) h+='<h3>Branches</h3><div class="chips">'+kids.map(c=>'<button class="mchip" data-nerve="'+c+'">'+NVD[c].n+'</button>').join("")+'</div>';
+    h+='<h3>Note</h3><p class="note">'+n.x+'</p>';
+    h+='<p class="fine">The supplied muscles are highlighted on the body. Muscle names open the muscle; the same nerve text is shown in each muscle card.</p>';
   } else {
     const b=BDB[sel.key];
     h+='<div class="top"><span class="tag">Bone, '+b[0].toLowerCase()+'</span><button class="close" aria-label="Close">×</button></div>';
@@ -1376,6 +1516,7 @@ card.addEventListener("click",e=>{
   if(act==="back"){sel=null;view=mode==="cmp"?"cmp":"ex";applyVisuals();renderCard();syncList();return;}
   if(t.dataset.var){const a=t.dataset.var.split(":"); const v=(exVars[selEx]=(exVars[selEx]||[]).slice()); v[+a[0]]=+a[1]; setMode("ex"); return renderCard();}
   if(t.dataset.ex!==undefined) return openEx(t.dataset);
+  if(t.dataset.nerve) return select("nerve",t.dataset.nerve,true);
   if(t.dataset.key) return select("muscle",t.dataset.key,true);
   if(t.classList.contains("close")) return select(null);
   if(t.dataset.act==="focus"&&sel) focusOn(sel.kind,sel.key,sel.side);
@@ -1394,6 +1535,7 @@ function select(kind,k,focus,clicked){
   sel=kind?{kind:kind,key:k,side:clicked&&clicked.side?clicked.side:(focus?undefined:nearSide())}:null; view=sel?"sel":(cmp?"cmp":"ex");
   if(sel&&kind==="muscle"){const d=DB[k]; if(d.g===TISSUE&&!state.tendons){state.tendons=true;$("#tTendons").checked=true;} else if(d.g!==TISSUE&&!state.muscles){state.muscles=true;$("#tMuscles").checked=true;}}
   if(sel&&kind==="bone"&&!state.bones){state.bones=true;$("#tBones").checked=true;}
+  if(sel&&kind==="nerve") setNerves(true);
   applyVisuals(); renderCard(clicked); syncList(); if(sel) revealCard();
   if(focus&&sel) focusOn(kind,k,sel.side); else if(sel) pivotOn(kind,k,sel.side); // the camera now orbits around the selection
 }
@@ -2169,16 +2311,19 @@ $("#tVol").onchange=e=>{ volOn=e.target.checked; if(volOn){selEx=null;cmp=null;c
 function buildList(){
   const q=$("#q").value.trim().toLowerCase(), open=!!q;
   let h="";
-  const sec=(title,items,kind)=>{ if(!items.length) return "";
+  const sec=(title,items,kind,lab)=>{ if(!items.length) return "";
     return '<details'+(open?' open':'')+'><summary><b>'+title+'</b><span>'+items.length+'</span></summary><div class="items">'+
-      items.map(k=>'<div class="row"><input type="checkbox" class="vis" data-kind="'+kind+'" data-key="'+k+'" aria-label="Show '+k+'"><button class="item" data-kind="'+kind+'" data-key="'+k+'">'+k+'</button></div>').join("")+'</div></details>'; };
+      items.map(k=>{ const l=lab?lab(k):k; return '<div class="row"><input type="checkbox" class="vis" data-kind="'+kind+'" data-key="'+k+'" aria-label="Show '+l+'"><button class="item" data-kind="'+kind+'" data-key="'+k+'">'+l+'</button></div>'; }).join("")+'</div></details>'; };
+  const nhay=id=>(NVD[id].n+" "+NVD[id].r).toLowerCase();
   let al=q?aliasKeys(aliasHits(q,false)):null;
   let mkeys=Object.keys(DB).filter(k=>byKey[k]&&(k.indexOf(q)>=0||(al&&al.has(k)))).sort();
   let bkeys=Object.keys(BDB).filter(k=>k.indexOf(q)>=0).sort();
-  if(q.length>=4&&!mkeys.length&&!bkeys.length){ // typo fallback: nothing matched exactly
+  let nkeys=NIDS.filter(id=>nhay(id).indexOf(q)>=0);
+  if(q.length>=4&&!mkeys.length&&!bkeys.length&&!nkeys.length){ // typo fallback: nothing matched exactly
     const toks=q.split(/\s+/).filter(Boolean); al=aliasKeys(aliasHits(q,true));
-    mkeys=Object.keys(DB).filter(k=>byKey[k]&&(al.has(k)||fuzzyHay(k,toks))).sort(); bkeys=Object.keys(BDB).filter(k=>fuzzyHay(k,toks)).sort(); }
+    mkeys=Object.keys(DB).filter(k=>byKey[k]&&(al.has(k)||fuzzyHay(k,toks))).sort(); bkeys=Object.keys(BDB).filter(k=>fuzzyHay(k,toks)).sort(); nkeys=NIDS.filter(id=>fuzzyHay(nhay(id),toks)); }
   MGROUPS.concat([TISSUE]).forEach(g=>{h+=sec(g,mkeys.filter(k=>DB[k].g===g),"muscle");});
+  h+=sec("Nerves (schematic)",nkeys,"nerve",id=>NVD[id].n);
   BGROUPS.forEach(g=>{h+=sec("Bones: "+g.toLowerCase(),bkeys.filter(k=>BDB[k][0]===g),"bone");});
   list.innerHTML=h||'<p style="color:var(--muted);margin:6px 2px">No match. Try a shorter name, for example "flexor" or "rib".</p>';
   syncList();
@@ -2190,6 +2335,7 @@ function syncList(){
     b.classList.toggle("active",!!sel&&keyId(sel.kind,sel.key)===id);
     let off=hidden.has(id);
     if(kind==="muscle"){const g=DB[k].g; off=off||(g===TISSUE?!state.tendons:(!state.muscles||!state.groups.has(g)));}
+    else if(kind==="nerve") off=off||!state.nerves;
     else off=off||!state.bones;
     b.classList.toggle("off",off);
   });
@@ -2200,6 +2346,7 @@ list.addEventListener("change",e=>{
   const id=keyId(c.dataset.kind,c.dataset.key);
   if(c.checked) hidden.delete(id); else{ hidden.add(id); if(sel&&keyId(sel.kind,sel.key)===id){sel=null;renderCard();} }
   if(c.checked){ if(c.dataset.kind==="bone"&&!state.bones){state.bones=true;$("#tBones").checked=true;}
+    if(c.dataset.kind==="nerve") setNerves(true);
     if(c.dataset.kind==="muscle"){const g=DB[c.dataset.key].g; if(g===TISSUE){if(!state.tendons){state.tendons=true;$("#tTendons").checked=true;}} else { if(!state.muscles){state.muscles=true;$("#tMuscles").checked=true;} if(!state.groups.has(g)){state.groups.add(g);syncGroups();}}}}
   applyVisuals(); syncUnhide(); syncList();
 });
@@ -2215,8 +2362,9 @@ $("#gNone").onclick=()=>{state.groups=new Set();syncGroups();};
 $("#tBones").onchange=e=>{state.bones=e.target.checked;applyVisuals();syncList();};
 $("#tMuscles").onchange=e=>{state.muscles=e.target.checked;applyVisuals();syncList();};
 $("#tTendons").onchange=e=>{state.tendons=e.target.checked;applyVisuals();syncList();};
+$("#tNerves").onchange=e=>setNerves(e.target.checked);
 $("#tIso").onchange=e=>{state.isolate=e.target.checked;applyVisuals();};
-$("#opM").oninput=e=>{state.opM=e.target.value/100;$("#opMo").textContent=e.target.value+"%";applyVisuals();};
+$("#opM").oninput=e=>{nvAuto=false;state.opM=e.target.value/100;$("#opMo").textContent=e.target.value+"%";applyVisuals();};
 $("#opB").oninput=e=>{state.opB=e.target.value/100;$("#opBo").textContent=e.target.value+"%";applyVisuals();};
 document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{ setView(b.dataset.view); if(isPhone()) closePops(); });
 document.addEventListener("keydown",e=>{
@@ -2228,7 +2376,7 @@ document.addEventListener("keydown",e=>{
 });
 
 /* ---------- deep links: location.hash mirrors the main view ---------- */
-// #m=<muscle>|#b=<bone> (selection), #ex=<exercise>[&v=<option,option,...>] (v: option name per variation group, empty = default),
+// #m=<muscle>|#b=<bone>|#n=<nerve id> (selection), #ex=<exercise>[&v=<option,option,...>] (v: option name per variation group, empty = default),
 // #cmp=<A>|<B> (each side name[:option,option]), #tab=ex|wk. All names are encodeURIComponent'ed; the plan is not part of the link.
 let hashReady=false, lastHash="";
 const enc=encodeURIComponent, own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k), dec=s=>{try{return decodeURIComponent(s);}catch(e){return null;}};
@@ -2237,7 +2385,7 @@ const vList=(i,v)=>trimV(varNames(i,v)).map(enc).join(",");
 const cmpSide=X=>enc(EX[X.i].n)+(vList(X.i,X.v)?":"+vList(X.i,X.v):"");
 function hashNow(){
   const p=[];
-  if(sel) p.push((sel.kind==="muscle"?"m=":"b=")+enc(sel.key));
+  if(sel) p.push((sel.kind==="muscle"?"m=":(sel.kind==="nerve"?"n=":"b="))+enc(sel.key));
   if(cmp) p.push("cmp="+cmpSide(cmp[0])+"|"+cmpSide(cmp[1]));
   else if(selEx!==null){ p.push("ex="+enc(EX[selEx].n)); const vl=vList(selEx,exVars[selEx]); if(vl) p.push("v="+vl); }
   if(curTab!=="anat") p.push("tab="+curTab);
@@ -2269,9 +2417,10 @@ function applyHash(raw){
     const i=exI(o.ex);
     if(i>=0){ exVars[i]=varFromNames(i,own(o,"v")?decList(o.v):[]); cmpPick=false; selectEx(i); any=exTab=true; }
   }
-  const mk=own(o,"m")?dec(o.m):null, bk=own(o,"b")?dec(o.b):null;
+  const mk=own(o,"m")?dec(o.m):null, bk=own(o,"b")?dec(o.b):null, nk=own(o,"n")?dec(o.n):null;
   if(mk!==null&&own(byKey,mk)){ select("muscle",mk,true); any=true; }
   else if(bk!==null&&own(byBone,bk)){ select("bone",bk,true); any=true; }
+  else if(nk!==null&&own(NVD,nk)){ select("nerve",nk,true); any=true; }
   if(own(o,"tab")&&(o.tab==="anat"||o.tab==="ex"||o.tab==="wk")){ openTab(o.tab); any=true; }
   else if(exTab) openTab("ex");
   return any;
@@ -2296,6 +2445,7 @@ $("#foot").innerHTML=nMus+" muscles in "+muscleMeshes.length+" meshes, "+Object.
  "<a href='https://www.z-anatomy.com/' target='_blank' rel='noopener'>Z-Anatomy</a> (CC BY-SA 4.0), as aligned in Johan Bellander's BodyExplorer, further decimated here (Low and Medium; High is the unreduced source). "+
  "The mesh data on this page is shared under CC BY-SA 4.0. For learning, not for clinical use.";
 buildList(); buildEq(); buildExList(); buildBest(); renderHr(); renderPlan(); renderVolSum(); renderSuggest(); syncGoalUI(); syncModeUI(); applyVisuals();
+if(store.get(NV_KEY,false)===true) setNerves(true);   // the Nerves layer is remembered per viewer
 if(applyHash(location.hash)){ hashReady=true; syncHash(); } else hashReady=true;
 $("#loading").remove();
 })();
