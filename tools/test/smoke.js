@@ -1302,6 +1302,16 @@ async function boardRun(){
  ok(w.__dpr===2&&!q('#side').classList.contains('has-card')&&q('#card').parentNode===q('#vp'),'desktop: pixel ratio capped at 2, card floats in the viewport, sheet classes unused');
  ok(q('#btnLayers').getAttribute('aria-expanded')==='false'&&q('#popLayers').contains(q('#tBones'))&&q('#popLayers').contains(q('#opM')),'desktop: layer toggles and opacity sliders live in the Layers popover, closed by default');
  ok(qa('[data-view]').length===5&&q('#toolbar').contains(q('[data-view="front"]')),'desktop: view buttons are in the floating toolbar');
+ // volume button
+ ok(q('#btnVol')&&q('#toolbar').contains(q('#btnVol'))&&q('#btnVol').getAttribute('aria-pressed')==='false'&&q('#volToolScope').hidden,'volume button exists in toolbar, starts off (aria-pressed=false, scope hidden)');
+ q('#btnVol').click();
+ ok(q('#tVol').checked&&q('#btnVol').getAttribute('aria-pressed')==='true'&&!q('#volToolScope').hidden,'clicking btnVol turns volume on (#tVol checked, btnVol aria-pressed=true, scope visible)');
+ ok(q('[data-vs2="week"]')&&q('[data-vs2="day"]'),'volume scope has week and day buttons');
+ const prevDay=q('[data-vs="day"]').getAttribute('aria-pressed')==='true';q('[data-vs2="day"]').click();
+ ok(q('[data-vs="day"]').getAttribute('aria-pressed')==='true'&&q('[data-vs2="day"]').getAttribute('aria-pressed')==='true','clicking scope day button presses both data-vs2 and data-vs day buttons');
+ q('#btnVol').click();
+ ok(!q('#tVol').checked&&q('#btnVol').getAttribute('aria-pressed')==='false'&&q('#volToolScope').hidden,'clicking btnVol again turns volume off (#tVol unchecked, btnVol aria-pressed=false, scope hidden)');
+ if(prevDay)q('[data-vs="day"]').click();else q('[data-vs="week"]').click();
  await weekRun();
  await endRun();
  await boardRun();

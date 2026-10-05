@@ -117,7 +117,13 @@ aside{background:var(--panel);border-right:1px solid var(--line);overflow:hidden
 .tbtn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);cursor:pointer;font-size:13px;font-weight:600;}
 .tbtn:hover{border-color:var(--accent);}
 .tbtn[aria-expanded="true"]{border-color:var(--accent);background:var(--accent-soft);}
+.tbtn[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);}
 .tbtn svg{flex:none;}
+#volToolScope{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel);margin-left:2px;}
+#volToolScope button{background:none;border:0;border-right:1px solid var(--line);padding:7px 8px;cursor:pointer;font-size:12.5px;flex:1;}
+#volToolScope button:last-child{border-right:0;}
+#volToolScope button:hover{background:var(--chip);}
+#volToolScope button[aria-pressed="true"]{background:var(--accent-soft);color:var(--ink);font-weight:600;}
 .pop{display:none;position:absolute;top:calc(100% + 8px);left:0;width:290px;max-width:calc(100vw - 24px);background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:8px 14px 12px;}
 .pop.open{display:block;}
 .pop.pop-view{display:block;position:static;width:auto;max-width:none;padding:0;border:0;border-radius:10px;box-shadow:none;background:none;}
@@ -683,10 +689,14 @@ input.num{width:66px;border:1px solid var(--line);background:var(--bg);border-ra
           </div>
         </div>
       </div>
+      <div class="tb-group">
+        <button class="tbtn" id="btnVol" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M3 9h18v12H3z"/><line x1="9" y1="12" x2="9" y2="20"/><line x1="15" y1="12" x2="15" y2="20"/></svg>Volume</button>
+        <div class="seg seg2" id="volToolScope" role="group" aria-label="Volume scope" hidden><button data-vs2="week">Wk</button><button data-vs2="day">Day</button></div>
+      </div>
     </div>
     <div class="loading" id="loading"><div><strong>Building the body</strong><span id="loadMsg">Loading model</span></div></div>
     <div class="tip" id="tip"></div>
-    <div class="ver" id="ver" title="Atlas of Motion, version 1.4 (build c1c4ec2)">v1.4 · c1c4ec2</div>
+    <div class="ver" id="ver" title="Atlas of Motion, version 1.5 (build 433c1f4)">v1.5 · 433c1f4</div>
     <div class="hint" id="hint">Drag to rotate, scroll to zoom, right-drag to pan, click to inspect, H to hide</div>
     <div class="card" id="card" aria-live="polite"></div>
     <section class="ov" id="ov" role="dialog" aria-label="Week overview" hidden>
@@ -1585,8 +1595,9 @@ function setMode(m){
       sumMeshes().forEach((g,gi)=>{ const f=M.F[day][gi]; if(f>=F_REC-EPS) g[1].forEach(ms=>{ if(!heat.has(ms)){heat.set(ms,M_FAT); heatTip.set(ms,"still recovering (carry-over "+fmt(f)+")");} }); }); } }
   applyVisuals(); syncModeUI();
 }
-function syncModeUI(){ $("#exClear").disabled=selEx===null&&!cmp; $("#tVol").checked=volOn; $("#volScope").hidden=!volOn; document.querySelectorAll("[data-vs]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.vs==="day")===volDay)); renderLegend(); syncBanner(); }
+function syncModeUI(){ $("#exClear").disabled=selEx===null&&!cmp; $("#tVol").checked=volOn; $("#volScope").hidden=!volOn; $("#btnVol").setAttribute("aria-pressed",String(volOn)); $("#volToolScope").hidden=!volOn; document.querySelectorAll("[data-vs]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.vs==="day")===volDay)); document.querySelectorAll("[data-vs2]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.vs2==="day")===volDay)); renderLegend(); syncBanner(); }
 document.querySelectorAll("[data-vs]").forEach(b=>b.onclick=()=>{ volDay=b.dataset.vs==="day"; if(mode==="vol") setMode("vol"); else syncModeUI(); });
+document.querySelectorAll("[data-vs2]").forEach(b=>b.onclick=()=>{ const btn=document.querySelector('[data-vs="'+(b.dataset.vs2==="day"?"day":"week")+'"]'); if(btn) btn.click(); });
 function syncBanner(){ const b=$("#cmpBanner"); b.hidden=!cmpPick; if(cmpPick&&selEx!==null) $("#cmpText").textContent="Pick a second exercise to compare with "+EX[selEx].n+"."; }
 $("#cmpCancel").onclick=()=>{cmpPick=false; syncBanner(); if(view==="ex") renderCard();};
 function selectEx(i){
@@ -2307,6 +2318,7 @@ $("#sug").addEventListener("click",e=>{
 $("#sug").addEventListener("change",e=>{ const t=e.target.closest("select[data-sv]"); if(!t) return; const a=t.dataset.sv.split(":"), o=sugO(+a[0]); o.v=(EX[+a[0]].v||[]).map((g,gi)=>o.v[gi]||0); o.v[+a[1]]=+t.value; if(sugPrev===+a[0]){ sugPrev=null; } renderSuggest(); });
 $("#volsum").addEventListener("click",e=>{const t=e.target.closest("[data-key]"); if(t) select("muscle",t.dataset.key,true);});
 $("#tVol").onchange=e=>{ volOn=e.target.checked; if(volOn){selEx=null;cmp=null;cmpPick=false; if(view!=="sel") view="sel"; setMode("vol"); renderCard(); syncExList();} else if(mode==="vol") setMode(null); };
+$("#btnVol").onclick=()=>{ const t=$("#tVol"); t.checked=!t.checked; t.dispatchEvent(new Event("change")); };
 
 function buildList(){
   const q=$("#q").value.trim().toLowerCase(), open=!!q;
