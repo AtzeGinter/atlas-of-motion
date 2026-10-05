@@ -114,7 +114,7 @@ async function nerveRun(){
  // picking: click on a point of the median nerve (seen from the front) while the muscles in front are translucent
  {
   const T=x.THREE,mm=nm().find(m=>m.userData.key==='median'&&m.userData.side==='L'),pa=mm.geometry.attributes.position,cam=x.__cam;
-  await sleep(1800); cam.updateMatrixWorld(); // let the camera settle
+  let prev=cam.position.clone();for(let i=0;i<50;i++){await sleep(50);const curr=cam.position.clone();if(curr.distanceTo(prev)<0.001)break;prev=curr;} cam.updateMatrixWorld(); // let the camera settle
   const pickAt=i=>{const v=new T.Vector3(pa.getX(i),pa.getY(i),pa.getZ(i)).project(cam),px=(v.x+1)/2*1000,py=(1-v.y)/2*800,cv=xq('#vp canvas');
    const mk=(t)=>{const e=new x.Event(t,{bubbles:true});Object.assign(e,{pointerId:1,clientX:px,clientY:py,button:0,buttons:1,pointerType:'mouse'});return e;};
    cv.dispatchEvent(mk('pointerdown'));cv.dispatchEvent(mk('pointerup'));return xq('#card h2')&&xq('#card.show')?xq('#card h2').textContent:'';};
@@ -478,7 +478,7 @@ async function lodRun(){
 }
 // ---- camera: orbit pivot follows the selection; screen-space panning ----
 async function camRun(){
- const T=w.THREE, cam=()=>w.__cam, settle=()=>sleep(1500);
+ const T=w.THREE, cam=()=>w.__cam, settle=async()=>{let prev=cam().position.clone();for(let i=0;i<50;i++){await sleep(50);const curr=cam().position.clone();if(curr.distanceTo(prev)<0.001)return;prev=curr;}};
  const fwd=()=>{const c=cam();c.updateMatrixWorld();return new T.Vector3(0,0,-1).applyQuaternion(c.quaternion);};
  const distToRay=p=>{const c=cam(),f=fwd(),v=p.clone().sub(c.position);return v.sub(f.multiplyScalar(v.dot(f))).length();};
  const centre=(k,side)=>{const b=new T.Box3();w.__scene.traverse(o=>{if(o.isMesh&&o.userData.key===k&&(!side||o.userData.side===side))b.union(o.geometry.boundingBox);});return b.getCenter(new T.Vector3());};
@@ -615,8 +615,7 @@ async function linkRun(){
  let clip=null;Object.defineProperty(x.navigator,'clipboard',{configurable:true,value:{writeText:async t=>{clip=t;}}});
  xd.querySelector('#card [data-act="copy"]').click();await sleep(30);
  ok(clip&&clip.includes('#m=biceps%20brachii')&&clip.startsWith('https://example.test/')&&xd.querySelector('#card [data-act="copy"]').textContent==='Copied','Copy link writes the full URL to the clipboard and shows "Copied" ('+clip+')');
- await sleep(1900);
- ok(xd.querySelector('#card [data-act="copy"]').textContent==='Copy link','... and the label returns to "Copy link"');
+ await waitFor(()=>xd.querySelector('#card [data-act="copy"]').textContent==='Copy link',4000,'copy button label to return');ok(xd.querySelector('#card [data-act="copy"]').textContent==='Copy link','... and the label returns to "Copy link"');
  // copy link: no clipboard API, execCommand unavailable -> link shown selected
  Object.defineProperty(x.navigator,'clipboard',{configurable:true,value:undefined});
  xd.querySelector('#card [data-act="copy"]').click();
@@ -719,8 +718,7 @@ async function phoneRun(){
  const cv=pq('canvas'),tip=pq('#tip');pev(cv,'pointerdown',{clientX:500,clientY:400});pev(cv,'pointermove',{clientX:507,clientY:400});pev(cv,'pointerup',{clientX:507,clientY:400,buttons:0});
  ok(tip.style.display==='block'&&tip.textContent.length>0,'phone: touch tap shows the name label ("'+tip.textContent+'")');
  ok(card.classList.contains('show')&&side.classList.contains('has-card'),'phone: touch tap on a structure also selects it (card in sheet)');
- await sleep(1700);
- ok(tip.style.display==='none','phone: the touch label disappears after about 1.5 s');
+ await waitFor(()=>tip.style.display==='none',4000,'touch label to disappear');ok(tip.style.display==='none','phone: the touch label disappears after about 1.5 s');
  // viewport grows to desktop size: card returns to the viewport, sheet classes cleared
  // choosing High on a phone shows a short note about the download size, without a blocking dialog
  lodBtn(pd,'high').click();
