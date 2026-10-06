@@ -102,6 +102,10 @@ aside{background:var(--panel);border-right:1px solid var(--line);overflow:hidden
 .chip[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);}
 .chip-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--line);}
 .chip-row h2{margin:0;}
+.idxhd{flex-wrap:wrap;row-gap:4px;}
+.idxhd>span{display:flex;width:100%;}
+.idxhd .linkbtn:first-child{padding-left:0;}
+.idxhd #unhide{margin-left:auto;}
 .linkbtn{background:none;border:0;color:var(--accent);cursor:pointer;font-size:12.5px;padding:0 0 0 10px;font-weight:500;}
 .linkbtn:hover:not(:disabled){text-decoration:underline;text-underline-offset:3px;}
 .linkbtn:disabled{color:var(--muted);cursor:default;opacity:.6;}
@@ -115,6 +119,12 @@ aside{background:var(--panel);border-right:1px solid var(--line);overflow:hidden
 .list summary::before{content:"+";width:12px;color:var(--muted);font:400 14px var(--f-ui);flex:none;}
 .list details[open] summary::before{content:"−";}
 .list summary b{flex:1;font-weight:600;}
+.geye{appearance:none;background:transparent;border:0;border-radius:2px;color:var(--muted);cursor:pointer;padding:0;margin:-6px 0;width:28px;height:28px;flex:none;display:flex;align-items:center;justify-content:center;align-self:center;}
+.geye:hover{color:var(--ink);}
+.geye svg{width:16px;height:16px;}
+.geye[aria-pressed="mixed"] svg{opacity:.5;}
+.geye:not([aria-pressed="false"]) .slash{display:none;}
+@media (pointer:coarse){.geye{width:44px;height:44px;margin:-12px 0;}}
 .list summary i.rn{font:500 12px var(--f-disp);font-style:normal;color:var(--accent);letter-spacing:.04em;min-width:2.5em;flex:none;}
 .items{padding:0 0 8px;}
 .row{display:flex;align-items:center;gap:2px;padding-left:10px;}
@@ -619,12 +629,7 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
 
     <div class="pane" id="paneAnat">
     <div class="sec">
-      <div class="chip-row"><h2>Regions</h2><span><button class="linkbtn" id="gAll">All</button><button class="linkbtn" id="gNone">None</button></span></div>
-      <div class="chips" id="groups"></div>
-    </div>
-
-    <div class="sec">
-      <div class="chip-row"><h2>Index of structures</h2><button class="linkbtn" id="unhide" disabled>Show hidden (0)</button></div>
+      <div class="chip-row idxhd"><h2>Index of structures</h2><span><button class="linkbtn" id="showAll">Show all</button><button class="linkbtn" id="hideAll">Hide all</button><button class="linkbtn" id="unhide" disabled>Show hidden (0)</button></span></div>
       <input class="search" id="q" type="search" placeholder="Search muscles and bones" aria-label="Search muscles and bones">
       <div class="list" id="list"></div>
     </div>
@@ -738,7 +743,7 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
     </div>
     <div class="loading" id="loading"><div><strong>Atlas of Motion</strong><em>preparing the plates…</em><span id="loadMsg">Loading model</span></div></div>
     <div class="tip" id="tip"></div>
-    <div class="ver" id="ver" title="Atlas of Motion, version 1.6 (build d447113)">v1.6 · d447113</div>
+    <div class="ver" id="ver" title="Atlas of Motion, version 1.7 (build 6fc6224)">v1.7 · 6fc6224</div>
     <div class="hint" id="hint">Drag to rotate, scroll to zoom, right-drag to pan, click to inspect, H to hide</div>
     <div class="card" id="card" aria-live="polite"></div>
     <section class="ov" id="ov" role="dialog" aria-label="Week overview" hidden>
@@ -1089,7 +1094,7 @@ const syncPlan=()=>{ plan=[].concat(...week.map(d=>d.items)); }; syncPlan();
 let selEx=null, exVars={}, cmp=null, cmpPick=false, volOn=false, view="sel", mode=null, heat=null, heatTip=null;
 
 /* ---------- state ---------- */
-const state={bones:true,muscles:true,tendons:true,nerves:false,isolate:false,opM:1,opB:1,groups:new Set(MGROUPS)};
+const state={bones:true,muscles:true,tendons:true,nerves:false,isolate:false,opM:1,opB:1,groups:new Set(MGROUPS),bgroups:new Set(BGROUPS)};
 const hidden=new Set();
 let sel=null, hoverKey=null, dirty=true;
 const keyId=(kind,k)=>kind+":"+k;
@@ -1226,7 +1231,7 @@ function applyVisuals(){
   });
   boneMeshes.forEach(m=>{
     const d=m.userData, id=keyId("bone",d.key), isSel=id===selId;
-    m.visible=isSel||(state.bones&&!hidden.has(id));
+    m.visible=isSel||(state.bones&&state.bgroups.has(d.group)&&!hidden.has(id));
     m.material=isSel?B_SEL:(hoverKey===id?B_HOV:((state.isolate&&sel)?B_FADE:B_MAT));
   });
   dirty=true;
@@ -2393,11 +2398,15 @@ IDX_GROUPS.forEach((g,i)=>{GROMAN[g]=roman(i+1);});
   BGROUPS.forEach(g=>Object.keys(BDB).filter(k=>BDB[k][0]===g).sort().forEach(k=>add("bone",k)));
 })();
 const plateNo=(kind,k)=>PLATE[kind+":"+k]||"";
+/* group eye toggles: gk m = muscle group, t = connective tissue, b = bone group, n = nerves */
+const EYE=(gk,g,title)=>'<button type="button" class="geye" data-gk="'+gk+'" data-g="'+esc(g)+'" aria-pressed="true" aria-label="Hide '+esc(title)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="eye"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></g><path class="slash" d="M4 4l16 16"/></svg></button>';
+const grpShown=(gk,g)=>gk==="m"?state.groups.has(g):gk==="t"?state.tendons:gk==="b"?state.bgroups.has(g):state.nerves;
+const grpIds=(gk,g)=>gk==="b"?Object.keys(BDB).filter(k=>BDB[k][0]===g).map(k=>keyId("bone",k)):gk==="n"?NIDS.map(id=>keyId("nerve",id)):Object.keys(DB).filter(k=>byKey[k]&&DB[k].g===(gk==="t"?TISSUE:g)).map(k=>keyId("muscle",k));
 function buildList(){
   const q=$("#q").value.trim().toLowerCase(), open=!!q;
   let h="";
-  const sec=(title,items,kind,lab)=>{ if(!items.length) return "";
-    return '<details'+(open?' open':'')+'><summary><i class="rn" title="Group '+GROMAN[title]+'">'+GROMAN[title]+'</i><b>'+title+'</b><span>'+items.length+'</span></summary><div class="items">'+
+  const sec=(title,items,kind,lab,gk,g)=>{ if(!items.length) return "";
+    return '<details'+(open?' open':'')+'><summary>'+EYE(gk,g,title)+'<i class="rn" title="Group '+GROMAN[title]+'">'+GROMAN[title]+'</i><b>'+title+'</b><span>'+items.length+'</span></summary><div class="items">'+
       items.map(k=>{ const l=lab?lab(k):k; return '<div class="row"><input type="checkbox" class="vis" data-kind="'+kind+'" data-key="'+k+'" aria-label="Show '+l+'"><button class="item" data-kind="'+kind+'" data-key="'+k+'">'+l+'</button></div>'; }).join("")+'</div></details>'; };
   const nhay=id=>(NVD[id].n+" "+NVD[id].r).toLowerCase();
   let al=q?aliasKeys(aliasHits(q,false)):null;
@@ -2407,9 +2416,9 @@ function buildList(){
   if(q.length>=4&&!mkeys.length&&!bkeys.length&&!nkeys.length){ // typo fallback: nothing matched exactly
     const toks=q.split(/\s+/).filter(Boolean); al=aliasKeys(aliasHits(q,true));
     mkeys=Object.keys(DB).filter(k=>byKey[k]&&(al.has(k)||fuzzyHay(k,toks))).sort(); bkeys=Object.keys(BDB).filter(k=>fuzzyHay(k,toks)).sort(); nkeys=NIDS.filter(id=>fuzzyHay(nhay(id),toks)); }
-  MGROUPS.concat([TISSUE]).forEach(g=>{h+=sec(g,mkeys.filter(k=>DB[k].g===g),"muscle");});
-  h+=sec("Nerves (schematic)",nkeys,"nerve",id=>NVD[id].n);
-  BGROUPS.forEach(g=>{h+=sec("Bones: "+g.toLowerCase(),bkeys.filter(k=>BDB[k][0]===g),"bone");});
+  MGROUPS.concat([TISSUE]).forEach(g=>{h+=sec(g,mkeys.filter(k=>DB[k].g===g),"muscle",null,g===TISSUE?"t":"m",g);});
+  h+=sec("Nerves (schematic)",nkeys,"nerve",id=>NVD[id].n,"n","Nerves (schematic)");
+  BGROUPS.forEach(g=>{h+=sec("Bones: "+g.toLowerCase(),bkeys.filter(k=>BDB[k][0]===g),"bone",null,"b",g);});
   list.innerHTML=h||'<p style="color:var(--muted);margin:6px 2px">No match. Try a shorter name, for example "flexor" or "rib".</p>';
   syncList();
 }
@@ -2421,28 +2430,51 @@ function syncList(){
     let off=hidden.has(id);
     if(kind==="muscle"){const g=DB[k].g; off=off||(g===TISSUE?!state.tendons:(!state.muscles||!state.groups.has(g)));}
     else if(kind==="nerve") off=off||!state.nerves;
-    else off=off||!state.bones;
+    else off=off||!state.bones||!state.bgroups.has(BDB[k][0]);
     b.classList.toggle("off",off);
   });
+  syncGroups();
 }
 list.addEventListener("click",e=>{const t=e.target.closest(".item"); if(t) select(t.dataset.kind,t.dataset.key,true);});
 list.addEventListener("change",e=>{
   const c=e.target.closest(".vis"); if(!c) return;
   const id=keyId(c.dataset.kind,c.dataset.key);
   if(c.checked) hidden.delete(id); else{ hidden.add(id); if(sel&&keyId(sel.kind,sel.key)===id){sel=null;renderCard();} }
-  if(c.checked){ if(c.dataset.kind==="bone"&&!state.bones){state.bones=true;$("#tBones").checked=true;}
+  if(c.checked){ if(c.dataset.kind==="bone"){ if(!state.bones){state.bones=true;$("#tBones").checked=true;} state.bgroups.add(BDB[c.dataset.key][0]); }
     if(c.dataset.kind==="nerve") setNerves(true);
-    if(c.dataset.kind==="muscle"){const g=DB[c.dataset.key].g; if(g===TISSUE){if(!state.tendons){state.tendons=true;$("#tTendons").checked=true;}} else { if(!state.muscles){state.muscles=true;$("#tMuscles").checked=true;} if(!state.groups.has(g)){state.groups.add(g);syncGroups();}}}}
+    if(c.dataset.kind==="muscle"){const g=DB[c.dataset.key].g; if(g===TISSUE){if(!state.tendons){state.tendons=true;$("#tTendons").checked=true;}} else { if(!state.muscles){state.muscles=true;$("#tMuscles").checked=true;} if(!state.groups.has(g)){state.groups.add(g);}}}}
   applyVisuals(); syncUnhide(); syncList();
 });
 $("#q").addEventListener("input",buildList);
 
-const gWrap=$("#groups");
-gWrap.innerHTML=MGROUPS.map(g=>'<button class="chip" aria-pressed="true" data-g="'+g+'">'+g+'</button>').join("");
-function syncGroups(){gWrap.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",state.groups.has(c.dataset.g)));applyVisuals();syncList();}
-gWrap.addEventListener("click",e=>{const c=e.target.closest(".chip"); if(!c) return; const g=c.dataset.g; state.groups.has(g)?state.groups.delete(g):state.groups.add(g); syncGroups();});
-$("#gAll").onclick=()=>{state.groups=new Set(MGROUPS);syncGroups();};
-$("#gNone").onclick=()=>{state.groups=new Set();syncGroups();};
+/* eye buttons on the group headings; "mixed" = group shown but some of its items hidden one by one */
+function syncGroups(){
+  list.querySelectorAll(".geye").forEach(e=>{
+    const gk=e.dataset.gk, g=e.dataset.g, on=grpShown(gk,g);
+    e.setAttribute("aria-pressed",on&&grpIds(gk,g).some(id=>hidden.has(id))?"mixed":String(on));
+    e.setAttribute("aria-label",(on?"Hide ":"Show ")+e.closest("summary").querySelector("b").textContent);
+  });
+}
+list.addEventListener("click",e=>{
+  const eye=e.target.closest(".geye"); if(!eye) return;
+  e.preventDefault(); e.stopPropagation();   // the eye lives in a <summary>: do not fold the group
+  const gk=eye.dataset.gk, g=eye.dataset.g;
+  if(grpShown(gk,g)){
+    if(gk==="m") state.groups.delete(g);
+    else if(gk==="b") state.bgroups.delete(g);
+    else if(gk==="t"){state.tendons=false;$("#tTendons").checked=false;}
+    else setNerves(false);
+  }else{
+    grpIds(gk,g).forEach(id=>hidden.delete(id));
+    if(gk==="m"){state.groups.add(g); if(!state.muscles){state.muscles=true;$("#tMuscles").checked=true;}}
+    else if(gk==="b"){state.bgroups.add(g); if(!state.bones){state.bones=true;$("#tBones").checked=true;}}
+    else if(gk==="t"){state.tendons=true;$("#tTendons").checked=true;}
+    else setNerves(true);
+  }
+  applyVisuals(); syncUnhide(); syncList();
+});
+$("#showAll").onclick=()=>{ state.groups=new Set(MGROUPS); state.bgroups=new Set(BGROUPS); state.tendons=true; $("#tTendons").checked=true; state.bones=true; $("#tBones").checked=true; hidden.clear(); applyVisuals(); syncUnhide(); syncList(); };
+$("#hideAll").onclick=()=>{ state.groups=new Set(); state.bgroups=new Set(); state.tendons=false; $("#tTendons").checked=false; applyVisuals(); syncUnhide(); syncList(); };
 
 $("#tBones").onchange=e=>{state.bones=e.target.checked;applyVisuals();syncList();};
 $("#tMuscles").onchange=e=>{state.muscles=e.target.checked;applyVisuals();syncList();};

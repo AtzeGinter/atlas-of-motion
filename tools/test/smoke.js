@@ -94,7 +94,7 @@ async function paletteRun(){
  const vc=new Set();y.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind==='muscle'&&o.visible&&!o.material.transparent)vc.add(o.material.color.getHexString());});
  const bands=['v0','v1','v2','v3'].map(n=>yl(yP(n)));
  ok([...vc].filter(h=>bands.includes(h)).length>=2,'volume heatmap: trained muscles use the legend band colours ('+[...vc].filter(h=>bands.includes(h)).map(h=>'#'+h).join(' ')+')');
- ok(/^v1\.6 · [0-9a-f]{7}$/.test(xq('#ver').textContent)&&/version 1\.6 /.test(xq('#ver').title),'version shows v1.6 ('+xq('#ver').textContent+')');
+ ok(/^v1\.7 · [0-9a-f]{7}$/.test(xq('#ver').textContent)&&/version 1\.7 /.test(xq('#ver').title),'version shows v1.7 ('+xq('#ver').textContent+')');
 }
 // ---- schematic nerves: data, Nerves layer, picking-independent selection flows, deep link, LOD rebuild ----
 async function nerveRun(){
@@ -573,6 +573,82 @@ async function searchRun(){
  ok(gz.length>0&&gz.every(n=>META.ex.find(e=>e.n===n).t.some(r=>/^gluteus/.test(r[0]))),'Add search: the typo "glutez" still offers gluteal exercises');
  ok(addq('zzzz').length===0&&/No match/.test(q('#addres').textContent),'Add search: nonsense gives "No match"');
  q('#qa').value='';ev(q('#qa'),'input');
+}
+// ---- Index group headings: eye toggles replace the old Regions chip panel ----
+async function eyeRun(){
+ q('[data-tab="anat"]').click();q('#q').value='';ev(q('#q'),'input');
+ const eye=(gk,g)=>q('#list .geye[data-gk="'+gk+'"][data-g="'+g+'"]'),pressed=(gk,g)=>eye(gk,g).getAttribute('aria-pressed');
+ const meshes=(kind,f)=>{const a=[];w.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind===kind&&f(o.userData))a.push(o);});return a;};
+ const keyMeshes=k=>meshes('muscle',u=>u.key===k);
+ const act=()=>{const a=q('#list .item.active');return a&&a.dataset.key;};   // a selected structure stays visible whatever the toggles say
+ const all=kind=>meshes(kind,u=>u.key!==act());
+ ok(!q('#groups')&&!q('#gAll')&&!q('#gNone'),'the Regions chip panel is gone');
+ const sums=qa('#list details > summary');
+ ok(sums.length>=26&&sums.every(s=>s.querySelectorAll('.geye').length===1&&s.firstElementChild===s.querySelector('.geye')),'every Index group heading has exactly one eye before its title ('+sums.length+')');
+ ok(sums.every(s=>s.querySelector('.geye').getAttribute('aria-pressed')==='true'||s.querySelector('b').textContent.startsWith('Nerves')),'all eyes start shown except Nerves');
+ // muscle group: hides its meshes, does not fold or unfold the group, shows them again
+ const sh=eye('m','Shoulder'),det=sh.closest('details'),open0=det.open;
+ ok(keyMeshes('deltoid').length>0&&keyMeshes('deltoid').every(m=>m.visible),'deltoid meshes start visible');
+ sh.click();
+ ok(pressed('m','Shoulder')==='false'&&keyMeshes('deltoid').every(m=>!m.visible||act()==='deltoid')&&det.open===open0,'Shoulder eye hides the deltoid meshes and leaves the group folded as it was');
+ ok(q('#list .item[data-key="deltoid"]').classList.contains('off'),'the deltoid entry is marked off');
+ sh.click();
+ ok(pressed('m','Shoulder')==='true'&&keyMeshes('deltoid').every(m=>m.visible)&&det.open===open0,'Shoulder eye shows them again');
+ det.open=true;sh.click();sh.click();ok(det.open===true,'an unfolded group stays unfolded');det.open=open0;
+ // connective tissue: same as the #tTendons layer checkbox, both ways
+ const tis='Connective tissue',tissue=()=>meshes('muscle',u=>u.tissue&&u.key!==act());
+ eye('t',tis).click();
+ ok(!q('#tTendons').checked&&pressed('t',tis)==='false'&&tissue().every(m=>!m.visible),'Connective tissue eye unchecks #tTendons and hides the tendons');
+ q('#tTendons').checked=true;ev(q('#tTendons'),'change');
+ ok(pressed('t',tis)==='true','ticking #tTendons updates the eye');
+ eye('t',tis).click();eye('t',tis).click();
+ ok(q('#tTendons').checked&&tissue().some(m=>m.visible),'Connective tissue eye shows the tendons again and ticks #tTendons');
+ // bone group (the muscle group "Hand" has the same name, hence data-gk)
+ const hand=()=>meshes('bone',u=>u.group==='Hand'),skull=()=>meshes('bone',u=>u.group==='Skull');
+ ok(hand().length>0&&hand().every(m=>m.visible),'hand bones start visible');
+ eye('b','Hand').click();
+ ok(pressed('b','Hand')==='false'&&hand().every(m=>!m.visible||m.userData.key===act())&&skull().every(m=>m.visible)&&meshes('muscle',u=>u.group==='Hand').every(m=>m.visible),'Hand bone eye hides the hand bones only (not the skull, not the hand muscles)');
+ const hk=hand()[0].userData.key,hcb=()=>q('#list .vis[data-kind="bone"][data-key="'+hk+'"]');
+ ok(q('#list .item[data-kind="bone"][data-key="'+hk+'"]').classList.contains('off'),'its bone entries are marked off');
+ hcb().checked=true;ev(hcb(),'change');
+ ok(pressed('b','Hand')==='true'&&hand().every(m=>m.visible),'ticking one hand bone in the hidden group brings the group back');
+ eye('b','Hand').click();eye('b','Hand').click();
+ ok(pressed('b','Hand')==='true'&&hand().every(m=>m.visible),'Hand bone eye shows the hand bones again');
+ // mixed: group shown, one entry unchecked; a click hides the group, the next one restores it and clears the entry
+ const key='adductor longus',cb=()=>q('#list .vis[data-kind="muscle"][data-key="'+key+'"]'),grp=META.db[key].g;
+ ok(pressed('m',grp)==='true','group of '+key+' starts shown');
+ cb().checked=false;ev(cb(),'change');
+ ok(pressed('m',grp)==='mixed'&&!q('#unhide').disabled,'unchecking one muscle makes its group eye "mixed"');
+ eye('m',grp).click();
+ ok(pressed('m',grp)==='false'&&keyMeshes(key).every(m=>!m.visible),'clicking a mixed eye hides the whole group');
+ eye('m',grp).click();
+ ok(pressed('m',grp)==='true'&&cb().checked&&keyMeshes(key).every(m=>m.visible)&&/\(0\)/.test(q('#unhide').textContent),'clicking a hidden eye shows the group and clears its individual hiding');
+ // checking an item of a hidden group re-adds that group
+ eye('m',grp).click();cb().checked=false;ev(cb(),'change');cb().checked=true;ev(cb(),'change');
+ ok(pressed('m',grp)==='true','checking an item in a hidden group shows the group again');
+ // Show all / Hide all
+ q('#hideAll').click();
+ ok(qa('#list .geye').filter(e=>e.dataset.gk!=='n').every(e=>e.getAttribute('aria-pressed')==='false')&&!q('#tTendons').checked&&all('muscle').every(m=>!m.visible)&&all('bone').every(m=>!m.visible),'Hide all: every group eye off, tendons off, no muscle or bone visible');
+ ok(q('#tBones').checked&&q('#tMuscles').checked,'Hide all leaves the bones and muscles layer checkboxes alone');
+ q('#tBones').checked=false;ev(q('#tBones'),'change');
+ q('#showAll').click();
+ ok(qa('#list .geye').filter(e=>e.dataset.gk!=='n').every(e=>e.getAttribute('aria-pressed')==='true')&&q('#tTendons').checked&&q('#tBones').checked&&all('muscle').every(m=>m.visible)&&all('bone').every(m=>m.visible),'Show all: every group eye on, tendons and bones layers on, everything visible');
+ cb().checked=false;ev(cb(),'change');q('#showAll').click();
+ ok(cb().checked&&q('#unhide').disabled,'Show all also clears individually hidden entries');
+ // Nerves eye drives the Nerves layer checkbox, and the checkbox drives the eye
+ const nv='Nerves (schematic)';
+ ok(pressed('n',nv)==='false'&&!q('#tNerves').checked,'Nerves eye starts off, like the layer');
+ eye('n',nv).click();
+ ok(pressed('n',nv)==='true'&&q('#tNerves').checked,'Nerves eye switches the Nerves layer on');
+ q('#hideAll').click();ok(q('#tNerves').checked&&pressed('n',nv)==='true','Hide all leaves the Nerves layer unchanged');
+ q('#tNerves').checked=false;ev(q('#tNerves'),'change');
+ ok(pressed('n',nv)==='false','unticking the Nerves layer updates its eye');
+ eye('n',nv).click();eye('n',nv).click();
+ ok(pressed('n',nv)==='false'&&!q('#tNerves').checked,'Nerves eye switches the layer off again');
+ q('#showAll').click();
+ q('#q').value='deltoid';ev(q('#q'),'input');
+ ok(qa('#list details').every(d=>d.querySelectorAll('.geye').length===1),'searching keeps one eye per heading');
+ q('#q').value='';ev(q('#q'),'input');
 }
 // ---- variations as separate entries in the ranked lists ----
 async function variationRun(){
@@ -1353,6 +1429,7 @@ async function boardRun(){
  await sugRun();
  await migrateRun();
  await searchRun();
+ await eyeRun();
  await variationRun();
  await linkRun();
  ok(/^v\d+\.\d+ · [0-9a-f]{7}$/.test(q('#ver').textContent)&&q('#vp').contains(q('#ver')),'version display in the viewport corner: '+q('#ver').textContent);
