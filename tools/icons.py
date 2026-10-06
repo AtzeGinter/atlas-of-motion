@@ -7,8 +7,8 @@ here = os.path.dirname(os.path.abspath(__file__))
 out = os.path.join(here, '..', 'icons')
 os.makedirs(out, exist_ok=True)
 
-BG = (0x1f, 0x6f, 0x78)   # --accent (light theme)
-FG = (0xf7, 0xf9, 0xfa)   # --panel (light theme)
+BG = (0xf3, 0xee, 0xe4)   # --bg (light theme paper)
+FG = (0x8e, 0x2a, 0x1e)   # --accent (oxblood)
 ANG = 35                  # tilt of the muscle axis, degrees (counter-clockwise on screen)
 L, W = 140, 84            # half-length and half-thickness of the belly (512 units)
 TEND0, TEND1, TENDR = L - 6, L + 60, 9   # tendon capsule: from, to, radius

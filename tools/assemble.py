@@ -19,7 +19,7 @@ print('index.html written', round(len(t) / 1e6, 1), 'MB, version', version, 'bui
 # service worker: precache list = app shell; build hash covers every precached file so any change gives a new cache name
 SHELL_FILES = ['index.html', 'manifest.webmanifest', 'vendor/three.min.js', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png',
                'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png',
-               'fonts/archivo-latin.woff2', 'fonts/source-serif-4-latin-600.woff2', 'fonts/source-serif-4-latin-italic-400.woff2']
+               'fonts/archivo-latin.woff2', 'fonts/fraunces-latin.woff2', 'fonts/source-serif-4-latin-400.woff2', 'fonts/source-serif-4-latin-italic-400.woff2']
 build = hashlib.md5(''.join(f + md5(os.path.join(root, f)) for f in SHELL_FILES).encode()).hexdigest()[:10]
 geohash = hashlib.md5(''.join(sorted(L['file'] for L in meta['lod'].values())).encode()).hexdigest()[:10]
 sw = open(os.path.join(here, 'sw.template.js'), encoding='utf-8').read()

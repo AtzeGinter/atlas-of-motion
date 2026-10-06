@@ -74,6 +74,6 @@ The mesh data is redistributed under **CC BY-SA 4.0** (see `LICENSE-DATA`). If y
 **Third-party files served with the app:**
 
 - [three.js](https://threejs.org/) r128 (`vendor/three.min.js`), MIT License, © three.js authors (`vendor/LICENSE-three.txt`)
-- [Archivo](https://github.com/Omnibus-Type/Archivo) (© The Archivo Project Authors) and [Source Serif 4](https://github.com/adobe-fonts/source-serif) (© The Source Serif 4 Project Authors), SIL Open Font License 1.1 (`fonts/OFL-*.txt`, sources in `fonts/README.md`)
+- [Fraunces](https://github.com/undercasetype/Fraunces) (© The Fraunces Project Authors), [Archivo](https://github.com/Omnibus-Type/Archivo) (© The Archivo Project Authors) and [Source Serif 4](https://github.com/adobe-fonts/source-serif) (© The Source Serif 4 Project Authors), SIL Open Font License 1.1 (`fonts/OFL-*.txt`, sources in `fonts/README.md`)
 
 **Code, anatomy text and exercise data** are released under the **MIT License** (see `LICENSE`).

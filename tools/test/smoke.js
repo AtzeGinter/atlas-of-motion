@@ -61,6 +61,41 @@ const clearAll=()=>{for(let i=6;i>=0;i--){selDay(i);if(!q('#wkClear').disabled)q
 const idxCount=win=>{let n=0;win.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind&&o.userData.kind!=='nerve'&&o.geometry.index)n+=o.geometry.index.count;});return n;};
 const lodBtn=(doc,l)=>doc.querySelector('[data-lod="'+l+'"]'),lodOn=doc=>[...doc.querySelectorAll('[data-lod]')].filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.dataset.lod).join(',');
 async function waitFor(f,ms,what){const t=Date.now();while(!f()){if(Date.now()-t>(ms||30000)) return ok(false,'timed out waiting for '+what);await sleep(50);}return true;}
+// ---- atlas look: fonts, palette tokens, one source of truth for material and legend colours ----
+async function paletteRun(){
+ const css=html0.slice(html0.indexOf('<style>'),html0.indexOf('</style>'));
+ const rule=sel=>{const i=css.indexOf(sel+'{');return i<0?'':css.slice(i,css.indexOf('}',i));};
+ ok(/@font-face\{font-family:"Fraunces"[^}]*fraunces-latin\.woff2/.test(css)&&/--f-disp:"Fraunces"/.test(css)&&['.brand h1','.card h2','.ovhead h2','.loading strong'].every(s=>/var\(--f-disp\)/.test(rule(s)))&&fs.existsSync(path.join(ROOT,'fonts','fraunces-latin.woff2'))&&fs.existsSync(path.join(ROOT,'fonts','OFL-Fraunces.txt'))&&/fonts\/fraunces-latin\.woff2/.test(fs.readFileSync(path.join(ROOT,'sw.js'),'utf8')),'Fraunces: @font-face, headings use it (--f-disp), file + OFL licence shipped and precached by the service worker');
+ const ochre=(re)=>{const m=css.match(re);return m?m[1]:null;};
+ const oL=ochre(/:root\{[^}]*--ochre:(#[0-9A-Fa-f]{6})/),oD=ochre(/:root\[data-theme="dark"\]\{[^}]*--ochre:(#[0-9A-Fa-f]{6})/);
+ const x=boot({store:{},url:'https://example.test/#m=deltoid'}),xd=x.document,xq=s=>xd.querySelector(s),xqa=s=>[...xd.querySelectorAll(s)],ex=(el,t)=>el.dispatchEvent(new x.Event(t,{bubbles:true}));
+ await waitFor(()=>!xd.getElementById('loading'),60000,'palette test instance');
+ const lin=h=>new x.THREE.Color(h).convertSRGBToLinear(),same=(c,h)=>{const t=lin(h);return Math.abs(c.r-t.r)<1e-5&&Math.abs(c.g-t.g)<1e-5&&Math.abs(c.b-t.b)<1e-5;};
+ const meshes=kind=>{const a=[];x.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind===kind)a.push(o);});return a;};
+ const selMat=()=>meshes('muscle').find(m=>m.userData.key==='deltoid').material;
+ ok(!!oL&&!!oD&&oL!==oD&&same(selMat().color,oL),'selection material (deltoid) is the --ochre of the light theme ('+oL+')');
+ xd.documentElement.setAttribute('data-theme','dark');await sleep(60);
+ ok(same(selMat().color,oD)&&xd.documentElement.style.getPropertyValue('--m-sel').toLowerCase()===oD.toLowerCase(),'... and follows to the dark theme --ochre ('+oD+') when the theme changes');
+ xd.documentElement.setAttribute('data-theme','light');await sleep(60);
+ // legend swatches: the CSS classes reference the --m-* properties, which the script sets from the same PAL entries the materials are made from
+ const P=n=>xd.documentElement.style.getPropertyValue('--m-'+n);
+ ok(['l3:h3','l2:h2','l1:h1','ca2:a2','ca1:a1','ceq:eq','cb1:b1','cb2:b2','v0:v0','v1:v1','v2:v2','v3:v3','sw.fat:fat','sw.end:end'].every(r=>{const a=r.split(':');return css.includes('.'+a[0]+'{background:var(--m-'+a[1]+')')&&/^#[0-9A-Fa-f]{6}$/.test(P(a[1]));}),'every legend swatch class (.l3 .l2 .l1 .ca2 .cb2 .v0-.v3 .fat .end ...) takes its colour from the --m-* palette property');
+ xqa('[data-tab="ex"]')[0].click();
+ const it=xqa('#exlist .item').find(b=>b.textContent==='Back squat');it.click();
+ const hc=[...new Set(meshes('muscle').filter(m=>m.visible).map(m=>m.material).filter(m=>!m.transparent).map(m=>m.color.getHexString()))];
+ const heat=['h3','h2','h1'].map(n=>lin(P(n)).getHexString());
+ ok(heat.every(h=>hc.includes(h)),'exercise heat: prime / synergist / stabiliser materials have exactly the legend colours ('+heat.map(h=>'#'+h).join(' ')+')');
+ // volume: a plan, then the heatmap bands match the legend
+ x.localStorage.setItem('aom.plan.v3',JSON.stringify({days:[{name:'',items:[{n:'Back squat',sets:10,v:['']},{n:'Barbell bench press',sets:3,v:['']}]}]}));
+ const y=boot({store:{'aom.plan.v3':x.localStorage.getItem('aom.plan.v3')}}),yd=y.document;
+ await waitFor(()=>!yd.getElementById('loading'),60000,'palette volume instance');
+ yd.getElementById('tVol').checked=true;yd.getElementById('tVol').dispatchEvent(new y.Event('change',{bubbles:true}));
+ const yl=h=>new y.THREE.Color(h).convertSRGBToLinear().getHexString(),yP=n=>yd.documentElement.style.getPropertyValue('--m-'+n);
+ const vc=new Set();y.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind==='muscle'&&o.visible&&!o.material.transparent)vc.add(o.material.color.getHexString());});
+ const bands=['v0','v1','v2','v3'].map(n=>yl(yP(n)));
+ ok([...vc].filter(h=>bands.includes(h)).length>=2,'volume heatmap: trained muscles use the legend band colours ('+[...vc].filter(h=>bands.includes(h)).map(h=>'#'+h).join(' ')+')');
+ ok(/^v1\.6 · [0-9a-f]{7}$/.test(xq('#ver').textContent)&&/version 1\.6 /.test(xq('#ver').title),'version shows v1.6 ('+xq('#ver').textContent+')');
+}
 // ---- schematic nerves: data, Nerves layer, picking-independent selection flows, deep link, LOD rebuild ----
 async function nerveRun(){
  const NV=META.nv,ND=META.nd,has=(id,k)=>(NV[id]||[]).includes(k);
@@ -272,7 +307,7 @@ async function weekRun(){
  ok(cell(GCHEST,1).dataset.c==='1'&&/Recovery conflicts <b>1<\/b>/.test(q('#ovSum').innerHTML),'overview updates live while open');
  q('#ovClose').click();
  // volume heatmap: whole week / selected day
- const amberHex=new w.THREE.Color(0xcfae7a).convertSRGBToLinear();
+ const amberHex=new w.THREE.Color(d.documentElement.style.getPropertyValue('--m-fat')).convertSRGBToLinear(); // carried-over fatigue colour: the palette entry that also colours the legend swatch
  const amberOf=key=>{let n=0;w.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind==='muscle'&&(!key||o.userData.key===key)&&o.material.color&&Math.abs(o.material.color.r-amberHex.r)<1e-6&&Math.abs(o.material.color.g-amberHex.g)<1e-6)n++;});return n;};
  q('#tVol').checked=true;ev(q('#tVol'),'change');
  ok(!q('#volScope').hidden&&q('[data-vs="week"]').getAttribute('aria-pressed')==='true','volume mode shows the Whole week / Selected day toggle');
@@ -905,7 +940,7 @@ async function endRun(){
  ok(/endurance: Running/.test(q('#ovDet').textContent)&&/⚠/.test(q('#ovDet').textContent)&&/Day 4/.test(q('#ovDet').textContent),'a muscle cell lists the endurance contribution and the conflict source: '+q('#ovDet').textContent.slice(0,200));
  q('#ovClose').click();
  // 3D body: selected-day heatmap paints endurance-loaded muscles teal, strength colours win
- const tealRgb=new w.THREE.Color(0x19a7b8).convertSRGBToLinear();
+ const tealRgb=new w.THREE.Color(d.documentElement.style.getPropertyValue('--m-end')).convertSRGBToLinear();
  const tealOf=key=>{let n=0;w.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind==='muscle'&&o.userData.key===key&&o.material.color&&Math.abs(o.material.color.r-tealRgb.r)<1e-6&&Math.abs(o.material.color.g-tealRgb.g)<1e-6)n++;});return n;};
  selDay(4);q('#tVol').click();q('[data-vs="day"]').click();
  ok(tealOf('gastrocnemius')>0&&tealOf('soleus')>0&&tealOf('gluteus maximus')>0&&tealOf('biceps')===0&&/Endurance load/.test(q('#volLegend').textContent),'volume heatmap, selected day: endurance-loaded muscles (calves, glutes) are teal; legend has "Endurance load"');
@@ -1321,6 +1356,7 @@ async function boardRun(){
  await variationRun();
  await linkRun();
  ok(/^v\d+\.\d+ · [0-9a-f]{7}$/.test(q('#ver').textContent)&&q('#vp').contains(q('#ver')),'version display in the viewport corner: '+q('#ver').textContent);
+ await paletteRun();
  await camRun();
  await lodRun();
  await nerveRun();
