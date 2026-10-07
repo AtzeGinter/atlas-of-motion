@@ -1423,6 +1423,40 @@ async function boardRun(){
  q('#btnVol').click();
  ok(!q('#tVol').checked&&q('#btnVol').getAttribute('aria-pressed')==='false'&&q('#volToolScope').hidden,'clicking btnVol again turns volume off (#tVol unchecked, btnVol aria-pressed=false, scope hidden)');
  if(prevDay)q('[data-vs="day"]').click();else q('[data-vs="week"]').click();
+ // backup/export/import
+ ok(q('#exportData')&&q('#importData'),'backup buttons exist (export, import)');
+ const origKO=w.URL.createObjectURL,origRO=w.URL.revokeObjectURL,origClick=w.HTMLAnchorElement.prototype.click,origConfirm=w.confirm;let capturedBlob=null,capturedDL="",capturedFileInput=null;
+ w.URL.createObjectURL=b=>{capturedBlob=b;return 'blob:mock';}; w.URL.revokeObjectURL=()=>{}; w.HTMLAnchorElement.prototype.click=function(){capturedDL=this.download;};
+ q('#exportData').click();
+ ok(capturedBlob&&capturedDL.startsWith('atlas-of-motion-backup-')&&capturedDL.endsWith('.json'),'export: creates JSON blob with backup filename');
+ const txt=new w.TextDecoder().decode(await capturedBlob.stream().getReader().read().then(r=>r.value));const backup=JSON.parse(txt);
+ ok(backup.app==='atlas-of-motion'&&backup.format===1&&backup.data&&typeof backup.data==='object'&&backup.data['aom.plan.v3'],'export: JSON contains app/format/exported/data with aom.plan.v3');
+ // import: stub file input
+ let importVal="";capturedFileInput=q('#importFile');
+ Object.defineProperty(capturedFileInput,'files',{value:[{text:async()=>importVal}]});
+ w.confirm=()=>true;
+ q('#importData').click();
+ ok(capturedFileInput===q('#importFile'),'import: opens the file input');
+ importVal=JSON.stringify({app:"atlas-of-motion",format:1,data:{"aom.test.v1":"123"}});
+ q('#importFile').dispatchEvent(new w.Event('change',{bubbles:true}));
+ await sleep(600);
+ ok(w.localStorage.getItem('aom.test.v1')==='123','import: writes valid backup to localStorage');
+ w.localStorage.removeItem('aom.test.v1');
+ const msgEl=q('#dataMsg');msgEl.textContent="";
+ importVal=JSON.stringify({app:"wrong",format:1,data:{}});
+ q('#importFile').dispatchEvent(new w.Event('change',{bubbles:true}));
+ await sleep(100);
+ ok(msgEl.textContent.includes('Error')&&msgEl.style.color==='var(--bad)','import: shows error on invalid app field');
+ // save image
+ ok(q('#saveImg'),'save image button exists in view popover');
+ let renderCalled=false;const origRender=w.__cam;
+ w.__scene={traverse:f=>{}};w.__cam={};
+ const origToBlob=w.HTMLCanvasElement.prototype.toBlob;let savedFilename="";
+ w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new w.Blob(['fake png'],{type:'image/png'}));savedFilename=(w.capturedDL||'').slice(0,-4);};
+ q('#saveImg').click();
+ await sleep(100);
+ ok(savedFilename.startsWith('atlas-of-motion-')&&savedFilename.match(/\d{4}-\d{2}-\d{2}/),'save image: downloads PNG with datestamp');
+ w.URL.createObjectURL=origKO;w.URL.revokeObjectURL=origRO;w.HTMLAnchorElement.prototype.click=origClick;w.HTMLCanvasElement.prototype.toBlob=origToBlob;w.confirm=origConfirm;
  await weekRun();
  await endRun();
  await boardRun();
