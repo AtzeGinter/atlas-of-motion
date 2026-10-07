@@ -54,25 +54,31 @@ for w, r in acts:
             except (IndexError, ValueError): err.append(f'{w}: bad profile entry {e!r} (key[:part]:weight)'); continue
             if not 0.2 <= wt <= 1: err.append(f'{w}: weight {wt} for {k!r} outside 0.2-1')
             if k not in keys: err.append(f'{w}: key {k!r} not in muscles.txt')
-mov = []
-s = rd(P('data', 'movements.txt'))
-if '\r' in s: err.append('movements.txt: contains CR characters')
-for ln, l in enumerate(s.split('\n'), 1):
-    l = l.rstrip('\r')
-    if not l.strip(): continue
-    w = f'movements.txt:{ln}'
-    if '\t' in l: err.append(w + ': tab character')
-    r = l.split('|', 3)  # split only on first 3 pipes to preserve patterns with | in them
-    if len(r) != 4: err.append(f'{w}: {len(r)} fields, expected 4'); continue
-    for x in r:
-        if x != x.strip(): err.append(f'{w}: leading/trailing whitespace in {x.strip()[:30]!r}'); break
-    if not r[0].strip(): err.append(w + ': empty id'); continue
-    # validate regex patterns
-    patterns = [p.strip() for p in r[3].split(';')]
-    for pat in patterns:
-        try: re.compile(pat)
-        except re.error as e: err.append(f'{w}: invalid regex pattern {pat!r}: {e}')
-    mov.append((w, r))
+# movements.txt: id|label|joint|primary|secondary, entries "key" or "key:part" (comma-separated, "-" = none)
+mov, mgrp = rows('movements.txt', 5), {r[0]: r[1] for _, r in mus}
+def mvents(w, f, lab):
+    if f == '-': return []
+    out = []
+    for e in f.split(','):
+        k, _, p = e.partition(':')
+        if not k or e != e.strip(): err.append(f'{w}: bad {lab} entry {e!r}'); continue
+        if k not in keys: err.append(f'{w}: {lab} key {k!r} not in muscles.txt')
+        elif mgrp[k] == 'Connective tissue': err.append(f'{w}: {k!r} is connective tissue, not a muscle')
+        out.append((k, p))
+    return out
+over = lambda a, b: a[0] == b[0] and (not a[1] or not b[1] or a[1] == b[1])   # same key, and same part or one of them the whole muscle
+mvparts = []   # (where, key, part), checked against meta3.json below
+for w, r in mov:
+    if not re.fullmatch(r'[a-z][a-z0-9_]*', r[0]): err.append(f'{w}: bad movement id {r[0]!r}')
+    if not r[1] or not r[2]: err.append(f'{w}: empty label or joint')
+    if r[3] == '-' or not r[3]: err.append(f'{w}: needs at least one primary muscle'); continue
+    pri, sec = mvents(w, r[3], 'primary'), mvents(w, r[4], 'secondary')
+    for lab, es in (('primary', pri), ('secondary', sec)):
+        for i, a in enumerate(es):
+            if any(over(a, b) for b in es[:i]): err.append(f'{w}: duplicate {lab} entry {":".join(x for x in a if x)!r}')
+    for a in sec:
+        if any(over(a, b) for b in pri): err.append(f'{w}: {":".join(x for x in a if x)!r} is both primary and secondary')
+    mvparts += [(w, k, p) for k, p in pri + sec if p]
 nrv = rows('nerves.txt', 8)
 NKINDS, SPINE = ('motor', 'mixed', 'cranial'), {f'{c}{i}' for c, n in (('C', 7), ('T', 12), ('L', 5), ('S', 4)) for i in range(1, n + 1)}
 nrow = {r[0]: r[7] for _, r in nrv}
@@ -152,14 +158,16 @@ if os.path.exists(P('meta3.json')):
     nsup = {k for v in nv.values() for k in v}
     nomatch = sorted(k for k in db if db[k]['g'] != 'Connective tissue' and db[k]['n'] and k not in nsup)
     print(f'INFO: {len(nsup)} muscles are supplied by a drawn nerve; {len(nomatch)} have nerve text that matched no nerve' + (': ' + ', '.join(nomatch) if nomatch else ''))
-    # movements validation
+    # movements: parts exist; META.mv agrees with movements.txt
+    for w, k, p in mvparts:
+        if p not in pts.get(k, ()): err.append(f'{w}: {k!r} has no part {p!r}')
     mv = M.get('mv', [])
+    if [m['id'] for m in mv] != [r[0] for _, r in mov]: err.append('meta3.json: movement ids differ from movements.txt (run meta.py && exercises.py)')
     for m in mv:
-        if not m['k']: err.append(f"movement {m['id']!r}: no muscles matched")
-        for mk in m['k']:
+        if not m['k']: err.append(f"movement {m['id']!r}: no primary muscle")
+        for mk in m['k'] + m['s']:
             if mk not in db: err.append(f"movement {m['id']!r}: unknown muscle {mk!r}")
-    if mv:
-        print(f'INFO: {len(mv)} movements defined, covering {len(set(k for m in mv for k in m["k"]))} unique muscles')
+    if mv: print(f'INFO: {len(mv)} movements, {len(set(k for m in mv for k in m["k"] + m["s"]))} muscles named as prime mover or assistant')
 else: print('NOTE: meta3.json missing, exercise checks skipped (run meta.py && exercises.py first)')
 if err:
     print('\n'.join('LINT: ' + x for x in err)); print(f'{len(err)} problem(s)'); sys.exit(1)
