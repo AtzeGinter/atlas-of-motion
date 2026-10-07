@@ -1087,6 +1087,10 @@ const exLabel=x=>EX[x.i].n+(x.v?' ('+varText(x.i,x.v)+')':'');
 /* ---------- search: colloquial names + typo tolerance ---------- */
 // ALIAS: lower-case gym name -> [{k:muscle key, p:part or ""}] (data/aliases.txt via META.al; entries "key" or "key:part")
 const ALIAS={}; Object.keys(META.al||{}).forEach(a=>ALIAS[a]=META.al[a].map(e=>{const j=e.indexOf(":"); return j<0?{k:e,p:""}:{k:e.slice(0,j),p:e.slice(j+1)};}));
+// MOVEMENTS: movement id -> {n:label, j:joint, k:[prime mover keys], s:[assisting keys], t:[[key,part,level]] (3 prime mover, 2 assisting; part "" = whole muscle)}
+// data/movements.txt via META.mv (curated lists); kp is only present when a movement names muscle parts
+const MOVEMENTS={}; (META.mv||[]).forEach(m=>{MOVEMENTS[m.id]={n:m.n,j:m.j,k:m.k,s:m.s,t:m.kp||m.k.map(k=>[k,"",3]).concat(m.s.map(k=>[k,"",2]))};});
+const mvCount=m=>new Set(m.k.concat(m.s)).size;
 const wordsOf=s=>s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
 // edit distance with adjacent transposition (optimal string alignment), true when <= max
 function near(a,b,max){
@@ -1111,6 +1115,16 @@ function aliasHits(q,fuzzy){
   return out;
 }
 const aliasKeys=hits=>new Set(hits.map(h=>h.k));
+// search for movements by label or joint name: substring match or all query words appear
+function movementHits(q){
+  if(!q) return [];
+  const toks=q.split(/\s+/).filter(Boolean);
+  return Object.keys(MOVEMENTS).filter(id=>{
+    const m=MOVEMENTS[id];
+    const label=(m.n+" "+m.j).toLowerCase();
+    return q.length>=2&&label.indexOf(q)>=0 || (q.length>=3&&toks.every(t=>label.indexOf(t)>=0));
+  });
+}
 // do the exercise's base targets hit an alias muscle (and its part, when the alias names one)?
 const exHits=(i,hits)=>hits.length&&EX[i].t.some(r=>hits.some(h=>h.k===r[0]&&(!h.p||r[1]===h.p)));
 // filter exercise ids by a lower-case query against a haystack function: substring or alias first, typo-tolerant fallback only when nothing matches
@@ -1461,7 +1475,7 @@ function faceTowards(ms){
   s/=Math.max(1,ms.length);
   if(s<-0.008) goal.theta=nearestAngle(orbit.theta,Math.PI); else if(s>0.008) goal.theta=nearestAngle(orbit.theta,0);
 }
-function meshesOf(kind,k){return kind==="muscle"?byKey[k]:(kind==="nerve"?byNerve[k]:byBone[k]);}
+function meshesOf(kind,k){if(kind==="movement"){const ms=[]; if(MOVEMENTS[k]) meshLevels(MOVEMENTS[k].t).forEach((l,m)=>{if(l===3) ms.push(m);}); return ms;} return kind==="muscle"?byKey[k]:(kind==="nerve"?byNerve[k]:byBone[k]);}
 const TB={x:0.6,y0:0.02,y1:1.8,z:0.45}; // pan/pivot limits around the body
 function setTarget(x,y,z){goal.tx=clamp(x,-TB.x,TB.x); goal.ty=clamp(y,TB.y0,TB.y1); goal.tz=clamp(z,-TB.z,TB.z);}
 // paired structures: the side that was clicked, else the side nearer the camera (subject's left when viewed straight on)
@@ -1758,13 +1772,22 @@ function renderCard0(clicked){
     if(kids.length) h+='<h3>Branches</h3><div class="chips">'+kids.map(c=>'<button class="mchip" data-nerve="'+c+'">'+NVD[c].n+'</button>').join("")+'</div>';
     h+='<h3>Note</h3><p class="note">'+n.x+'</p>';
     h+='<p class="fine">The supplied muscles are highlighted on the body. Muscle names open the muscle; the same nerve text is shown in each muscle card.</p>';
+  } else if(sel.kind==="movement"){
+    const m=MOVEMENTS[sel.key], pr=m.t.filter(r=>r[2]===3), as=m.t.filter(r=>r[2]===2);
+    const chips=(rs,c)=>'<div class="chips">'+rs.map(r=>'<button class="mchip" data-key="'+r[0]+'"><i class="sw '+c+'"></i>'+r[0]+(r[1]?' <small>'+r[1]+'</small>':'')+'</button>').join("")+'</div>';
+    h+='<div class="top"><span class="tag">Movement · '+m.j+'</span><button class="close" aria-label="Close">×</button></div>';
+    h+='<h2>'+m.n+'</h2><div class="drule"></div>';
+    h+='<div class="legend"><span><i class="sw l3"></i>Prime mover</span>'+(as.length?'<span><i class="sw l2"></i>Synergist</span>':'')+'</div>';
+    h+='<h3>Prime movers ('+pr.length+')</h3>'+chips(pr,"l3");
+    if(as.length) h+='<h3>Assisting ('+as.length+')</h3>'+chips(as,"l2");
+    h+='<p class="fine">Curated textbook lists: the prime movers of the movement and the muscles that assist it. Muscle names open the muscle.</p>';
   } else {
     const b=BDB[sel.key];
     h+='<div class="top"><span class="tag">Plate '+plateNo("bone",sel.key)+' · Bone, '+b[0].toLowerCase()+'</span><button class="close" aria-label="Close">×</button></div>';
     h+='<h2>'+sel.key+'</h2>'+(clicked&&clicked.side?'<p class="sub">Clicked: '+sideText(clicked.side)+' side</p>':'')+'<div class="drule"></div>';
     h+='<h3>About</h3><p>'+b[1]+'</p>';
   }
-  h+='<div class="actions"><button class="btn" data-act="focus">Zoom to it</button><button class="btn" data-act="hide">'+(isHidden?'Show it':'Hide it (H)')+'</button><button class="btn" data-act="copy">Copy link</button></div>';
+  h+='<div class="actions"><button class="btn" data-act="focus">Zoom to it</button>'+(sel.kind==="movement"?"":'<button class="btn" data-act="hide">'+(isHidden?'Show it':'Hide it (H)')+'</button>')+'<button class="btn" data-act="copy">Copy link</button></div>';
   card.innerHTML=h; card.classList.add("show"); card.scrollTop=0;
 }
 card.addEventListener("click",e=>{
@@ -1787,7 +1810,7 @@ card.addEventListener("click",e=>{
   if(t.dataset.act==="hide"&&sel) toggleHide();
 });
 function toggleHide(){
-  if(!sel) return; const id=keyId(sel.kind,sel.key);
+  if(!sel||sel.kind==="movement") return; const id=keyId(sel.kind,sel.key);
   if(hidden.has(id)){hidden.delete(id); renderCard(); applyVisuals(); syncList(); syncUnhide(); return;}
   hidden.add(id); select(null); syncUnhide();
 }
@@ -1800,6 +1823,8 @@ function select(kind,k,focus,clicked){
   if(sel&&kind==="muscle"){const d=DB[k]; if(d.g===TISSUE&&!state.tendons){state.tendons=true;$("#tTendons").checked=true;} else if(d.g!==TISSUE&&!state.muscles){state.muscles=true;$("#tMuscles").checked=true;}}
   if(sel&&kind==="bone"&&!state.bones){state.bones=true;$("#tBones").checked=true;}
   if(sel&&kind==="nerve") setNerves(true);
+  if(sel&&kind==="movement"){ curMovement=k; if(!state.muscles){state.muscles=true;$("#tMuscles").checked=true;} setMode("mv"); }
+  else if(!sel&&mode==="mv"){ curMovement=null; setMode(cmp?"cmp":(selEx!==null?"ex":(volOn?"vol":null))); }  // leaving a movement restores the exercise / comparison / volume heat it replaced
   applyVisuals(); renderCard(clicked); syncList(); if(sel) revealCard();
   if(focus&&sel) focusOn(kind,k,sel.side); else if(sel) pivotOn(kind,k,sel.side); // the camera now orbits around the selection
 }
@@ -1834,6 +1859,7 @@ function goalInput(hiEdited){
   setGoal("custom",lo,hi);
 }
 $("#goalLo").onchange=()=>goalInput(false); $("#goalHi").onchange=()=>goalInput(true);
+let curMovement=null;  // currently selected movement
 function setMode(m){
   mode=m; heat=null; heatTip=null;
   if(m==="ex"){ const lv=meshLevels(effTargets(selEx,exVars[selEx])); heat=new Map(); heatTip=new Map(); lv.forEach((l,ms)=>{heat.set(ms,HM[l]); heatTip.set(ms,ROLE[l].toLowerCase());}); }
@@ -1841,6 +1867,8 @@ function setMode(m){
     new Set([...a.keys(),...b.keys()]).forEach(ms=>{const d=(W[a.get(ms)]||0)-(W[b.get(ms)]||0); let mt,tp;
       if(Math.abs(d)<0.05){mt=CM.eq;tp="similar in A and B";} else if(d>0){mt=d>=0.5?CM.a2:CM.a1;tp="more in A";} else {mt=-d>=0.5?CM.b2:CM.b1;tp="more in B";}
       heat.set(ms,mt); heatTip.set(ms,tp);}); }
+  else if(m==="mv"){ heat=new Map(); heatTip=new Map();  // movement highlighting
+    if(curMovement) meshLevels(MOVEMENTS[curMovement].t).forEach((l,ms)=>{heat.set(ms,HM[l]); heatTip.set(ms,l===3?"prime mover":"assists this movement");}); }
   else if(m==="vol"){ volCache=volumeByMesh(); heat=new Map(); heatTip=new Map();
     if(!volDay) volCache.forEach((s,ms)=>{if(s>0){heat.set(ms,VM[volBand(s)]); heatTip.set(ms,fmt(s)+" weekly sets");}});
     else { // selected day: its trained muscles in the weekly-status colours, plus muscles still recovering from the previous days
@@ -2737,6 +2765,10 @@ function buildList(){
     return '<details'+(open?' open':'')+'><summary>'+EYE(gk,g,title)+'<i class="rn" title="Group '+GROMAN[title]+'">'+GROMAN[title]+'</i><b>'+title+'</b><span>'+items.length+'</span></summary><div class="items">'+
       items.map(k=>{ const l=lab?lab(k):k; return '<div class="row"><input type="checkbox" class="vis" data-kind="'+kind+'" data-key="'+k+'" aria-label="Show '+l+'"><button class="item" data-kind="'+kind+'" data-key="'+k+'">'+l+'</button></div>'; }).join("")+'</div></details>'; };
   const nhay=id=>(NVD[id].n+" "+NVD[id].r).toLowerCase();
+  // movements section
+  let mvIds=q?movementHits(q):[];
+  const mvList=mvIds.map(id=>{const m=MOVEMENTS[id]; return '<div class="row"><button class="item" data-kind="movement" data-key="'+id+'">'+m.n+' <span style="opacity:0.7">·</span> '+mvCount(m)+' muscles</button></div>';}).join("");
+  const mvSec=mvIds.length?'<details open><summary style="font-weight:bold;color:var(--accent)">Movements</summary><div class="items">'+mvList+'</div></details>':"";
   let al=q?aliasKeys(aliasHits(q,false)):null;
   let mkeys=Object.keys(DB).filter(k=>byKey[k]&&(k.indexOf(q)>=0||(al&&al.has(k)))).sort();
   let bkeys=Object.keys(BDB).filter(k=>k.indexOf(q)>=0).sort();
@@ -2744,6 +2776,7 @@ function buildList(){
   if(q.length>=4&&!mkeys.length&&!bkeys.length&&!nkeys.length){ // typo fallback: nothing matched exactly
     const toks=q.split(/\s+/).filter(Boolean); al=aliasKeys(aliasHits(q,true));
     mkeys=Object.keys(DB).filter(k=>byKey[k]&&(al.has(k)||fuzzyHay(k,toks))).sort(); bkeys=Object.keys(BDB).filter(k=>fuzzyHay(k,toks)).sort(); nkeys=NIDS.filter(id=>fuzzyHay(nhay(id),toks)); }
+  h+=mvSec;
   MGROUPS.concat([TISSUE]).forEach(g=>{h+=sec(g,mkeys.filter(k=>DB[k].g===g),"muscle",null,g===TISSUE?"t":"m",g);});
   h+=sec("Nerves (schematic)",nkeys,"nerve",id=>NVD[id].n,"n","Nerves (schematic)");
   BGROUPS.forEach(g=>{h+=sec("Bones: "+g.toLowerCase(),bkeys.filter(k=>BDB[k][0]===g),"bone",null,"b",g);});
@@ -2758,6 +2791,7 @@ function syncList(){
     let off=hidden.has(id);
     if(kind==="muscle"){const g=DB[k].g; off=off||(g===TISSUE?!state.tendons:(!state.muscles||!state.groups.has(g)));}
     else if(kind==="nerve") off=off||!state.nerves;
+    else if(kind==="movement") off=false;
     else off=off||!state.bones||!state.bgroups.has(BDB[k][0]);
     b.classList.toggle("off",off);
   });
@@ -2863,7 +2897,7 @@ $("#saveImg").onclick=()=>{
 };
 
 /* ---------- deep links: location.hash mirrors the main view ---------- */
-// #m=<muscle>|#b=<bone>|#n=<nerve id> (selection), #ex=<exercise>[&v=<option,option,...>] (v: option name per variation group, empty = default),
+// #m=<muscle>|#b=<bone>|#n=<nerve id>|#mv=<movement id> (selection), #ex=<exercise>[&v=<option,option,...>] (v: option name per variation group, empty = default),
 // #cmp=<A>|<B> (each side name[:option,option]), #tab=ex|wk. All names are encodeURIComponent'ed; the plan is not part of the link.
 let hashReady=false, lastHash="";
 const enc=encodeURIComponent, own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k), dec=s=>{try{return decodeURIComponent(s);}catch(e){return null;}};
@@ -2872,7 +2906,7 @@ const vList=(i,v)=>trimV(varNames(i,v)).map(enc).join(",");
 const cmpSide=X=>enc(EX[X.i].n)+(vList(X.i,X.v)?":"+vList(X.i,X.v):"");
 function hashNow(){
   const p=[];
-  if(sel) p.push((sel.kind==="muscle"?"m=":(sel.kind==="nerve"?"n=":"b="))+enc(sel.key));
+  if(sel) p.push((({muscle:"m=",nerve:"n=",movement:"mv="})[sel.kind]||"b=")+enc(sel.key));
   if(cmp) p.push("cmp="+cmpSide(cmp[0])+"|"+cmpSide(cmp[1]));
   else if(selEx!==null){ p.push("ex="+enc(EX[selEx].n)); const vl=vList(selEx,exVars[selEx]); if(vl) p.push("v="+vl); }
   if(curTab!=="anat") p.push("tab="+curTab);
@@ -2904,10 +2938,11 @@ function applyHash(raw){
     const i=exI(o.ex);
     if(i>=0){ exVars[i]=varFromNames(i,own(o,"v")?decList(o.v):[]); cmpPick=false; selectEx(i); any=exTab=true; }
   }
-  const mk=own(o,"m")?dec(o.m):null, bk=own(o,"b")?dec(o.b):null, nk=own(o,"n")?dec(o.n):null;
+  const mk=own(o,"m")?dec(o.m):null, bk=own(o,"b")?dec(o.b):null, nk=own(o,"n")?dec(o.n):null, vk=own(o,"mv")?dec(o.mv):null;
   if(mk!==null&&own(byKey,mk)){ select("muscle",mk,true); any=true; }
   else if(bk!==null&&own(byBone,bk)){ select("bone",bk,true); any=true; }
   else if(nk!==null&&own(NVD,nk)){ select("nerve",nk,true); any=true; }
+  else if(vk!==null&&own(MOVEMENTS,vk)){ select("movement",vk,true); any=true; }
   if(own(o,"tab")&&(o.tab==="anat"||o.tab==="ex"||o.tab==="wk")){ openTab(o.tab); any=true; }
   else if(exTab) openTab("ex");
   return any;

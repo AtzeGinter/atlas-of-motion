@@ -69,6 +69,21 @@ def canon(n):
     n=re.sub(r'\b(left|right)\b ?','',n); n=re.sub(r' +',' ',n).strip()
     n=re.sub(r' of (hand|foot)$',r' (\1)',n); n=re.sub(r' \(\d\)$','',n)
     return n,side
+def load_movements(db):  # data/movements.txt: id|label|joint|primary|secondary ("key" or "key:part", comma-separated; "-" = none)
+    # -> [{id, n:label, j:joint, k:[primary keys], s:[secondary keys], kp?:[[key,part,level],...] (all entries, only when a part is named; level 3 primary, 2 secondary)}]
+    out=[]
+    for l in open('data/movements.txt',encoding='utf-8'):
+        l=l.rstrip('\n')
+        if not l: continue
+        id,name,joint,pri,sec=l.split('|')
+        ent=lambda f,lv:[] if f=='-' else [e.partition(':')[::2]+(lv,) for e in f.split(',')]
+        es=ent(pri,3)+ent(sec,2)
+        for k,p,lv in es: assert k in db and db[k]['g']!='Connective tissue',(id,k)
+        uniq=lambda lv:list(dict.fromkeys(k for k,p,l in es if l==lv))
+        m={'id':id,'n':name,'j':joint,'k':uniq(3),'s':uniq(2)}
+        if any(p for k,p,lv in es): m['kp']=[[k,p,lv] for k,p,lv in es]
+        out.append(m)
+    return out
 if __name__=='__main__':
     db=load_db()
     M=json.load(open('meshes.json',encoding='utf-8'))
@@ -95,6 +110,9 @@ if __name__=='__main__':
             k,_,p=e.partition(':'); assert not p or p in pts.get(k,()),(a,e)
     M['al']=al; M['act']=load_acts(db)
     M['nd'],M['nv']=load_nerves(db)
+    M['mv']=load_movements(db)
+    for m in M['mv']:
+        for k,p,lv in m.get('kp',[]): assert not p or p in pts.get(k,()),(m['id'],k,p)
     nsup={k for v in M['nv'].values() for k in v}
     print('nerves:',len(M['nd']),'; muscles supplied by a drawn nerve:',len(nsup),'; nerve text matched no nerve (info):',sorted(k for k in db if db[k]['g']!='Connective tissue' and db[k]['n'] and k not in nsup))
     for a in M['act']:

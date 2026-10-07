@@ -702,6 +702,56 @@ async function searchRun(){
  ok(addq('zzzz').length===0&&/No match/.test(q('#addres').textContent),'Add search: nonsense gives "No match"');
  q('#qa').value='';ev(q('#qa'),'input');
 }
+// ---- Movement search: curated prime movers / assisting muscles (data/movements.txt -> META.mv) ----
+async function movementRun(){
+ const MV=META.mv||[],byId=id=>MV.find(m=>m.id===id)||{k:[],s:[]},all=m=>m.k.concat(m.s),has=(m,k)=>all(m).includes(k);
+ const ent=m=>m.kp||m.k.map(k=>[k,'',3]).concat(m.s.map(k=>[k,'',2]));
+ ok(MV.length>=50,'META.mv holds '+MV.length+' curated movements');
+ const pts={};META.meshes.forEach(r=>{if(r[0]==='m'&&r[3])(pts[r[1]]=pts[r[1]]||new Set()).add(r[3]);});
+ ok(MV.every(m=>m.k.length>0&&all(m).every(k=>META.db[k]&&META.db[k].g!=='Connective tissue')&&ent(m).every(r=>!r[1]||(pts[r[0]]&&pts[r[0]].has(r[1])))),'every movement has a prime mover; all keys are muscles of the atlas and every named part exists');
+ const ef=byId('el_flex');
+ ok(['biceps brachii','brachialis'].every(k=>ef.k.includes(k))&&!has(ef,'triceps brachii'),'Elbow flexion: prime movers include biceps brachii and brachialis, triceps is not listed');
+ const ke=byId('kn_ext');
+ ok(ke.k.slice().sort().join()==='rectus femoris,vastus intermedius,vastus lateralis,vastus medialis'&&!has(ke,'popliteus'),'Knee extension: the four quadriceps heads, no popliteus ('+all(ke).join(', ')+')');
+ const ha=byId('hp_abd');
+ ok(['gluteus medius','gluteus minimus'].every(k=>ha.k.includes(k))&&has(ha,'tensor fasciae latae')&&!has(ha,'quadratus lumborum'),'Hip abduction: gluteus medius + minimus prime, tensor fasciae latae listed, no quadratus lumborum');
+ const tf=byId('toe_flex'),bad=['biceps brachii','psoas major','rectus abdominis','flexor digitorum superficialis'];
+ ok(tf.k.length>0&&!bad.some(k=>has(tf,k))&&all(tf).every(k=>['Foot','Lower leg'].includes(META.db[k].g)),'Toe flexion lists only leg and foot muscles ('+all(tf).join(', ')+')');
+ const sf=byId('sh_flex'),hasP=(m,k,p,l)=>ent(m).some(r=>r[0]===k&&r[1]===p&&(!l||r[2]===l));
+ ok(hasP(sf,'deltoid','clavicular part',3)&&hasP(sf,'pectoralis major','clavicular part',3),'Shoulder flexion: deltoid (clavicular part) and pectoralis major (clavicular part) are prime movers');
+ ok(!has(byId('sh_ext'),'biceps femoris')&&!has(byId('sh_habd'),'temporalis')&&has(byId('trk_rot'),'internal oblique')&&['adductor longus','pectineus'].every(k=>has(byId('hp_add'),k))&&!has(byId('expir'),'latissimus dorsi')&&!has(byId('th_flex'),'flexor digitorum profundus')&&!has(byId('fg_ext'),'flexor accessorius'),'regressions of the regex version are gone (shoulder extension, horizontal abduction, trunk rotation, hip adduction, expiration, thumb flexion, finger extension)');
+ const hand=MV.filter(m=>['Wrist','Fingers','Thumb'].includes(m.j)),foot=MV.filter(m=>['Ankle','Foot','Toes'].includes(m.j));
+ ok(hand.length>=10&&hand.every(m=>all(m).every(k=>META.db[k].g!=='Foot'&&!/\(foot\)/.test(k)))&&foot.length>=5&&foot.every(m=>all(m).every(k=>!['Hand','Forearm','Upper arm'].includes(META.db[k].g)&&!/\(hand\)/.test(k))),'hand movements name no foot muscles and foot movements no hand or arm muscles');
+ // UI: Index search -> movement row -> heat on the body (prime = h3, assisting = h2), card with two chip groups; Escape restores the previous heat
+ const lin=h=>new w.THREE.Color(h).convertSRGBToLinear(),Pc=n=>d.documentElement.style.getPropertyValue('--m-'+n),same=(c,h)=>{const t=lin(h);return !!c&&Math.abs(c.r-t.r)<1e-5&&Math.abs(c.g-t.g)<1e-5&&Math.abs(c.b-t.b)<1e-5;};
+ const km=k=>{const a=[];w.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind==='muscle'&&o.userData.key===k)a.push(o);});return a;};
+ const isH=(k,l)=>{const ms=km(k);return ms.length>0&&ms.every(m=>same(m.material.color,Pc(l)));};
+ const esc=()=>d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ if(q('#tVol').checked){q('#tVol').checked=false;ev(q('#tVol'),'change');}
+ esc();esc();esc();
+ q('[data-tab="ex"]').click();exItem('Back squat').click();
+ ok(isH('vastus lateralis','h3'),'(setup) Back squat heat is on');
+ q('[data-tab="anat"]').click();q('#q').value='elbow flex';ev(q('#q'),'input');
+ const row=q('#list [data-kind="movement"][data-key="el_flex"]');
+ ok(row&&/Elbow flexion/.test(row.textContent)&&/\d+ muscles/.test(row.textContent),'Index: "elbow flex" shows the movement row ('+(row&&row.textContent)+')');
+ if(row) row.click();
+ ok(isH('biceps brachii','h3')&&isH('brachialis','h3'),'clicking it paints biceps brachii and brachialis with the prime-mover material');
+ ok(isH('brachioradialis','h3')||isH('brachioradialis','h2'),'brachioradialis is prime mover or synergist');
+ ok(isH('pronator teres','h2')&&!isH('triceps brachii','h3')&&!isH('triceps brachii','h2')&&!isH('vastus lateralis','h3'),'assisting muscles get the synergist material; triceps and the squat muscles are not lit');
+ ok(q('#card h2')&&q('#card h2').textContent==='Elbow flexion'&&roleKeys('Prime movers ('+ef.k.length+')').join()===ef.k.join()&&roleKeys('Assisting ('+ef.s.length+')').join()===ef.s.join()&&q('#card .mchip i.sw.l3')&&q('#card .mchip i.sw.l2'),'card: "Prime movers" and "Assisting" chip groups with the legend swatches');
+ ok(/^#mv=el_flex(&|$)/.test(w.location.hash)&&!q('#card [data-act="hide"]'),'deep link #mv=el_flex (the exercise stays in the hash); no Hide button on a movement card ('+w.location.hash+')');
+ esc();
+ ok(!q('#card h2')||q('#card h2').textContent!=='Elbow flexion','Escape closes the movement card');
+ ok(!isH('biceps brachii','h3')&&isH('vastus lateralis','h3'),'... and restores the exercise heat it replaced');
+ q('[data-tab="ex"]').click();esc();q('[data-tab="anat"]').click();
+ ok(!isH('vastus lateralis','h3')&&!isH('biceps brachii','h3'),'with nothing selected no muscle carries heat');
+ // shoulder flexion is part-aware: clavicular deltoid lit, spinal deltoid not
+ w.location.hash='#mv=sh_flex';
+ await waitFor(()=>q('#card h2')&&q('#card h2').textContent==='Shoulder flexion',5000,'#mv=sh_flex');
+ const dp=p=>km('deltoid').filter(m=>m.userData.part===p);
+ ok(dp('clavicular part').length>0&&dp('clavicular part').every(m=>same(m.material.color,Pc('h3')))&&dp('spinal part').every(m=>!same(m.material.color,Pc('h3'))&&!same(m.material.color,Pc('h2'))),'hashchange #mv=sh_flex: only the clavicular part of the deltoid is lit (part-aware)');
+ esc();q('#q').value='';ev(q('#q'),'input');
+}
 // ---- Index group headings: eye toggles replace the old Regions chip panel ----
 async function eyeRun(){
  q('[data-tab="anat"]').click();q('#q').value='';ev(q('#q'),'input');
@@ -1595,6 +1645,7 @@ async function boardRun(){
  await sugRun();
  await migrateRun();
  await searchRun();
+ await movementRun();
  await eyeRun();
  await variationRun();
  await linkRun();
