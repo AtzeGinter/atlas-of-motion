@@ -656,7 +656,9 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
 
     <div class="pane" id="paneWk" hidden>
     <div class="sec">
-      <div class="chip-row"><h2>Your training week</h2></div>
+      <div class="chip-row"><h2>Your training week</h2><span class="sp"></span><button class="linkbtn" id="exportData" type="button">Export data</button><button class="linkbtn" id="importData" type="button">Import data</button></div>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+      <p class="fine" id="dataMsg" role="status" style="margin:0 0 4px!important"></p>
       <button class="btn prim" id="ovOpen" type="button" aria-haspopup="dialog"><span>Week overview</span><small id="ovBadge"></small></button>
       <div class="wstrip" id="wstrip" role="group" aria-label="Training days"></div>
       <div class="dayhead"><span id="dayLbl"></span><span class="sp"></span><select class="search" id="dayCopy" aria-label="Copy this day to…"></select><button class="linkbtn" id="wkClear" type="button">Clear day</button></div>
@@ -734,6 +736,7 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
           <div class="seg" role="group" aria-label="Camera view">
             <button data-view="front">Front</button><button data-view="back">Back</button><button data-view="left">Left</button><button data-view="right">Right</button><button data-view="reset">Reset</button>
           </div>
+          <button class="btn" id="saveImg" type="button" style="width:100%;margin-top:8px">Save image</button>
         </div>
       </div>
       <div class="tb-group">
@@ -2491,6 +2494,48 @@ document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){ if(cmpPick){cmpPick=false;syncBanner();if(view==="ex")renderCard();} else if(sel) select(null); else if(cmp||selEx!==null) clearEx(); }
   if((e.key==="h"||e.key==="H")&&sel) toggleHide();
 });
+
+/* ---------- backup/export/import: save and restore app data as JSON ---------- */
+function getAomKeys(){const keys=[];try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith("aom.")) keys.push(k);}}catch(e){}return keys;}
+function exportData(){
+  const keys=getAomKeys();const data={};keys.forEach(k=>{try{data[k]=localStorage.getItem(k);}catch(e){}});
+  const iso=new Date().toISOString().split('T')[0];
+  const backup={app:"atlas-of-motion",format:1,exported:iso,data:data};
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.download="atlas-of-motion-backup-"+iso+".json";a.href=url;a.click();URL.revokeObjectURL(url);
+  $("#dataMsg").textContent="";$("#dataMsg").style.color="";
+}
+function importData(){$("#importFile").click();}
+$("#importFile").onchange=async function(e){
+  const file=e.target.files&&e.target.files[0]; e.target.value=""; if(!file) return;
+  const msg=$("#dataMsg");
+  try{
+    const backup=JSON.parse(await file.text());
+    if(!backup||backup.app!=="atlas-of-motion") throw new Error("this is not an Atlas of Motion backup.");
+    if(!backup.data||typeof backup.data!=="object") throw new Error("the backup has no data.");
+    for(const [k,v] of Object.entries(backup.data)){ if(!k.startsWith("aom.")||typeof v!=="string") throw new Error("unexpected entry \""+k+"\"."); }
+    if(typeof confirm==="function"&&!confirm("Replace your current plan and settings with this backup?")) return;
+    for(const [k,v] of Object.entries(backup.data)){ try{localStorage.setItem(k,v);}catch(_){} }
+    msg.textContent="Backup imported. Reloading…"; msg.style.color="var(--ok)";
+    setTimeout(()=>location.reload(),500);
+  }catch(err){ msg.textContent="Couldn't import: "+(err instanceof SyntaxError?"the file is not valid JSON.":err.message); msg.style.color="var(--bad)"; }
+};
+$("#exportData").onclick=exportData;$("#importData").onclick=importData;
+$("#saveImg").onclick=()=>{
+  if(typeof renderer!=="undefined"){
+    renderer.render(scene,camera);
+    const canvas=renderer.domElement;if(canvas.toBlob){
+      canvas.toBlob(blob=>{
+        const iso=new Date().toISOString().replace(/[:.]/g,'-').slice(0,16);
+        const url=URL.createObjectURL(blob);const a=document.createElement("a");a.download="atlas-of-motion-"+iso+".png";a.href=url;a.click();URL.revokeObjectURL(url);
+        closePops();
+      },"image/png");
+    } else if(canvas.toDataURL){
+      const url=canvas.toDataURL("image/png");const a=document.createElement("a");a.download="atlas-of-motion-"+new Date().toISOString().replace(/[:.]/g,'-').slice(0,16)+".png";a.href=url;a.click();
+      closePops();
+    }
+  }
+};
 
 /* ---------- deep links: location.hash mirrors the main view ---------- */
 // #m=<muscle>|#b=<bone>|#n=<nerve id> (selection), #ex=<exercise>[&v=<option,option,...>] (v: option name per variation group, empty = default),

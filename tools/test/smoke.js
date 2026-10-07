@@ -17,7 +17,7 @@ const OLD_EQ=['Barbell','Dumbbells','Kettlebell','Cable','Machine','Bodyweight',
 function boot(opts){
  opts=opts||{};
  const vc=new VirtualConsole();
- vc.on('error',(...a)=>errs.push('console.error: '+a.join(' ')));vc.on('jsdomError',e=>errs.push('jsdomError: '+(e.stack||e.message)));
+ vc.on('error',(...a)=>errs.push('console.error: '+a.join(' ')));vc.on('jsdomError',e=>{const m=e.stack||e.message||'';if(/Not implemented: navigation/.test(m)) return;errs.push('jsdomError: '+m);});
  const dom=new JSDOM(html0,{runScripts:'outside-only',pretendToBeVisual:true,url:opts.url||'https://example.test/',virtualConsole:vc});const w=dom.window;const THREE=require('three');
  w.addEventListener('error',e=>errs.push('uncaught: '+(e.message||e.error)));
  class FR{constructor(){this.domElement=w.document.createElement('canvas');}setPixelRatio(r){w.__dpr=r;}setClearColor(){}setSize(){}render(s,c){w.__scene=s;w.__cam=c;}}
@@ -1423,6 +1423,34 @@ async function boardRun(){
  q('#btnVol').click();
  ok(!q('#tVol').checked&&q('#btnVol').getAttribute('aria-pressed')==='false'&&q('#volToolScope').hidden,'clicking btnVol again turns volume off (#tVol unchecked, btnVol aria-pressed=false, scope hidden)');
  if(prevDay)q('[data-vs="day"]').click();else q('[data-vs="week"]').click();
+ // backup/export/import
+ ok(q('#exportData')&&q('#importData')&&q('#importFile'),'backup buttons exist (export, import)');
+ const oKO=w.URL.createObjectURL,oRO=w.URL.revokeObjectURL,oClick=w.HTMLAnchorElement.prototype.click,oConfirm=w.confirm,oTB=w.HTMLCanvasElement.prototype.toBlob;
+ let blob=null,dl='';
+ w.URL.createObjectURL=b=>{blob=b;return 'blob:mock';};w.URL.revokeObjectURL=()=>{};w.HTMLAnchorElement.prototype.click=function(){dl=this.download;};
+ q('#exportData').click();
+ ok(blob&&/^atlas-of-motion-backup-\d{4}-\d{2}-\d{2}\.json$/.test(dl),'export: downloads a JSON backup ('+dl+')');
+ const bk=JSON.parse(await blob.text());
+ ok(bk.app==='atlas-of-motion'&&bk.format===1&&bk.data&&typeof bk.data['aom.plan.v3']==='string','export: JSON has app, format and the stored plan (aom.plan.v3)');
+ const fin=q('#importFile');let fileTxt='';Object.defineProperty(fin,'files',{configurable:true,get:()=>[{text:async()=>fileTxt}]});
+ const imp=async t=>{fileTxt=t;fin.dispatchEvent(new w.Event('change',{bubbles:true}));await sleep(50);};
+ w.confirm=()=>false; await imp(JSON.stringify({app:'atlas-of-motion',format:1,data:{'aom.test.v1':'123'}}));
+ ok(w.localStorage.getItem('aom.test.v1')===null,'import: cancelling the confirm changes nothing');
+ await imp(JSON.stringify({app:'wrong',format:1,data:{}}));
+ ok(/Couldn't import/.test(q('#dataMsg').textContent),'import: a file from another app is rejected with a message');
+ await imp('{not json');
+ ok(/not valid JSON/.test(q('#dataMsg').textContent),'import: invalid JSON is rejected with a message');
+ await imp(JSON.stringify({app:'atlas-of-motion',format:1,data:{'other.key':'1'}}));
+ ok(/unexpected entry/.test(q('#dataMsg').textContent)&&w.localStorage.getItem('other.key')===null,'import: keys outside aom.* are refused');
+ w.confirm=()=>true; await imp(JSON.stringify({app:'atlas-of-motion',format:1,data:{'aom.test.v1':'123'}}));
+ ok(w.localStorage.getItem('aom.test.v1')==='123'&&/Reloading/.test(q('#dataMsg').textContent),'import: a valid backup is written to localStorage after confirming');
+ w.localStorage.removeItem('aom.test.v1');await sleep(600); // let the (jsdom no-op) reload timer pass
+ // save image
+ dl='';w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new w.Blob(['png'],{type:'image/png'}));};
+ ok(q('#saveImg'),'save image button exists');
+ q('#saveImg').click();
+ ok(/^atlas-of-motion-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}\.png$/.test(dl),'save image: downloads a PNG with a timestamp ('+dl+')');
+ w.URL.createObjectURL=oKO;w.URL.revokeObjectURL=oRO;w.HTMLAnchorElement.prototype.click=oClick;w.confirm=oConfirm;w.HTMLCanvasElement.prototype.toBlob=oTB;delete fin.files;q('#dataMsg').textContent='';
  await weekRun();
  await endRun();
  await boardRun();
