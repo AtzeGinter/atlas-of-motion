@@ -516,6 +516,97 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
 .eb.sel{outline:2px solid var(--ochre);outline-offset:-4px;}
 .cb .ef{position:absolute;left:3px;right:3px;bottom:2px;height:calc(2px + 6px*var(--n,0));border-radius:1px;background:var(--slate-teal);pointer-events:none;}
 .lg.e{height:5px;align-self:center;background:var(--slate-teal);}
+/* training log: Today view (#td), progress marks on day cards and board headers, history */
+.trainbtn{margin:2px 0 8px;}
+.pl.pd{position:relative;background:var(--pe-bg);color:var(--pe-fg);}
+.pl.pd u{position:absolute;left:0;bottom:0;height:2px;background:var(--ok);display:block;}
+.bh3{display:flex;align-items:center;gap:6px;margin-top:3px;min-height:20px;}
+.btrain{font:600 11.5px var(--f-ui);border:1px solid var(--line);background:none;border-radius:2px;padding:2px 7px;cursor:pointer;color:var(--accent);}
+.btrain:hover{border-color:var(--accent);}
+.bpd{font:600 11.5px var(--f-ui);color:var(--pe-fg);white-space:nowrap;}
+.histl{display:flex;flex-direction:column;margin-top:6px;}
+.hrow{display:flex;flex-direction:column;align-items:flex-start;gap:1px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:6px 2px;cursor:pointer;min-height:44px;justify-content:center;}
+.hrow:hover b{color:var(--accent);}
+.hrow b{font:600 14px var(--f-disp);}
+.hrow small{font:italic 400 13px var(--f-read);color:var(--muted);}
+.hrow small .fin{font-style:normal;font-weight:600;color:var(--pe-fg);}
+.ov.td{z-index:45;}
+.tdw{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;width:100%;max-width:780px;margin:0 auto;}
+.tdh{display:flex;flex-direction:column;min-width:0;gap:2px;}
+.tdd{font:600 13px var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.12em;color:var(--accent);}
+.tdh h2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tdsum{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 18px;align-items:center;padding:10px 14px;background:var(--card);border:1px solid var(--line);border-radius:3px;}
+.tdring{position:relative;width:84px;height:84px;grid-row:1/4;}
+.tdring svg{display:block;width:100%;height:100%;transform:rotate(-90deg);}
+.tdring circle{fill:none;stroke-width:4;}
+.tdring .bg{stroke:var(--line);}
+.tdring .fg{stroke:var(--sage);transition:stroke-dasharray .25s;}
+.tdring b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:600 24px var(--f-disp);}
+.tdring b small{font:500 12px var(--f-disp);margin-left:1px;}
+.tdprog{font:400 15px var(--f-read);color:var(--muted);}
+.tdprog b{font:600 26px var(--f-disp);color:var(--ink);}
+.tdleft,.tdstate{margin:0;font:italic 400 14.5px/1.35 var(--f-read);color:var(--muted);}
+.tdleft b{font-style:normal;color:var(--ink);font-weight:600;}
+.tdstate.fin{color:var(--pe-fg);}
+.tdbody{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:10px;overscroll-behavior:contain;padding-bottom:6px;}
+.tx{flex:none;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:3px;padding:8px 10px 6px;}
+.tx.e{border-left-color:var(--slate-teal);}
+.tx.done{border-left-color:var(--sage);}
+.tx>header{display:flex;align-items:center;gap:8px;}
+.tn{flex:1;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:1px;}
+.tn b{font:600 16px/1.2 var(--f-disp);}
+.tn small{font:italic 400 13px var(--f-read);color:var(--muted);}
+.tn .pl{display:inline-block;font-size:11px;padding:1px 5px;border-radius:2px;margin-bottom:2px;}
+.tcnt{font:600 15px var(--f-disp);color:var(--muted);}
+.tx.done .tcnt{color:var(--pe-fg);}
+.tsk{padding:0 0 0 6px;white-space:nowrap;}
+.tcols,.tset{display:grid;grid-template-columns:30px 44px minmax(0,1fr) minmax(0,1fr) 44px;gap:6px;align-items:center;}
+.tcols{margin-top:4px;font:600 11px var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.1em;color:var(--muted);}
+.tcols span:first-child{text-align:center;}
+.tset{border-top:1px solid var(--line);padding:2px 0;}
+.tsn{font:600 15px var(--f-disp);color:var(--muted);text-align:center;}
+.tset.done .tsn{color:var(--pe-fg);}
+.tset input.num{width:100%;min-width:0;margin:0;}
+.tset.done input.num{border-color:var(--sage);}
+.tck{position:relative;display:inline-flex;align-items:center;justify-content:center;width:44px;height:40px;cursor:pointer;}
+.tck input{appearance:none;-webkit-appearance:none;width:24px;height:24px;margin:0;border:2px solid var(--muted);border-radius:3px;background:var(--bg);cursor:pointer;}
+.tck input:checked{background:var(--sage);border-color:var(--sage);}
+.tck i{position:absolute;left:50%;top:50%;width:6px;height:11px;margin:-7px 0 0 -3px;border:solid var(--onacc);border-width:0 2px 2px 0;transform:rotate(45deg);opacity:0;pointer-events:none;}
+.tck input:checked+i{opacity:1;}
+.tset .x{width:44px;height:36px;justify-self:center;}
+.tadd{padding:6px 0;}
+.tses{display:flex;flex-wrap:wrap;align-items:center;gap:2px 12px;margin-top:2px;}
+.tses .lb{display:inline-flex;align-items:center;gap:6px;font:500 12.5px var(--f-ui);color:var(--muted);}
+.tses .lb.dn{color:var(--ink);}
+.tses input.num{width:76px;}
+.tzone{display:block;min-height:1.2em;font:italic 400 13px var(--f-read);color:var(--muted);margin:0 0 4px 44px;}
+.tx.skip .tn b{text-decoration:line-through;}
+.tx.skip .tn,.tx.skip .tcnt{opacity:.6;}
+.tx.skip .tcols,.tx.skip .tset,.tx.skip .tadd,.tx.skip .tses,.tx.skip .tzone{display:none;}
+.tdfoot{display:flex;align-items:center;gap:10px;padding-top:8px;border-top:3px double var(--line);}
+.tdfoot .sp{flex:1;}
+.tdfoot .linkbtn{padding:0;white-space:nowrap;}
+.tdmsg{font:italic 400 13px var(--f-read);color:var(--muted);min-width:0;}
+.tdmsg:empty{display:none;}
+.tdfin{width:auto;padding:10px 22px;}
+.tdempty{margin:6px 0;font:italic 400 15px var(--f-read);color:var(--muted);}
+@media (max-width:760px){
+  .tdsum{padding:8px 10px;gap:2px 12px;}
+  .tdring{width:68px;height:68px;}
+  .tdring b{font-size:20px;}
+  .tdprog b{font-size:22px;}
+  .tdfoot{padding-top:6px;}
+  .tdfoot{flex-wrap:wrap;}
+  .tdmsg{flex:1 0 100%;order:9;}
+  .tx{padding:8px 8px 4px;}
+  .tcols,.tset{grid-template-columns:24px 44px minmax(0,1fr) minmax(0,1fr) 40px;gap:4px;}
+  .tset .x{width:40px;}
+}
+@media (pointer:coarse){
+  .btrain{min-height:36px;padding:2px 10px;}
+  .tdfin,.tadd{min-height:44px;}
+  .tck{height:44px;}
+}
 @media (max-width:760px){
   :root{padding:0;--vh:100vh;--half:50vh;}
   @supports (height:100dvh){:root{--vh:100dvh;--half:50dvh;}}
@@ -660,6 +751,7 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
       <button class="btn prim" id="ovOpen" type="button" aria-haspopup="dialog"><span>Week overview</span><small id="ovBadge"></small></button>
       <div class="wstrip" id="wstrip" role="group" aria-label="Training days"></div>
       <div class="dayhead"><span id="dayLbl"></span><span class="sp"></span><select class="search" id="dayCopy" aria-label="Copy this day to…"></select><button class="linkbtn" id="wkClear" type="button">Clear day</button></div>
+      <button class="btn prim trainbtn" id="trainBtn" type="button" aria-haspopup="dialog"><span id="trainLbl">Start training</span><small id="trainSub"></small></button>
       <p class="fine" id="dayMsg" role="status" style="margin:0 0 4px!important"></p>
       <div id="plan"></div>
       <div id="ses"></div>
@@ -673,6 +765,13 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
         <p class="fine" id="endHint" style="margin:0!important;align-self:center"></p>
         <div class="ea"><button class="linkbtn" id="endCancel" type="button">Cancel</button><button class="btn" id="endAdd" type="button">Add</button></div>
       </div>
+    </div>
+    <div class="sec" id="histSec">
+      <details class="hrset" id="histSet">
+        <summary><span>History</span><small id="histSum"></small></summary>
+        <div class="histl" id="hist"></div>
+        <p class="fine" id="histNote" style="margin-top:6px!important"></p>
+      </details>
     </div>
     <div class="sec" id="balSec">
       <h2>Week balance</h2>
@@ -760,6 +859,14 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
       <div class="ovscroll"><div class="ovbal" id="ovBal"></div><table class="ovg" id="ovGrid"></table><p class="fine ovnote">Fatigue is a rough estimate, not physiology: a group carries over 60%, 25% and 10% of the effective sets of the 1, 2 and 3 previous days (halved for small muscle groups; Day 7 wraps to Day 1). Under 1.5 counts as fresh, up to 4 as recovering, above as fatigued. ⚠ marks a group trained again while it is still recovering.</p></div>
       </div>
       <div class="sronly" id="ovLive" role="status" aria-live="polite"></div>
+    </section>
+    <section class="ov td" id="td" role="dialog" aria-label="Training log" hidden>
+      <div class="tdw">
+        <div class="ovhead"><div class="tdh"><small class="tdd" id="tdDate"></small><h2 id="tdTitle"></h2></div><button class="btn" id="tdClose" type="button">Show body</button></div>
+        <div class="tdsum" id="tdSum"></div>
+        <div class="tdbody" id="tdBody"></div>
+        <div class="tdfoot"><button class="linkbtn" id="tdSync" type="button">Sync with plan</button><span class="tdmsg" id="tdMsg" role="status"></span><span class="sp"></span><button class="btn prim tdfin" id="tdFinish" type="button">Finish day</button></div>
+      </div>
     </section>
   </main>
 </div>
@@ -1091,6 +1198,81 @@ function loadWeek(){
 }
 let week=loadWeek(), day=0, plan=[];
 const syncPlan=()=>{ plan=[].concat(...week.map(d=>d.items)); }; syncPlan();
+/* ---------- training log (aom.log.v1): what was actually done on a date, independent of later plan edits ----------
+   {"YYYY-MM-DD":{d:planDayIndex, name, startedAt, finishedAt?, ex:[{n, v:[option names], o, skip?, sets:[{r?, w?, done}]}], ses:[{a, k, min, o, done, act?, hr?, skip?}]}}
+   One entry per date; o = position in the day's schedule so the Today view keeps the plan order. Read through logs() (parsed and cleaned, cached per stored string). */
+const LOG_KEY="aom.log.v1", LOGMAX=400;
+const pad2=n=>(n<10?"0":"")+n, dkey=dt=>dt.getFullYear()+"-"+pad2(dt.getMonth()+1)+"-"+pad2(dt.getDate()), todayKey=()=>dkey(new Date());
+const keyDate=k=>{ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(k); return m?new Date(+m[1],+m[2]-1,+m[3]):null; };
+const fmtDate=(k,short)=>{ const dt=keyDate(k); return dt?dt.toLocaleDateString(undefined,short?{weekday:"short",day:"numeric",month:"short"}:{weekday:"long",day:"numeric",month:"long"}):k; };
+const nN=(x,lo,hi)=>{ if(x===""||x===null||x===undefined) return undefined; x=+x; return isFinite(x)&&x>=lo&&x<=hi?Math.round(x*100)/100:undefined; };
+function cleanLog(o){
+  const out={}; if(!o||typeof o!=="object") return out;
+  Object.keys(o).forEach(k=>{
+    const e=o[k]; if(!keyDate(k)||!e||typeof e!=="object") return;
+    const d=nI(e.d,0,ND-1,0), L={d:d,name:cleanName(e.name,d),startedAt:+e.startedAt>0?+e.startedAt:0,ex:[],ses:[]};
+    if(+e.finishedAt>0) L.finishedAt=+e.finishedAt;
+    (Array.isArray(e.ex)?e.ex:[]).forEach((x,ix)=>{
+      if(!x||typeof x.n!=="string"||!x.n) return;
+      const r={n:x.n.slice(0,80),v:(Array.isArray(x.v)?x.v:[]).map(t=>typeof t==="string"?t.slice(0,40):""),o:isFinite(+x.o)&&x.o!==null?+x.o:ix,
+        sets:(Array.isArray(x.sets)?x.sets:[]).slice(0,40).map(t=>{ t=t||{}; const c={done:!!t.done}, a=nN(t.r,0,999), b=nN(t.w,0,999); if(a!==undefined) c.r=a; if(b!==undefined) c.w=b; return c; })};
+      if(x.skip) r.skip=true; L.ex.push(r);
+    });
+    (Array.isArray(e.ses)?e.ses:[]).forEach((x,ix)=>{
+      if(!x||ACTI[x.a]===undefined) return;
+      const A=ACT[ACTI[x.a]], r={a:x.a,k:KL[x.k]?x.k:A.d[0],min:nI(x.min,1,600,A.d[1]),o:isFinite(+x.o)&&x.o!==null?+x.o:1000+ix,done:!!x.done}, a=nI(x.act,1,900,0), h=nI(x.hr,30,230,0);
+      if(a) r.act=a; if(h) r.hr=h; if(x.skip) r.skip=true; L.ses.push(r);
+    });
+    out[k]=L;
+  });
+  return out;
+}
+let lgRaw=null, lgObj={};
+function logs(){
+  let raw=null; try{ raw=localStorage.getItem(LOG_KEY); }catch(e){}
+  if(raw!==lgRaw){ lgRaw=raw; let o=null; try{ o=raw?JSON.parse(raw):null; }catch(e){} lgObj=cleanLog(o); }
+  return lgObj;
+}
+function saveLogs(){
+  const ks=Object.keys(lgObj).sort(); while(ks.length>LOGMAX) delete lgObj[ks.shift()];
+  try{ lgRaw=JSON.stringify(lgObj); localStorage.setItem(LOG_KEY,lgRaw); }catch(e){ lgRaw=null; }
+}
+// values of the same exercise and variation from the most recent earlier log that has any
+function lastSets(n,vn,before){
+  const L=logs(), vk=vn.join("|"), ks=Object.keys(L).filter(k=>k<before).sort().reverse();
+  for(const k of ks){ const x=L[k].ex.find(y=>y.n===n&&y.v.join("|")===vk&&y.sets.some(t=>t.r!==undefined||t.w!==undefined)); if(x) return x.sets; }
+  return [];
+}
+function logEntry(e,o,key){ // a planned entry of the schedule as a log entry (strength sets prefilled from the last log of the same exercise and variation)
+  if(e.t==="e") return {t:"e",x:{a:e.x.a,k:e.x.k,min:e.x.min,o:o,done:false}};
+  const vn=varNames(EXI[e.x.n],e.x.v), pv=lastSets(e.x.n,vn,key);
+  return {t:"s",x:{n:e.x.n,v:vn,o:o,sets:Array.from({length:e.x.sets},(_,k)=>{ const t={done:false}, p=pv.length?pv[Math.min(k,pv.length-1)]:null; if(p){ if(p.r!==undefined) t.r=p.r; if(p.w!==undefined) t.w=p.w; } return t; })}};
+}
+function newLog(d,key){
+  const L={d:d,name:dayName(d),startedAt:Date.now(),ex:[],ses:[]};
+  entriesOf(week[d]).forEach((e,o)=>{ const g=logEntry(e,o,key); (g.t==="e"?L.ses:L.ex).push(g.x); });
+  return L;
+}
+const sesUnits=m=>Math.max(1,Math.ceil(m/15)); // an endurance session counts like one set per 15 minutes in the progress percentage
+function logStats(L){
+  const s={sets:0,done:0,exLeft:0,min:0,minDone:0,left:[],units:0,uDone:0};
+  L.ex.forEach(x=>{ if(x.skip) return; const dn=x.sets.filter(t=>t.done).length; s.sets+=x.sets.length; s.done+=dn; s.units+=x.sets.length; s.uDone+=dn; if(dn<x.sets.length) s.exLeft++; });
+  L.ses.forEach(x=>{ if(x.skip) return; const u=sesUnits(x.min); s.min+=x.min; s.units+=u; if(x.done){ s.minDone+=x.act||x.min; s.uDone+=u; } else s.left.push(x); });
+  s.setsLeft=s.sets-s.done; s.pct=s.units?Math.round(s.uDone/s.units*100):0; s.complete=s.units>0&&s.uDone>=s.units;
+  return s;
+}
+function leftText(st){
+  const p=[]; if(st.exLeft) p.push(st.exLeft+" exercise"+(st.exLeft===1?"":"s")); if(st.setsLeft) p.push(st.setsLeft+" set"+(st.setsLeft===1?"":"s"));
+  st.left.forEach(x=>p.push(actOf(x).s+" "+x.min+"′"));
+  return p.join(", ");
+}
+function recentByDay(){ // plan day index -> latest log of the last 7 days (today included)
+  const L=logs(), r={}, n=new Date();
+  for(let i=0;i<7;i++){ const k=dkey(new Date(n.getFullYear(),n.getMonth(),n.getDate()-i)), x=L[k]; if(x&&!r[x.d]) r[x.d]={k:k,L:x,st:logStats(x)}; }
+  return r;
+}
+const markTxt=(L,st)=>(L.finishedAt||st.complete?"✓ ":"")+(st.sets?st.done+"/"+st.sets:st.minDone+"/"+st.min+"′");
+const markTip=(k,L,st)=>"Logged "+fmtDate(k,true)+": "+[st.sets?st.done+" of "+st.sets+" sets":"",st.min?st.minDone+" of "+st.min+" min":""].filter(Boolean).join(", ")+(L.finishedAt?", finished":", in progress");
 let selEx=null, exVars={}, cmp=null, cmpPick=false, volOn=false, view="sel", mode=null, heat=null, heatTip=null;
 
 /* ---------- state ---------- */
@@ -1802,11 +1984,11 @@ function selectDay(i){
 }
 const abbr=i=>{const n=dayName(i); if(n===dname0(i)) return "D"+(i+1); const w=n.split(" ").filter(Boolean); return w.length>1?w.map(x=>x[0]).join("").slice(0,3).toUpperCase():n.slice(0,4);};
 function renderStrip(M){
-  const st=$("#wstrip"), sl=st.scrollLeft;
+  const st=$("#wstrip"), sl=st.scrollLeft, RL=recentByDay();
   st.innerHTML=week.map((d,i)=>{const s=daySets(i), n=d.items.length, nc=M.C[i].filter(Boolean).length, busy=dayBusy(i),
       tt=d.name+": "+(busy?[s?n+" exercise"+(n===1?"":"s")+", "+s+" sets":"",d.ses.map(sesTip).join("; ")].filter(Boolean).join(" · "):"rest day")+(nc?", recovery conflict":"");
     return '<button class="dbtn'+(i===day?' sel':'')+(busy?'':' rest')+(nc?' warn':'')+'" data-day="'+i+'" aria-pressed="'+(i===day)+'" title="'+esc(tt)+'" aria-label="'+esc(tt)+'"><b>'+esc(dayName(i))+'</b>'+
-      (s?'<span class="pl ps">'+s+' sets</span>':'')+d.ses.slice(0,3).map(x=>'<span class="pl '+pillCls(x)+'">'+esc(pillOf(x))+'</span>').join("")+(d.ses.length>3?'<span class="pl pm">+'+(d.ses.length-3)+' more</span>':'')+(busy?'':'<span class="pl pm">rest</span>')+
+      (s?'<span class="pl ps">'+s+' sets</span>':'')+d.ses.slice(0,3).map(x=>'<span class="pl '+pillCls(x)+'">'+esc(pillOf(x))+'</span>').join("")+(d.ses.length>3?'<span class="pl pm">+'+(d.ses.length-3)+' more</span>':'')+(RL[i]&&RL[i].st.units?'<span class="pl pd" data-log="'+RL[i].k+'" title="'+esc(markTip(RL[i].k,RL[i].L,RL[i].st))+'"><span>'+markTxt(RL[i].L,RL[i].st)+'</span><u style="width:'+RL[i].st.pct+'%"></u></span>':'')+(busy?'':'<span class="pl pm">rest</span>')+
       '<span class="ld" aria-hidden="true"><u style="width:'+Math.min(100,s/24*100).toFixed(0)+'%"></u></span>'+(nc?'<i class="wi" aria-hidden="true">⚠</i>':'')+'</button>';}).join("");
   st.scrollLeft=sl; const b=st.querySelector(".sel");
   if(b&&st.clientWidth&&b.offsetLeft+b.offsetWidth>st.scrollLeft+st.clientWidth) st.scrollLeft=b.offsetLeft+b.offsetWidth-st.clientWidth+4; else if(b&&b.offsetLeft<st.scrollLeft) st.scrollLeft=Math.max(0,b.offsetLeft-4);
@@ -1834,7 +2016,7 @@ function renderPlan(){
     '<p class="fine">'+items.length+' exercise'+(items.length===1?'':'s')+', '+tot+' sets on '+nm+' · '+wt+' sets in the week.</p>'
     :(ses.length?'':'<p class="empty">'+(wt||allSes().length?nm+' is a rest day so far. ':'')+'No exercises yet. Add them below or with "Add to '+nm+'" on any exercise.</p>');
   $("#ses").innerHTML=ses.length?'<h3 class="subh">Endurance</h3>'+ses.map((s,ix)=>sesRow(s,ix,M)).join("")+'<p class="fine">'+dayMin(day)+' min endurance on '+nm+' · '+allSes().length+' session'+(allSes().length===1?'':'s')+' in the week.</p>':"";
-  $("#wkClear").disabled=!(items.length+ses.length);
+  $("#wkClear").disabled=!(items.length+ses.length); renderTrainBtn(); renderHist();
   $("#endAdd").textContent="Add to "+(dayName(day).length>12?dayName(day).slice(0,11)+"…":dayName(day));
   $("#qa").placeholder="Add an exercise to "+dayName(day);
   $("#ovBadge").textContent=wt||wm?[wt?wt+" sets":"",wm?wm+" min":"",M.nc?"⚠ "+M.nc:""].filter(Boolean).join(" · "):"empty"; $("#ovBadge").title=wt||wm?tdays+" training day"+(tdays===1?"":"s")+(M.nc?", "+M.nc+" recovery conflict"+(M.nc===1?"":"s"):""):"";
@@ -2063,7 +2245,7 @@ function colHtml(d,M){
   let h='<section class="bcol'+(d>=4?' r':'')+(d===day?' sel':'')+(n?'':' rest')+'" data-d="'+d+'" aria-label="'+nm+'"><header class="bh">'+
     (bRen===d?'<div class="bh1"><input class="search" id="bIn" maxlength="'+DAYMAX+'" aria-label="Day name" value="'+nm+'"></div>'
       :'<div class="bh1"><b class="bdn" data-bact="dn" title="Double-click to rename">'+nm+'</b>'+(cw?'<span class="bw" role="img" aria-label="'+esc(cw)+'" title="'+esc(cw)+'">⚠</span>':'')+'<button class="pen" type="button" data-bact="ren" aria-label="Rename '+nm+'" title="Rename day">✎</button></div>')+
-    '<div class="bh2">'+(n?[s?s+" sets":"",m?m+" min":""].filter(Boolean).join(" · "):"Rest day")+'</div></header><div class="bl">';
+    '<div class="bh2">'+(n?[s?s+" sets":"",m?m+" min":""].filter(Boolean).join(" · "):"Rest day")+'</div>'+trainHead(d,n)+'</header><div class="bl">';
   for(let i=0;i<=n;i++){
     const op=!!(bPick&&bPick.d===d&&bPick.i===i);
     h+='<button class="bslot'+(i===n?' end':'')+(op?' open':'')+'" type="button" data-bact="add" data-d="'+d+'" data-i="'+i+'" tabindex="'+(i===n?0:-1)+'" aria-expanded="'+op+'" aria-label="Add to '+nm+(n?' at position '+(i+1):'')+'">'+(i===n?'+ add':'')+'</button>';
@@ -2246,6 +2428,149 @@ $("#ovGrid").addEventListener("click",e=>{
   const h=e.target.closest("[data-oday]"); if(h) return selectDay(+h.dataset.oday);
   const c=e.target.closest(".cb,.eb"); if(c){ ovSel={d:+c.dataset.d,g:c.dataset.g==="e"?"e":+c.dataset.g}; renderOv(); }
 });
+/* ---------- training log UI: "Start training" -> Today view (overlay like the week overview), day marks, history ----------
+   The log (logs(), see above) is edited in place: every input updates the model and saves at once, only the progress summary and the check states are refreshed (no re-render while typing).
+   Adding/removing a set or toggling Skip re-renders the list and restores scroll and focus. */
+const tdEl=$("#td"), tdBody=$("#tdBody"); let tdOn=false, tdKey=null, tdFrom=null, tdEnts=[];
+const tdLog=()=>logs()[tdKey], todayLog=()=>logs()[todayKey()];
+const tdOrder=L=>[].concat(L.ex.map(x=>({t:"s",x:x})),L.ses.map(x=>({t:"e",x:x}))).sort((a,b)=>a.x.o-b.x.o||(a.t===b.t?0:(a.t==="s"?-1:1)));
+function hrZoneTxt(hr){ // zone of an average heart rate, when max HR is known
+  if(!hr||!hrMax()) return "";
+  for(let z=5;z>=1;z--) if(hr>=bpmAt(ZP[z-1])) return zoneTxt(z,z)+" · "+ZNAME[z-1];
+  return "Below Z1 (under "+bpmAt(ZP[0])+" bpm)";
+}
+function tdSetRow(t,k,nm){
+  const n=k+1, v=a=>a===undefined?"":a;
+  return '<div class="tset'+(t.done?' done':'')+'" data-s="'+k+'"><span class="tsn">'+n+'</span><label class="tck"><input type="checkbox" data-f="done"'+(t.done?' checked':'')+' aria-label="Set '+n+' done, '+nm+'"><i aria-hidden="true"></i></label>'+
+    '<input class="num" type="number" data-f="r" min="0" max="999" step="1" inputmode="numeric" placeholder="reps" value="'+v(t.r)+'" aria-label="Reps, set '+n+', '+nm+'">'+
+    '<input class="num" type="number" data-f="w" min="0" max="999" step="0.5" inputmode="decimal" placeholder="kg" value="'+v(t.w)+'" aria-label="Weight in kg, set '+n+', '+nm+'">'+
+    '<button class="x" type="button" data-act="rmset" aria-label="Remove set '+n+', '+nm+'">×</button></div>';
+}
+function tdBlock(e,i){
+  const x=e.x, sk=!!x.skip, skb=nm=>'<button class="linkbtn tsk" type="button" data-act="skip" aria-pressed="'+sk+'">'+(sk?'Skipped · undo':'Skip')+'<span class="sronly"> '+nm+'</span></button>';
+  if(e.t==="s"){
+    const dn=x.sets.filter(t=>t.done).length, nm=esc(x.n), vt=x.v.filter(Boolean).join(", ");
+    return '<article class="tx s'+(sk?' skip':'')+(!sk&&x.sets.length&&dn===x.sets.length?' done':'')+'" data-i="'+i+'" aria-label="'+nm+'"><header><div class="tn"><b>'+nm+'</b>'+(vt?'<small>'+esc(vt)+'</small>':'')+'</div><span class="tcnt" title="Sets done">'+dn+'/'+x.sets.length+'</span>'+skb(nm)+'</header>'+
+      '<div class="tcols" aria-hidden="true"><span>Set</span><span>Done</span><span>Reps</span><span>kg</span><span></span></div>'+x.sets.map((t,k)=>tdSetRow(t,k,nm)).join("")+
+      '<button class="linkbtn tadd" type="button" data-act="addset">+ Add set<span class="sronly"> to '+nm+'</span></button></article>';
+  }
+  const A=actOf(x), nm=esc(A.n);
+  return '<article class="tx e'+(sk?' skip':'')+(!sk&&x.done?' done':'')+'" data-i="'+i+'" aria-label="'+nm+'"><header><div class="tn"><span class="pl '+pillCls(x)+'">'+esc(pillOf(mkSes(A,x.k,x.min)))+'</span><b>'+nm+'</b><small>'+esc(KL[x.k])+' · planned '+x.min+' min</small></div>'+skb(nm)+'</header>'+
+    '<div class="tses"><label class="tck"><input type="checkbox" data-f="done"'+(x.done?' checked':'')+' aria-label="Done, '+nm+'"><i aria-hidden="true"></i></label>'+
+    '<label class="lb">Actual min<input class="num" type="number" data-f="act" min="1" max="900" step="1" inputmode="numeric" placeholder="'+x.min+'" value="'+(x.act||'')+'" aria-label="Actual minutes, '+nm+'"></label>'+
+    '<label class="lb">Avg HR<input class="num" type="number" data-f="hr" min="30" max="230" step="1" inputmode="numeric" placeholder="bpm" value="'+(x.hr||'')+'" aria-label="Average heart rate in bpm, '+nm+'"></label></div>'+
+    '<small class="tzone">'+esc(hrZoneTxt(x.hr))+'</small></article>';
+}
+function tdSum(){
+  const L=tdLog(), st=logStats(L), R=19, C=2*Math.PI*R, left=leftText(st), skipped=L.ex.concat(L.ses).filter(x=>x.skip).length;
+  const parts=[]; if(st.sets||!st.min) parts.push('<b>'+st.done+'</b> / '+st.sets+' sets'); if(st.min) parts.push('<b>'+st.minDone+'</b> / '+st.min+' min');
+  const fin=L.finishedAt?new Date(L.finishedAt).toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}):"";
+  $("#tdSum").innerHTML='<div class="tdring" role="img" aria-label="'+st.pct+' percent done"><svg viewBox="0 0 44 44" aria-hidden="true"><circle class="bg" cx="22" cy="22" r="'+R+'"/><circle class="fg" cx="22" cy="22" r="'+R+'" stroke-dasharray="'+(st.pct/100*C).toFixed(1)+' '+C.toFixed(1)+'"/></svg><b>'+st.pct+'<small>%</small></b></div>'+
+    '<div class="tdprog" id="tdProg" data-pct="'+st.pct+'">'+parts.join(" · ")+'</div>'+
+    '<p class="tdleft" id="tdLeft">'+(st.units?(left?'Still left: <b>'+esc(left)+'</b>':'<b>Everything is done.</b>'):'Nothing to do in this log.')+'</p>'+
+    '<p class="tdstate'+(L.finishedAt?' fin':'')+'" id="tdState">'+(L.finishedAt?'Finished at '+esc(fin)+'. ':'In progress. ')+'Changes are saved as you go'+(skipped?' · '+skipped+' skipped':'')+'.</p>';
+  $("#tdFinish").textContent=L.finishedAt?"Close":"Finish day";
+}
+function tdRender(){ // whole list (open, add/remove set, skip, sync); keeps scroll
+  const L=tdLog(); if(!L) return; const sc=tdBody.scrollTop;
+  tdEnts=tdOrder(L);
+  tdBody.innerHTML=tdEnts.length?tdEnts.map(tdBlock).join(""):'<p class="tdempty">Nothing in this log yet. "Sync with plan" pulls in what is planned for '+esc(L.name)+'.</p>';
+  tdBody.scrollTop=sc; tdSum();
+}
+function tdRefresh(){ // after an edit: summary, counts and check states only (inputs keep focus and caret)
+  tdSum();
+  tdBody.querySelectorAll(".tx").forEach(a=>{
+    const e=tdEnts[+a.dataset.i]; if(!e) return; const x=e.x;
+    if(e.t==="s"){
+      const dn=x.sets.filter(t=>t.done).length; a.classList.toggle("done",!x.skip&&x.sets.length>0&&dn===x.sets.length); a.querySelector(".tcnt").textContent=dn+"/"+x.sets.length;
+      a.querySelectorAll(".tset").forEach(r=>{ const t=x.sets[+r.dataset.s]; if(!t) return; r.classList.toggle("done",t.done); const c=r.querySelector('[data-f="done"]'); if(c.checked!==t.done) c.checked=t.done; });
+    } else {
+      a.classList.toggle("done",!x.skip&&!!x.done); const c=a.querySelector('[data-f="done"]'); if(c.checked!==!!x.done) c.checked=!!x.done; a.querySelector(".tzone").textContent=hrZoneTxt(x.hr);
+    }
+  });
+}
+function tdField(t){
+  const a=t.closest(".tx"), f=t.dataset.f, e=a&&tdEnts[+a.dataset.i]; if(!e||!f) return; const x=e.x;
+  if(e.t==="s"){
+    const r=t.closest(".tset"), s=r&&x.sets[+r.dataset.s]; if(!s) return;
+    if(f==="done") s.done=t.checked;
+    else if(f==="r"||f==="w"){
+      const v=t.value===""?undefined:nN(t.value,0,999); if(t.value!==""&&v===undefined) return;
+      if(v!==s[f]){ if(v===undefined) delete s[f]; else { s[f]=v; s.done=true; } } // entering reps or weight marks the set done
+    }
+  } else if(f==="done") x.done=t.checked;
+  else if(f==="act"||f==="hr"){
+    const v=nI(t.value,f==="act"?1:30,f==="act"?900:230,0);
+    if(v!==(x[f]||0)){ if(v) { x[f]=v; x.done=true; } else delete x[f]; }
+  }
+  saveLogs(); tdRefresh();
+}
+tdBody.addEventListener("input",e=>{ if(e.target.dataset.f&&e.target.dataset.f!=="done") tdField(e.target); });
+tdBody.addEventListener("change",e=>{ if(e.target.dataset.f) tdField(e.target); });
+tdBody.addEventListener("click",e=>{
+  const b=e.target.closest("button[data-act]"); if(!b) return;
+  const a=b.closest(".tx"), i=+a.dataset.i, en=tdEnts[i], act=b.dataset.act; if(!en) return; const x=en.x; let fs=null, last=false;
+  if(act==="skip"){ if(x.skip) delete x.skip; else x.skip=true; fs='[data-act="skip"]'; }
+  else if(act==="addset"&&en.t==="s"){ if(x.sets.length>=40) return; const l=x.sets[x.sets.length-1], t={done:false}; if(l){ if(l.r!==undefined) t.r=l.r; if(l.w!==undefined) t.w=l.w; } x.sets.push(t); fs='.tset [data-f="r"]'; last=true; }
+  else if(act==="rmset"&&en.t==="s"){ x.sets.splice(+b.closest(".tset").dataset.s,1); fs='[data-act="addset"]'; }
+  else return;
+  saveLogs(); tdRender();
+  const ns=tdBody.querySelectorAll('.tx[data-i="'+i+'"] '+fs), n=ns.length?(last?ns[ns.length-1]:ns[0]):null; if(n) n.focus();
+});
+function tdMsg(t){ $("#tdMsg").textContent=t; }
+function openToday(k,from){
+  if(!logs()[k]) return; if(ovOn) closeOv(); closePops();
+  tdKey=k; tdFrom=from||null; tdOn=true; tdMsg(""); tdEl.hidden=false; $("#tdDate").textContent=(k===todayKey()?"Today · ":"")+fmtDate(k); $("#tdTitle").textContent=logs()[k].name; tdRender(); $("#tdClose").focus();
+}
+function logChanged(){ renderPlan(); renderOv(); }
+function closeToday(){
+  if(!tdOn) return; tdOn=false; tdEl.hidden=true; logChanged();
+  const f=tdFrom&&tdFrom.isConnected&&!tdFrom.disabled&&!tdFrom.closest("[hidden]")?tdFrom:$("#trainBtn"); tdFrom=null; if(f&&!f.disabled&&f.focus) f.focus();
+}
+function startTraining(d,from){
+  const k=todayKey(), cur=logs()[k];
+  if(!cur||cur.d!==d){
+    if(cur){ const st=logStats(cur); if((st.done||st.minDone||cur.finishedAt)&&!confirm("Today already has a log for "+cur.name+" ("+(st.sets?st.done+" of "+st.sets+" sets":"")+(st.sets&&st.min?", ":"")+(st.min?st.minDone+" of "+st.min+" min":"")+" done). Replace it with "+dayName(d)+"?")) return; }
+    logs()[k]=newLog(d,k); saveLogs();
+  }
+  openToday(k,from);
+}
+function renderTrainBtn(){
+  const b=$("#trainBtn"), tk=todayLog(), same=!!tk&&tk.d===day, busy=dayBusy(day), st=same?logStats(tk):null;
+  b.disabled=!(busy||same);
+  $("#trainLbl").textContent="▶ "+(same?(tk.finishedAt?"Open today's log":"Continue training"):"Start training");
+  $("#trainSub").textContent=same?[st.sets?st.done+"/"+st.sets+" sets":"",st.min?st.minDone+"/"+st.min+" min":""].filter(Boolean).join(" · "):(busy?dayName(day):"nothing planned");
+  b.title=same?"Reopen today's log of "+dayName(day):(busy?"Track sets, reps and weights of "+dayName(day)+" today":"Add exercises or a session first");
+}
+function trainHead(d,n){ // small "▶ Train" button and progress mark in a schedule board column header
+  const rl=recentByDay()[d], tk=todayLog(), has=n>0||(!!tk&&tk.d===d);
+  if(!has&&!(rl&&rl.st.units)) return "";
+  return '<div class="bh3">'+(has?'<button class="btrain" type="button" data-bact="train" aria-label="Start training, '+esc(dayName(d))+'">▶ Train</button>':'')+
+    (rl&&rl.st.units?'<span class="bpd" data-log="'+rl.k+'" title="'+esc(markTip(rl.k,rl.L,rl.st))+'">'+markTxt(rl.L,rl.st)+'</span>':'')+'</div>';
+}
+function renderHist(){
+  const L=logs(), all=Object.keys(L).sort().reverse(), ks=all.slice(0,10);
+  $("#histSum").textContent=all.length?all.length+" log"+(all.length===1?"":"s"):"none yet";
+  $("#hist").innerHTML=ks.map(k=>{ const x=L[k], st=logStats(x), bits=[st.sets?st.done+"/"+st.sets+" sets":"",st.min?st.minDone+" min":""].filter(Boolean);
+    return '<button class="hrow" type="button" data-k="'+k+'"><b>'+esc(fmtDate(k,true))+' · '+esc(x.name)+'</b><small>'+(bits.length?bits.join(" · ")+' · ':'')+(x.finishedAt?'<span class="fin">finished</span>':'in progress')+'</small></button>'; }).join("");
+  $("#histNote").textContent=all.length?(all.length>ks.length?"Showing the last "+ks.length+" of "+all.length+" logs. ":"")+"Tap a log to open it; you can still edit it.":"Press Start training on a day to log your sets, reps and weights. Your logs stay on this device.";
+}
+$("#trainBtn").onclick=e=>startTraining(day,e.currentTarget);
+board.addEventListener("click",e=>{ const t=e.target.closest('[data-bact="train"]'); if(t) startTraining(+t.closest(".bcol").dataset.d,t); });
+$("#hist").addEventListener("click",e=>{ const b=e.target.closest("[data-k]"); if(b) openToday(b.dataset.k,b); });
+$("#tdClose").onclick=closeToday;
+$("#tdFinish").onclick=()=>{ const L=tdLog(); if(L&&!L.finishedAt){ L.finishedAt=Date.now(); saveLogs(); } closeToday(); };
+$("#tdSync").onclick=()=>{
+  const L=tdLog(); if(!L) return; let n=0, o=1+Math.max(-1,...L.ex.map(x=>x.o),...L.ses.map(x=>x.o));
+  entriesOf(week[L.d]).forEach(e=>{
+    if(e.t==="s"){ const vk=varNames(EXI[e.x.n],e.x.v).join("|"); if(L.ex.some(y=>y.n===e.x.n&&y.v.join("|")===vk)) return; }
+    else if(L.ses.some(y=>y.a===e.x.a&&y.k===e.x.k&&y.min===e.x.min)) return;
+    const g=logEntry(e,o++,tdKey); (g.t==="e"?L.ses:L.ex).push(g.x); n++;
+  });
+  if(n) saveLogs(); tdMsg(n?"Added "+n+" from the plan.":"Already in sync with the plan."); tdRender();
+};
+window.addEventListener("keydown",e=>{ if(e.key==="Escape"&&tdOn){ e.preventDefault(); e.stopImmediatePropagation(); closeToday(); } },true);
+renderHist();
 function buildAdd(){
   const q=$("#qa").value.trim().toLowerCase();
   if(!q){$("#addres").innerHTML=""; return;}

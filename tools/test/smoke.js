@@ -355,6 +355,134 @@ async function weekRun(){
  clearAll();selDay(0);
 }
 // ---- gap filler: summary chips, top picks, alternatives, options, day placement ----
+// ---- v1.8: training-day tracking (Start training, Today view, aom.log.v1, progress marks, history) ----
+async function logRun(){
+ const KEY='aom.log.v1',dk=t=>t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+ const tk=(back)=>{const t=new w.Date();t.setDate(t.getDate()-(back||0));return dk(t);};
+ const lg=()=>JSON.parse(w.localStorage.getItem(KEY)||'{}'),tdo=()=>!q('#td').hidden;
+ const prog=()=>q('#tdProg').textContent.replace(/\s+/g,' ').trim(),left=()=>q('#tdLeft').textContent.replace(/\s+/g,' ').trim();
+ const blocks=()=>qa('#tdBody .tx'),setsOf=b=>[...b.querySelectorAll('.tset')],bn=b=>b.querySelector('.tn b').textContent;
+ const setv=(el,v)=>{el.value=v;ev(el,'input');},esc=()=>d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+ const runS=META.act.find(a=>a.id==='running').s;
+ const confirms=[];let answer=true;w.confirm=m=>{confirms.push(m);return answer;};
+ w.localStorage.removeItem(KEY);
+ q('[data-tab="wk"]').click();if(!q('#ov').hidden)q('#ovClose').click();clearAll();selDay(0);
+ // an earlier log provides the prefill (bench: 8 x 60 kg, 6 x 65 kg)
+ w.localStorage.setItem(KEY,JSON.stringify({'2020-01-02':{d:0,name:'Old',startedAt:1,finishedAt:2,ex:[{n:'Barbell bench press',v:[''],o:0,sets:[{r:8,w:60,done:true},{r:6,w:65,done:true}]}],ses:[]}}));
+ addEx('Barbell bench press');addEx('Barbell row');q('#endOpen').click();[['#endAct','running'],['#endKind','easy'],['#endMin','45']].forEach(x=>{q(x[0]).value=x[1];ev(q(x[0]),'change');});q('#endAdd').click();
+ ok(!q('#trainBtn').disabled&&/Start training/.test(q('#trainLbl').textContent)&&/Day 1/.test(q('#trainSub').textContent),'Workout tab: prominent "Start training" button for the selected day ('+q('#trainLbl').textContent+' / '+q('#trainSub').textContent+')');
+ selDay(3);ok(q('#trainBtn').disabled,'an empty day cannot be started');selDay(0);
+ ok(!q('#histSec').hidden&&/1 log/.test(q('#histSum').textContent)&&qa('#hist .hrow').length===1,'History lists the seeded log');
+ q('#trainBtn').click();
+ ok(tdo()&&q('#vp').contains(q('#td'))&&q('#td').classList.contains('ov')&&q('#ov').hidden,'Start training opens the Today view over the viewport');
+ ok(q('#tdTitle').textContent==='Day 1'&&/Today/.test(q('#tdDate').textContent)&&blocks().map(bn).join()==='Barbell bench press,Barbell row,Running','Today view: date, plan day name and one block per planned entry in schedule order ('+blocks().map(bn).join()+')');
+ const bench=blocks()[0],row=blocks()[1],run0=blocks()[2];
+ ok(setsOf(bench).length===3&&setsOf(row).length===3&&run0.classList.contains('e'),'one row per planned set (3 + 3) and an endurance block');
+ const vals=b=>setsOf(b).map(r=>r.querySelector('[data-f="r"]').value+'x'+r.querySelector('[data-f="w"]').value).join(' ');
+ ok(vals(bench)==='8x60 6x65 6x65'&&vals(row)==='x x x','sets are prefilled from the last log of the same exercise ('+vals(bench)+'), none for a new exercise ('+vals(row)+')');
+ ok(prog()==='0 / 6 sets · 0 / 45 min'&&q('#tdProg').dataset.pct==='0'&&left()==='Still left: 2 exercises, 6 sets, '+runS+' 45′','progress "0 / 6 sets · 0 / 45 min", still left: "'+left()+'"');
+ ok(bench.querySelector('input[data-f="r"]').getAttribute('inputmode')==='numeric'&&bench.querySelector('input[data-f="w"]').getAttribute('step')==='0.5'&&bench.querySelector('input[data-f="done"]').getAttribute('aria-label')!=='','set rows: done checkbox, numeric reps, weight with step 0.5, labelled');
+ // done checkbox
+ setsOf(bench)[0].querySelector('[data-f="done"]').click();
+ ok(prog()==='1 / 6 sets · 0 / 45 min'&&setsOf(bench)[0].classList.contains('done')&&bench.querySelector('.tcnt').textContent==='1/3'&&q('#tdProg').dataset.pct==='11','checking a set updates the progress ('+prog()+', '+q('#tdProg').dataset.pct+' %)');
+ let L=lg()[tk()];
+ ok(L&&L.d===0&&L.name==='Day 1'&&L.startedAt>0&&!L.finishedAt&&L.ex.length===2&&L.ses.length===1&&L.ex[0].sets[0].done===true&&L.ex[0].sets[0].r===8&&L.ex[0].sets[0].w===60,'saved in aom.log.v1 under today\'s date ('+tk()+'): plan day, start time, prefilled reps/weight persisted');
+ // reps / weight entry marks a set done
+ setv(setsOf(row)[0].querySelector('[data-f="r"]'),'10');
+ ok(setsOf(row)[0].classList.contains('done')&&setsOf(row)[0].querySelector('[data-f="done"]').checked&&prog().startsWith('2 / 6'),'entering reps marks the set done');
+ setv(setsOf(row)[1].querySelector('[data-f="w"]'),'42.5');
+ L=lg()[tk()];
+ ok(prog().startsWith('3 / 6')&&L.ex[1].sets[0].r===10&&L.ex[1].sets[0].done&&L.ex[1].sets[1].w===42.5&&L.ex[1].sets[1].done&&L.ex[1].sets[2].done===false,'entering a weight (42.5 kg) marks the set done and persists');
+ // unchecking
+ setsOf(row)[1].querySelector('[data-f="done"]').click();
+ ok(prog().startsWith('2 / 6')&&lg()[tk()].ex[1].sets[1].done===false&&lg()[tk()].ex[1].sets[1].w===42.5,'unchecking a set keeps its values');
+ // extra and fewer sets
+ row.querySelector('[data-act="addset"]').click();
+ ok(setsOf(blocks()[1]).length===4&&prog().startsWith('2 / 7')&&lg()[tk()].ex[1].sets.length===4&&setsOf(blocks()[1])[3].querySelector('[data-f="r"]').value==='','"+ Add set" adds a row (7 sets in total, saved)');
+ setsOf(blocks()[1])[3].querySelector('[data-act="rmset"]').click();
+ ok(setsOf(blocks()[1]).length===3&&prog().startsWith('2 / 6'),'remove-set drops it again');
+ // skip an exercise
+ blocks()[0].querySelector('[data-act="skip"]').click();
+ ok(blocks()[0].classList.contains('skip')&&prog().startsWith('1 / 3 sets')&&left()==='Still left: 1 exercise, 2 sets, '+runS+' 45′'&&lg()[tk()].ex[0].skip===true,'skipping an exercise removes it from progress and "still left" ('+prog()+' | '+left()+')');
+ blocks()[0].querySelector('[data-act="skip"]').click();
+ ok(!blocks()[0].classList.contains('skip')&&prog().startsWith('2 / 6')&&!lg()[tk()].ex[0].skip,'skip can be undone');
+ // endurance: done + actual minutes + heart rate
+ const run=blocks()[2],act=run.querySelector('[data-f="act"]'),hr=run.querySelector('[data-f="hr"]');
+ ok(act.placeholder==='45'&&run.querySelector('.pl')&&run.querySelector('.tzone').textContent==='','endurance block: pill, planned minutes as placeholder, no zone text yet');
+ setv(act,'40');
+ L=lg()[tk()];
+ ok(prog()==='2 / 6 sets · 40 / 45 min'&&run.querySelector('[data-f="done"]').checked&&L.ses[0].act===40&&L.ses[0].done===true&&L.ses[0].min===45&&L.ses[0].a==='running'&&!/Run/.test(left()),'actual minutes mark the session done ('+prog()+')');
+ const hm=q('#hrMax');hm.value='190';ev(hm,'change');
+ setv(hr,'150');
+ ok(lg()[tk()].ses[0].hr===150&&/Z3/.test(run.querySelector('.tzone').textContent)&&/bpm/.test(run.querySelector('.tzone').textContent),'average heart rate is shown with its zone ('+run.querySelector('.tzone').textContent+')');
+ // finish the strength sets so the day is complete
+ qa('#tdBody .tset [data-f="done"]').filter(c=>!c.checked).forEach(c=>c.click());
+ ok(prog()==='6 / 6 sets · 40 / 45 min'&&/Everything is done/.test(q('#tdLeft').textContent)&&q('#tdProg').dataset.pct==='100'&&blocks().every(b=>b.classList.contains('done')),'all done: 100 %, "Everything is done"');
+ // close with Show body, button on the day card
+ ok(q('#tdFinish').textContent==='Finish day','Finish day button while unfinished');
+ q('#tdFinish').click();
+ L=lg()[tk()];
+ ok(!tdo()&&L.finishedAt>0,'Finish day stores finishedAt and closes');
+ const pd0=q('#wstrip [data-day="0"] .pl.pd');
+ ok(pd0&&/^✓\s*6\/6$/.test(pd0.textContent.trim())&&pd0.querySelector('u').style.width==='100%'&&/finished/.test(pd0.title),'day card shows the progress mark: "'+(pd0&&pd0.textContent.trim())+'"');
+ ok(/Open today/.test(q('#trainLbl').textContent)&&/6\/6 sets/.test(q('#trainSub').textContent),'the Start button now reopens today\'s log ('+q('#trainLbl').textContent+')');
+ ok(qa('#hist .hrow').length===2&&qa('#hist .hrow')[0].dataset.k===tk()&&/6\/6 sets/.test(qa('#hist .hrow')[0].textContent)&&/finished/.test(qa('#hist .hrow')[0].textContent)&&/2 logs/.test(q('#histSum').textContent),'History lists today\'s log first ('+qa('#hist .hrow')[0].textContent+')');
+ // board column header mark and Train button
+ q('#ovOpen').click();
+ const bh=q('#ovBoard .bcol[data-d="0"] .bh3');
+ ok(bh&&/^✓\s*6\/6$/.test(bh.querySelector('.bpd').textContent.trim())&&bh.querySelector('[data-bact="train"]').textContent.includes('Train')&&!q('#ovBoard .bcol[data-d="3"] .bh3'),'schedule board: progress mark and "▶ Train" in the Day 1 header, none on an empty day');
+ q('#ovBoard .bcol[data-d="0"] [data-bact="train"]').click();
+ ok(tdo()&&q('#ov').hidden&&q('#tdTitle').textContent==='Day 1'&&q('#tdFinish').textContent==='Close'&&/Finished at/.test(q('#tdState').textContent),'"▶ Train" in a board column closes the overview and reopens the log (edits still allowed)');
+ // Show body closes, focus returns
+ q('#tdClose').click();
+ ok(!tdo()&&d.activeElement===q('#trainBtn'),'Show body closes the Today view and returns focus ('+(d.activeElement&&d.activeElement.id)+')');
+ // history reopens a log; Escape closes; an old log opens as well
+ qa('#hist .hrow').find(b=>b.dataset.k==='2020-01-02').click();
+ ok(tdo()&&q('#tdTitle').textContent==='Old'&&!/Today/.test(q('#tdDate').textContent)&&prog()==='2 / 2 sets'&&blocks().length===1,'History opens an older log ('+q('#tdDate').textContent+', '+prog()+')');
+ setv(setsOf(blocks()[0])[1].querySelector('[data-f="w"]'),'67.5');
+ ok(lg()['2020-01-02'].ex[0].sets[1].w===67.5,'an old log is editable');
+ esc();
+ ok(!tdo(),'Escape closes the Today view');
+ q('#trainBtn').click();
+ const ri=setsOf(blocks()[1])[0].querySelector('[data-f="r"]');ri.focus();ri.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+ ok(!tdo(),'Escape also closes it while typing in a field');
+ // Sync with plan
+ selDay(0);addEx('Back squat');
+ q('#trainBtn').click();q('#tdSync').click();
+ ok(blocks().length===4&&blocks()[3].querySelector('.tn b').textContent==='Back squat'&&/Added 1/.test(q('#tdMsg').textContent)&&lg()[tk()].ex.length===3,'"Sync with plan" pulls a newly planned exercise into the log');
+ q('#tdSync').click();
+ ok(blocks().length===4&&/in sync/.test(q('#tdMsg').textContent),'a second sync adds nothing');
+ q('#tdClose').click();
+ // a log stays independent of later plan edits
+ selDay(0);q('#plan [data-rm="0"]').click();
+ q('#trainBtn').click();
+ ok(blocks().map(bn).includes('Barbell bench press')&&blocks().length===4,'the log keeps what was planned at start when the plan changes later');
+ q('#tdClose').click();
+ // starting another plan day on the same date replaces the log after a confirm
+ selDay(1);addEx('Overhead press');
+ answer=false;confirms.length=0;q('#trainBtn').click();
+ ok(confirms.length===1&&/Day 1/.test(confirms[0])&&/Day 2/.test(confirms[0])&&!tdo()&&lg()[tk()].d===0,'a different day on the same date asks to confirm; "cancel" keeps today\'s log ('+confirms[0]+')');
+ answer=true;q('#trainBtn').click();
+ L=lg()[tk()];
+ ok(confirms.length===2&&tdo()&&L.d===1&&L.name==='Day 2'&&L.ex.length===1&&L.ex[0].n==='Overhead press'&&!L.finishedAt&&q('#tdTitle').textContent==='Day 2'&&qa('#hist .hrow').length===1+1,'confirming replaces it with the new day\'s log (one entry per date)');
+ q('#tdClose').click();
+ // an untouched log is replaced without asking
+ selDay(0);confirms.length=0;q('#trainBtn').click();
+ ok(confirms.length===0&&tdo()&&lg()[tk()].d===0,'a log without progress is replaced silently');
+ q('#tdClose').click();
+ // marks only for logs of the last 7 days
+ const all=lg();all[tk(10)]={d:2,name:'Day 3',startedAt:1,ex:[{n:'Back squat',v:['',''],o:0,sets:[{done:true}]}],ses:[]};all[tk(3)]={d:4,name:'Day 5',startedAt:1,ex:[{n:'Back squat',v:['',''],o:0,sets:[{done:true,r:5,w:100},{done:false}]}],ses:[]};
+ w.localStorage.setItem(KEY,JSON.stringify(all));selDay(0);
+ ok(!q('#wstrip [data-day="2"] .pl.pd')&&/^1\/2$/.test(q('#wstrip [data-day="4"] .pl.pd').textContent.trim())&&q('#wstrip [data-day="4"] .pl.pd').querySelector('u').style.width==='50%','progress marks appear only for plan days with a log from the last 7 days (10 days old: none; 3 days old: 1/2)');
+ // garbage in storage does not break anything
+ w.localStorage.setItem(KEY,'{bad json');selDay(0);
+ ok(!q('#wstrip .pl.pd')&&/Start training/.test(q('#trainLbl').textContent),'a corrupt log is ignored');
+ w.localStorage.setItem(KEY,JSON.stringify({'nope':{d:1},'2021-02-03':{d:99,name:'  x  ',ex:[{n:'A',sets:[{r:-3,w:'abc',done:1},{r:12}]},7,{sets:[]}],ses:[{a:'nonexistent'},{a:'running',k:'bogus',min:9999}]}}));
+ selDay(0);q('#trainBtn').click();q('#tdClose').click();
+ const cl=lg();
+ ok(Object.keys(cl).length===2&&cl['2021-02-03'].d===0&&cl['2021-02-03'].name==='x'&&cl['2021-02-03'].ex.length===1&&cl['2021-02-03'].ex[0].sets.length===2&&cl['2021-02-03'].ex[0].sets[0].r===undefined&&cl['2021-02-03'].ex[0].sets[0].done===true&&cl['2021-02-03'].ses.length===1&&cl['2021-02-03'].ses[0].k==='easy'&&cl['2021-02-03'].ses[0].min===45&&!cl.nope,'malformed entries are cleaned on load (bad date, day, set values, unknown activity or kind)');
+ w.localStorage.removeItem(KEY);w.confirm=()=>true;hm.value='';ev(hm,'change');clearAll();selDay(0);
+}
 async function sugRun(){
  const numOf=x=>parseFloat(x),rowVal=n=>{const r=qa('#volsum tr').find(r=>r.cells[0].textContent.trim()===n);return r?parseFloat(r.cells[2].textContent):NaN;};
  const exOf=n=>META.ex.find(e=>e.n===n);
@@ -874,6 +1002,15 @@ async function phoneRun(){
  ok(pq('#ov').hidden&&sheet()!==undefined&&!!pq('#side'),'phone: "Show body" closes the overview, the sheet is untouched');
  pq('#ovOpen').click();pd.dispatchEvent(new p.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
  ok(pq('#ov').hidden,'phone: Escape closes the overview');
+ // training log on the phone: the Today view opens over everything, inputs are numeric, typing marks a set done and saves it
+ pq('[data-tab="wk"]').click();pq('#wstrip [data-day="1"]').click();pq('#trainBtn').click();
+ const ptd=pq('#td'),tkey=(()=>{const t=new p.Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');})();
+ ok(!ptd.hidden&&pq('#vp').contains(ptd)&&ptd.classList.contains('ov')&&pqa('#tdBody .tx').length>=1&&pqa('#tdBody .tset input[data-f="r"]').every(i=>i.getAttribute('inputmode')==='numeric')&&pqa('#tdBody .tset input[data-f="w"]').every(i=>i.getAttribute('inputmode')==='decimal'),'phone: Start training opens the Today view with numeric reps/weight inputs');
+ const pr=pq('#tdBody .tset input[data-f="r"]');pr.value='9';pr.dispatchEvent(new p.Event('input',{bubbles:true}));
+ const plg=JSON.parse(p.localStorage.getItem('aom.log.v1'));
+ ok(/^1 \/ \d+ sets/.test(pq('#tdProg').textContent.trim())&&plg[tkey]&&plg[tkey].d===1&&plg[tkey].ex[0].sets[0].r===9&&plg[tkey].ex[0].sets[0].done===true,'phone: typing reps marks the set done and saves it under today\'s date');
+ pd.dispatchEvent(new p.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ ok(ptd.hidden&&/\d+\/\d+/.test(pq('#wstrip [data-day="1"] .pl.pd').textContent),'phone: Escape closes the Today view, the Day 2 card shows the progress mark');
  p.__setPhone(false);
  ok(card.parentNode===pq('#vp')&&!side.classList.contains('has-card')&&!card.classList.contains('mini'),'phone->desktop: card moves back over the viewport');
  ok(pq('#hint').textContent.includes('right-drag')&&p.__dpr===2,'phone->desktop: mouse hint text restored, pixel ratio cap back to 2');
@@ -1426,6 +1563,7 @@ async function boardRun(){
  await weekRun();
  await endRun();
  await boardRun();
+ await logRun();
  await sugRun();
  await migrateRun();
  await searchRun();
