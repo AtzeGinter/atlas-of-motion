@@ -2506,20 +2506,19 @@ function exportData(){
   $("#dataMsg").textContent="";$("#dataMsg").style.color="";
 }
 function importData(){$("#importFile").click();}
-$("#importFile").onchange=function(e){
-  const file=e.target.files[0];if(!file) return;
-  const reader=new FileReader();reader.onload=ev=>{
-    const msg=$("#dataMsg");try{
-      const backup=JSON.parse(ev.target.result);
-      if(backup.app!=="atlas-of-motion") throw new Error("Invalid backup: app field is not 'atlas-of-motion'");
-      if(!backup.data||typeof backup.data!=="object") throw new Error("Invalid backup: data is missing or not an object");
-      for(const k of Object.keys(backup.data)){if(!k.startsWith("aom.")) throw new Error("Invalid backup: key '"+k+"' does not start with 'aom.'");}
-      if(typeof confirm==="function"&&!confirm("Replace your current plan and settings with this backup?")) return;
-      for(const [k,v] of Object.entries(backup.data)){try{localStorage.setItem(k,v);}catch(e){}}
-      msg.textContent="✓ Backup imported. Reloading…";msg.style.color="var(--ok)";
-      setTimeout(()=>location.reload(),500);
-    }catch(e){msg.textContent="Error: "+e.message;msg.style.color="var(--bad)";}
-  };reader.readAsText(file);e.target.value="";
+$("#importFile").onchange=async function(e){
+  const file=e.target.files&&e.target.files[0]; e.target.value=""; if(!file) return;
+  const msg=$("#dataMsg");
+  try{
+    const backup=JSON.parse(await file.text());
+    if(!backup||backup.app!=="atlas-of-motion") throw new Error("this is not an Atlas of Motion backup.");
+    if(!backup.data||typeof backup.data!=="object") throw new Error("the backup has no data.");
+    for(const [k,v] of Object.entries(backup.data)){ if(!k.startsWith("aom.")||typeof v!=="string") throw new Error("unexpected entry \""+k+"\"."); }
+    if(typeof confirm==="function"&&!confirm("Replace your current plan and settings with this backup?")) return;
+    for(const [k,v] of Object.entries(backup.data)){ try{localStorage.setItem(k,v);}catch(_){} }
+    msg.textContent="Backup imported. Reloading…"; msg.style.color="var(--ok)";
+    setTimeout(()=>location.reload(),500);
+  }catch(err){ msg.textContent="Couldn't import: "+(err instanceof SyntaxError?"the file is not valid JSON.":err.message); msg.style.color="var(--bad)"; }
 };
 $("#exportData").onclick=exportData;$("#importData").onclick=importData;
 $("#saveImg").onclick=()=>{

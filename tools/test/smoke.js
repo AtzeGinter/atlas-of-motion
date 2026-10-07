@@ -17,7 +17,7 @@ const OLD_EQ=['Barbell','Dumbbells','Kettlebell','Cable','Machine','Bodyweight',
 function boot(opts){
  opts=opts||{};
  const vc=new VirtualConsole();
- vc.on('error',(...a)=>errs.push('console.error: '+a.join(' ')));vc.on('jsdomError',e=>errs.push('jsdomError: '+(e.stack||e.message)));
+ vc.on('error',(...a)=>errs.push('console.error: '+a.join(' ')));vc.on('jsdomError',e=>{const m=e.stack||e.message||'';if(/Not implemented: navigation/.test(m)) return;errs.push('jsdomError: '+m);});
  const dom=new JSDOM(html0,{runScripts:'outside-only',pretendToBeVisual:true,url:opts.url||'https://example.test/',virtualConsole:vc});const w=dom.window;const THREE=require('three');
  w.addEventListener('error',e=>errs.push('uncaught: '+(e.message||e.error)));
  class FR{constructor(){this.domElement=w.document.createElement('canvas');}setPixelRatio(r){w.__dpr=r;}setClearColor(){}setSize(){}render(s,c){w.__scene=s;w.__cam=c;}}
@@ -1424,39 +1424,33 @@ async function boardRun(){
  ok(!q('#tVol').checked&&q('#btnVol').getAttribute('aria-pressed')==='false'&&q('#volToolScope').hidden,'clicking btnVol again turns volume off (#tVol unchecked, btnVol aria-pressed=false, scope hidden)');
  if(prevDay)q('[data-vs="day"]').click();else q('[data-vs="week"]').click();
  // backup/export/import
- ok(q('#exportData')&&q('#importData'),'backup buttons exist (export, import)');
- const origKO=w.URL.createObjectURL,origRO=w.URL.revokeObjectURL,origClick=w.HTMLAnchorElement.prototype.click,origConfirm=w.confirm;let capturedBlob=null,capturedDL="",capturedFileInput=null;
- w.URL.createObjectURL=b=>{capturedBlob=b;return 'blob:mock';}; w.URL.revokeObjectURL=()=>{}; w.HTMLAnchorElement.prototype.click=function(){capturedDL=this.download;};
+ ok(q('#exportData')&&q('#importData')&&q('#importFile'),'backup buttons exist (export, import)');
+ const oKO=w.URL.createObjectURL,oRO=w.URL.revokeObjectURL,oClick=w.HTMLAnchorElement.prototype.click,oConfirm=w.confirm,oTB=w.HTMLCanvasElement.prototype.toBlob;
+ let blob=null,dl='';
+ w.URL.createObjectURL=b=>{blob=b;return 'blob:mock';};w.URL.revokeObjectURL=()=>{};w.HTMLAnchorElement.prototype.click=function(){dl=this.download;};
  q('#exportData').click();
- ok(capturedBlob&&capturedDL.startsWith('atlas-of-motion-backup-')&&capturedDL.endsWith('.json'),'export: creates JSON blob with backup filename');
- const txt=new w.TextDecoder().decode(await capturedBlob.stream().getReader().read().then(r=>r.value));const backup=JSON.parse(txt);
- ok(backup.app==='atlas-of-motion'&&backup.format===1&&backup.data&&typeof backup.data==='object'&&backup.data['aom.plan.v3'],'export: JSON contains app/format/exported/data with aom.plan.v3');
- // import: stub file input
- let importVal="";capturedFileInput=q('#importFile');
- Object.defineProperty(capturedFileInput,'files',{value:[{text:async()=>importVal}]});
- w.confirm=()=>true;
- q('#importData').click();
- ok(capturedFileInput===q('#importFile'),'import: opens the file input');
- importVal=JSON.stringify({app:"atlas-of-motion",format:1,data:{"aom.test.v1":"123"}});
- q('#importFile').dispatchEvent(new w.Event('change',{bubbles:true}));
- await sleep(600);
- ok(w.localStorage.getItem('aom.test.v1')==='123','import: writes valid backup to localStorage');
- w.localStorage.removeItem('aom.test.v1');
- const msgEl=q('#dataMsg');msgEl.textContent="";
- importVal=JSON.stringify({app:"wrong",format:1,data:{}});
- q('#importFile').dispatchEvent(new w.Event('change',{bubbles:true}));
- await sleep(100);
- ok(msgEl.textContent.includes('Error')&&msgEl.style.color==='var(--bad)','import: shows error on invalid app field');
+ ok(blob&&/^atlas-of-motion-backup-\d{4}-\d{2}-\d{2}\.json$/.test(dl),'export: downloads a JSON backup ('+dl+')');
+ const bk=JSON.parse(await blob.text());
+ ok(bk.app==='atlas-of-motion'&&bk.format===1&&bk.data&&typeof bk.data['aom.plan.v3']==='string','export: JSON has app, format and the stored plan (aom.plan.v3)');
+ const fin=q('#importFile');let fileTxt='';Object.defineProperty(fin,'files',{configurable:true,get:()=>[{text:async()=>fileTxt}]});
+ const imp=async t=>{fileTxt=t;fin.dispatchEvent(new w.Event('change',{bubbles:true}));await sleep(50);};
+ w.confirm=()=>false; await imp(JSON.stringify({app:'atlas-of-motion',format:1,data:{'aom.test.v1':'123'}}));
+ ok(w.localStorage.getItem('aom.test.v1')===null,'import: cancelling the confirm changes nothing');
+ await imp(JSON.stringify({app:'wrong',format:1,data:{}}));
+ ok(/Couldn't import/.test(q('#dataMsg').textContent),'import: a file from another app is rejected with a message');
+ await imp('{not json');
+ ok(/not valid JSON/.test(q('#dataMsg').textContent),'import: invalid JSON is rejected with a message');
+ await imp(JSON.stringify({app:'atlas-of-motion',format:1,data:{'other.key':'1'}}));
+ ok(/unexpected entry/.test(q('#dataMsg').textContent)&&w.localStorage.getItem('other.key')===null,'import: keys outside aom.* are refused');
+ w.confirm=()=>true; await imp(JSON.stringify({app:'atlas-of-motion',format:1,data:{'aom.test.v1':'123'}}));
+ ok(w.localStorage.getItem('aom.test.v1')==='123'&&/Reloading/.test(q('#dataMsg').textContent),'import: a valid backup is written to localStorage after confirming');
+ w.localStorage.removeItem('aom.test.v1');await sleep(600); // let the (jsdom no-op) reload timer pass
  // save image
- ok(q('#saveImg'),'save image button exists in view popover');
- let renderCalled=false;const origRender=w.__cam;
- w.__scene={traverse:f=>{}};w.__cam={};
- const origToBlob=w.HTMLCanvasElement.prototype.toBlob;let savedFilename="";
- w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new w.Blob(['fake png'],{type:'image/png'}));savedFilename=(w.capturedDL||'').slice(0,-4);};
+ dl='';w.HTMLCanvasElement.prototype.toBlob=function(cb){cb(new w.Blob(['png'],{type:'image/png'}));};
+ ok(q('#saveImg'),'save image button exists');
  q('#saveImg').click();
- await sleep(100);
- ok(savedFilename.startsWith('atlas-of-motion-')&&savedFilename.match(/\d{4}-\d{2}-\d{2}/),'save image: downloads PNG with datestamp');
- w.URL.createObjectURL=origKO;w.URL.revokeObjectURL=origRO;w.HTMLAnchorElement.prototype.click=origClick;w.HTMLCanvasElement.prototype.toBlob=origToBlob;w.confirm=origConfirm;
+ ok(/^atlas-of-motion-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}\.png$/.test(dl),'save image: downloads a PNG with a timestamp ('+dl+')');
+ w.URL.createObjectURL=oKO;w.URL.revokeObjectURL=oRO;w.HTMLAnchorElement.prototype.click=oClick;w.confirm=oConfirm;w.HTMLCanvasElement.prototype.toBlob=oTB;delete fin.files;q('#dataMsg').textContent='';
  await weekRun();
  await endRun();
  await boardRun();

@@ -746,7 +746,7 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
     </div>
     <div class="loading" id="loading"><div><strong>Atlas of Motion</strong><em>preparing the plates…</em><span id="loadMsg">Loading model</span></div></div>
     <div class="tip" id="tip"></div>
-    <div class="ver" id="ver" title="Atlas of Motion, version 1.7 (build ee8fb4a)">v1.7 · ee8fb4a</div>
+    <div class="ver" id="ver" title="Atlas of Motion, version 1.7 (build 1ce30d1)">v1.7 · 1ce30d1</div>
     <div class="hint" id="hint">Drag to rotate, scroll to zoom, right-drag to pan, click to inspect, H to hide</div>
     <div class="card" id="card" aria-live="polite"></div>
     <section class="ov" id="ov" role="dialog" aria-label="Week overview" hidden>
@@ -2506,20 +2506,19 @@ function exportData(){
   $("#dataMsg").textContent="";$("#dataMsg").style.color="";
 }
 function importData(){$("#importFile").click();}
-$("#importFile").onchange=function(e){
-  const file=e.target.files[0];if(!file) return;
-  const reader=new FileReader();reader.onload=ev=>{
-    const msg=$("#dataMsg");try{
-      const backup=JSON.parse(ev.target.result);
-      if(backup.app!=="atlas-of-motion") throw new Error("Invalid backup: app field is not 'atlas-of-motion'");
-      if(!backup.data||typeof backup.data!=="object") throw new Error("Invalid backup: data is missing or not an object");
-      for(const k of Object.keys(backup.data)){if(!k.startsWith("aom.")) throw new Error("Invalid backup: key '"+k+"' does not start with 'aom.'");}
-      if(typeof confirm==="function"&&!confirm("Replace your current plan and settings with this backup?")) return;
-      for(const [k,v] of Object.entries(backup.data)){try{localStorage.setItem(k,v);}catch(e){}}
-      msg.textContent="✓ Backup imported. Reloading…";msg.style.color="var(--ok)";
-      setTimeout(()=>location.reload(),500);
-    }catch(e){msg.textContent="Error: "+e.message;msg.style.color="var(--bad)";}
-  };reader.readAsText(file);e.target.value="";
+$("#importFile").onchange=async function(e){
+  const file=e.target.files&&e.target.files[0]; e.target.value=""; if(!file) return;
+  const msg=$("#dataMsg");
+  try{
+    const backup=JSON.parse(await file.text());
+    if(!backup||backup.app!=="atlas-of-motion") throw new Error("this is not an Atlas of Motion backup.");
+    if(!backup.data||typeof backup.data!=="object") throw new Error("the backup has no data.");
+    for(const [k,v] of Object.entries(backup.data)){ if(!k.startsWith("aom.")||typeof v!=="string") throw new Error("unexpected entry \""+k+"\"."); }
+    if(typeof confirm==="function"&&!confirm("Replace your current plan and settings with this backup?")) return;
+    for(const [k,v] of Object.entries(backup.data)){ try{localStorage.setItem(k,v);}catch(_){} }
+    msg.textContent="Backup imported. Reloading…"; msg.style.color="var(--ok)";
+    setTimeout(()=>location.reload(),500);
+  }catch(err){ msg.textContent="Couldn't import: "+(err instanceof SyntaxError?"the file is not valid JSON.":err.message); msg.style.color="var(--bad)"; }
 };
 $("#exportData").onclick=exportData;$("#importData").onclick=importData;
 $("#saveImg").onclick=()=>{
