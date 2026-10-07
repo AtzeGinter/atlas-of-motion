@@ -200,7 +200,7 @@ localStorage, all wrapped in try/catch. `aom.nerves.v1`: `true|false`, the Nerve
 
 Service worker: `geo()` registers its cache write with a synchronous `waitUntil` (Safari rejects late calls); requests with `&direct=1` bypass the worker. `fetchLod` retries once with `&direct=1` when a controlled fetch fails, so a broken worker cannot block loading or the quality switch.
 
-Version display: `#ver` in the viewport corner (bottom right; top right on phones) shows `v<tools/version.txt> · <build id>`; the build id is an md5 of template + META + version computed in `assemble.py`. **Bump `tools/version.txt` (1.0 → 1.1 …) with every user-visible release.** Current: 1.9 (1.8 training-day tracking + backup/PNG export, 1.9 movement search; 1.3 schedule board, 1.4 schematic nerves, 1.5 toolbar Volume button, 1.6 anatomical-atlas redesign, 1.7 index group eye toggles).
+Version display: `#ver` in the viewport corner (bottom right; top right on phones) shows `v<tools/version.txt> · <build id>`; the build id is an md5 of template + META + version computed in `assemble.py`. **Bump `tools/version.txt` (1.0 → 1.1 …) with every user-visible release.** Current: 1.10 (1.10 Save image as a toolbar button; 1.8 training-day tracking + backup/PNG export, 1.9 movement search; 1.3 schedule board, 1.4 schematic nerves, 1.5 toolbar Volume button, 1.6 anatomical-atlas redesign, 1.7 index group eye toggles).
 
 ## Testing
 
@@ -228,14 +228,14 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs on push and PR to `main`: `
 - Left and right share one key: hiding, exercise heat and volume always apply to both sides; single-sided exercises light both legs.
 - Missing structures in source data: tongue, pharyngeal constrictors, buccinator, auricular/occipitalis, perineal muscles, extensor digitorum brevis, dorsal interossei of the foot; sacrum, coccyx, costal cartilages.
 - Anatomy and exercise texts were written for this project and are not reviewed by an anatomist; innervation of small hand/foot/laryngeal muscles is the most error-prone.
-- Plan and training log live in localStorage only (no export).
+- Plan and training log live in localStorage only; the user can back them up with "Export data" (JSON, all `aom.*` keys) and restore with "Import data".
 - Endurance load is a coarse zone-minute estimate (per-activity profile weights are coach-level guesses, not measured); muscles outside the 27 SUMMARY groups (serratus anterior, neck, ...) only show on the 3D heatmap, not in the fatigue grid.
 - The fatigue / recovery model is a deliberately crude estimate (fixed carry-over weights, no intensity, no individual recovery). A group's value per day is the max over its meshes, so the Week column can be lower than the sum of the day cells for groups whose members are trained on different days.
 
 ## Roadmap ideas
 
 1. Rank variation combinations across groups (single options are already ranked as separate entries).
-2. Plan export/import (JSON). (Training days with per-session volume: done in 1.1.)
+2. (Done in 1.8) Plan export/import (JSON). (Training days with per-session volume: done in 1.1.)
 3. Left/right and per-part toggles in the Index.
 4. Replace three levels with cited per-muscle percentages.
 5. Rebuild meshes directly from BodyParts3D + Z-Anatomy (needs own alignment of the 66 Z-Anatomy meshes).
@@ -250,4 +250,4 @@ CI (GitHub Actions, `.github/workflows/ci.yml`) runs on push and PR to `main`: `
 
 ## Licensing
 
-Code, anatomy text and exercise data: MIT (`LICENSE`). Embedded mesh data: CC BY-SA 4.0 (`LICENSE-DATA`), derived from BodyParts3D (© DBCLS, CC BY-SA 2.1 JP), Z-Anatomy (CC BY-SA 4.0), via BodyExplorer (code MIT; meshes under source licenses). Self-hosted third-party files: three.js r128 (MIT, `vendor/LICENSE-three.txt`), Archivo and Source Serif 4 fonts (SIL OFL 1.1, `fonts/OFL-*.txt`). Keep attribution in README and in the app footer.
+Code, anatomy text and exercise data: MIT (`LICENSE`). Embedded mesh data: CC BY-SA 4.0 (`LICENSE-DATA`), derived from BodyParts3D (© DBCLS, CC BY-SA 2.1 JP), Z-Anatomy (CC BY-SA 4.0), via BodyExplorer (code MIT; meshes under source licenses). Self-hosted third-party files: three.js r128 (MIT, `vendor/LICENSE-three.txt`), Fraunces, Archivo and Source Serif 4 fonts (SIL OFL 1.1, `fonts/OFL-*.txt`). Commercial-use notes for the meshes: README, "Commercial use of the 3D models". Keep attribution in README and in the app footer.

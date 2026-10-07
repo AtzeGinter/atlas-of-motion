@@ -63,7 +63,7 @@ Anatomy text lives in `tools/data/muscles.txt` (`key|group|action|origin|inserti
 
 ## Credits and licensing
 
-**3D mesh data** (embedded in `index.html`) is derived from:
+**3D mesh data** (served as `geo/*.bin`) is derived from:
 
 - [BodyParts3D](https://lifesciencedb.jp/bp3d/), © The Database Center for Life Science, licensed CC BY-SA 2.1 Japan
 - [Z-Anatomy](https://www.z-anatomy.com/), licensed CC BY-SA 4.0
@@ -77,3 +77,27 @@ The mesh data is redistributed under **CC BY-SA 4.0** (see `LICENSE-DATA`). If y
 - [Fraunces](https://github.com/undercasetype/Fraunces) (© The Fraunces Project Authors), [Archivo](https://github.com/Omnibus-Type/Archivo) (© The Archivo Project Authors) and [Source Serif 4](https://github.com/adobe-fonts/source-serif) (© The Source Serif 4 Project Authors), SIL Open Font License 1.1 (`fonts/OFL-*.txt`, sources in `fonts/README.md`)
 
 **Code, anatomy text and exercise data** are released under the **MIT License** (see `LICENSE`).
+
+### Commercial use of the 3D models
+
+This is a summary for orientation, not legal advice; check the current licence texts and get legal advice before commercial use.
+
+| Source | Used for | Licence |
+|---|---|---|
+| [BodyParts3D](https://lifesciencedb.jp/bp3d/) (© DBCLS) | 401 muscle/tendon meshes, all bones | CC BY-SA 2.1 Japan |
+| [Z-Anatomy](https://www.z-anatomy.com/) | 66 muscle/tendon meshes | CC BY-SA 4.0 |
+| [BodyExplorer](https://github.com/JohanBellander/BodyExplorer) | alignment of both sets | code MIT, meshes under the licences above |
+| This project (`geo/*.bin`, `tools/meshes.json`) | decimated, re-encoded meshes | CC BY-SA 4.0 (`LICENSE-DATA`) |
+
+- **Commercial use is allowed** under CC BY-SA (paid apps, subscriptions, ads).
+- **Attribution is required:** keep the credits above and the colophon in the app.
+- **ShareAlike:** modified meshes must be released under CC BY-SA. This applies to the mesh data, not to the app code, which may use any licence.
+- **No exclusivity:** anyone may reuse the meshes, including competitors; they cannot be locked away.
+- **No technical restrictions** on the licensed material (CC 4.0, section 2(a)(5)(C)): unproblematic for the web app; DRM-protected app-store distribution is a grey area worth a legal check.
+
+Options for a commercial release:
+
+1. **Keep the open meshes** and charge for the app's own value (planner, training log, sync, programmes, coaching). Cheapest and legally simple.
+2. **License commercial models:** asset marketplaces (e.g. TurboSquid, CGTrader; check segmentation and app-use terms), medical-grade vendors such as Zygote, or an embedded anatomy SDK such as BioDigital Human.
+3. **Commission own models**, e.g. segmented from the NLM Visible Human data: full ownership, high cost and effort.
+4. **Hybrid:** start with the open meshes; the mesh data is isolated in `geo/*.bin` plus `tools/meshes.json`, so it can be replaced later without changing the app logic.
