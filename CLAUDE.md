@@ -89,7 +89,7 @@ If you only changed `template.html`, `data/*.txt`, `bones.py`, `exercises.py` or
 - `VARS`: per-exercise variation groups `{name: [(group, [(option, overrideSpec), ...])]}`. First option is the default and usually `""`. Overrides replace levels; `:0` removes a target. Part-specific overrides split a whole-muscle target into parts.
 - `EQ`: maps the free-text equipment string to filter categories (Barbell, Dumbbells, Kettlebell, Cable, Machine, Bodyweight, Band, Other). A new equipment string needs an entry here or the script raises KeyError.
 - Categories (must match `EXCATS` in template.html): Chest & shoulders, Back, Arms, Legs, Hinge, Full body, Core, Grip & carry, Neck.
-- Current size: 113 exercises, 18 with variations, 80 muscles covered.
+- Current size: 148 exercises, 23 with variations, 134 muscles covered.
 
 ## META object (embedded as `const META=...`)
 
@@ -195,7 +195,7 @@ localStorage, all wrapped in try/catch. `aom.nerves.v1`: `true|false`, the Nerve
 
 Service worker: `geo()` registers its cache write with a synchronous `waitUntil` (Safari rejects late calls); requests with `&direct=1` bypass the worker. `fetchLod` retries once with `&direct=1` when a controlled fetch fails, so a broken worker cannot block loading or the quality switch.
 
-Version display: `#ver` in the viewport corner (bottom right; top right on phones) shows `v<tools/version.txt> · <build id>`; the build id is an md5 of template + META + version computed in `assemble.py`. **Bump `tools/version.txt` (1.0 → 1.1 …) with every user-visible release.** Current: 1.2 (endurance sessions, heart-rate zones, week balance, day cards).
+Version display: `#ver` in the viewport corner (bottom right; top right on phones) shows `v<tools/version.txt> · <build id>`; the build id is an md5 of template + META + version computed in `assemble.py`. **Bump `tools/version.txt` (1.0 → 1.1 …) with every user-visible release.** Current: 1.7 (1.3 schedule board, 1.4 schematic nerves, 1.5 toolbar Volume button, 1.6 anatomical-atlas redesign, 1.7 index group eye toggles).
 
 ## Testing
 
