@@ -69,6 +69,21 @@ def canon(n):
     n=re.sub(r'\b(left|right)\b ?','',n); n=re.sub(r' +',' ',n).strip()
     n=re.sub(r' of (hand|foot)$',r' (\1)',n); n=re.sub(r' \(\d\)$','',n)
     return n,side
+def load_movements(db):  # data/movements.txt: id|label|joint|pattern;pattern;... -> [{id,n:label,j:joint,k:[muscle keys]}]
+    out=[]
+    for l in open('data/movements.txt',encoding='utf-8'):
+        l=l.rstrip('\n')
+        if not l: continue
+        id,name,joint,pats=l.split('|',3); patterns=[p.strip() for p in pats.split(';')]
+        keys=set()
+        for k in db:
+            if db[k]['g']=='Connective tissue': continue  # skip tendons/ligaments
+            actions=db[k]['a']
+            for action in actions:
+                for pat in patterns:
+                    if re.search(pat,action,re.IGNORECASE): keys.add(k); break
+        out.append({'id':id,'n':name,'j':joint,'k':sorted(keys)})
+    return out
 if __name__=='__main__':
     db=load_db()
     M=json.load(open('meshes.json',encoding='utf-8'))
@@ -95,6 +110,7 @@ if __name__=='__main__':
             k,_,p=e.partition(':'); assert not p or p in pts.get(k,()),(a,e)
     M['al']=al; M['act']=load_acts(db)
     M['nd'],M['nv']=load_nerves(db)
+    M['mv']=load_movements(db)
     nsup={k for v in M['nv'].values() for k in v}
     print('nerves:',len(M['nd']),'; muscles supplied by a drawn nerve:',len(nsup),'; nerve text matched no nerve (info):',sorted(k for k in db if db[k]['g']!='Connective tissue' and db[k]['n'] and k not in nsup))
     for a in M['act']:

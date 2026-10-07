@@ -574,6 +574,20 @@ async function searchRun(){
  ok(addq('zzzz').length===0&&/No match/.test(q('#addres').textContent),'Add search: nonsense gives "No match"');
  q('#qa').value='';ev(q('#qa'),'input');
 }
+// ---- Movement search ----
+async function movementRun(){
+ ok(META.mv&&META.mv.length>=30,'META.mv holds >=30 movements ('+META.mv.length+')');
+ const mvByLabel=label=>META.mv.find(m=>m.n.toLowerCase().includes(label.toLowerCase()));
+ // test that movements contain expected muscles
+ const elFlex=mvByLabel('Elbow flexion');
+ ok(elFlex&&elFlex.k.includes('biceps brachii')&&elFlex.k.includes('brachialis')&&!elFlex.k.includes('triceps brachii'),'Elbow flexion contains biceps brachii and brachialis, not triceps');
+ const kneeExt=mvByLabel('Knee extension');
+ ok(kneeExt&&kneeExt.k.includes('vastus lateralis'),'Knee extension contains vastus lateralis');
+ // test that movements cover many muscles
+ const coveredMuscles=new Set();
+ META.mv.forEach(m=>m.k.forEach(k=>coveredMuscles.add(k)));
+ ok(coveredMuscles.size>100,'Movements cover '+coveredMuscles.size+' unique muscles');
+}
 // ---- Index group headings: eye toggles replace the old Regions chip panel ----
 async function eyeRun(){
  q('[data-tab="anat"]').click();q('#q').value='';ev(q('#q'),'input');
@@ -1429,6 +1443,7 @@ async function boardRun(){
  await sugRun();
  await migrateRun();
  await searchRun();
+ await movementRun();
  await eyeRun();
  await variationRun();
  await linkRun();

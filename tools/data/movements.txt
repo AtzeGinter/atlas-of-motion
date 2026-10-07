@@ -1,0 +1,55 @@
+nk_flex|Neck flexion|Neck|flexes? the (head|neck|cervical);flexes? the cervical
+nk_ext|Neck extension|Neck|extends? the (head|neck|cervical|thoracic);extends? the thoracic
+nk_lat|Neck lateral flexion|Neck|tilts? the (head|neck) to the same side;bends? (the spine|it) to the same side.*neck;tilts? the cervical
+nk_rot|Neck rotation|Neck|rotates? (the head|it|the spine|the neck);turns? the face;rotates? to the.*side.*neck
+trk_flex|Trunk flexion|Trunk|flexes? the (trunk|spine)
+trk_ext|Trunk extension|Trunk|extends? the (spine|trunk|thoracic)
+trk_lat|Trunk lateral flexion|Trunk|bends? the (spine|trunk) to the same side;lateral flexion
+trk_rot|Trunk rotation|Trunk|rotates? the (trunk|spine).*opposite
+scap_elev|Scapula elevation|Scapula|elevates? the scapula
+scap_depr|Scapula depression|Scapula|depresses? the scapula;pulls? the scapula.*down
+scap_prot|Scapula protraction|Scapula|protracts? and upwardly rotates the scapula;pulls? the scapula forward
+scap_retr|Scapula retraction|Scapula|retracts? and downwardly rotates the scapula;pulls? the scapula.*back.*down
+scap_uprot|Scapula upward rotation|Scapula|upwardly rotates? the scapula;upward rotation
+scap_dnrot|Scapula downward rotation|Scapula|downwardly rotates? the scapula
+sh_flex|Shoulder flexion|Shoulder|flexes? the shoulder;starts? abduction;clavicular part.*flexion
+sh_ext|Shoulder extension|Shoulder|extends? the shoulder;spinal part.*extension;long head.*extends?
+sh_abd|Shoulder abduction|Shoulder|abducts? the shoulder;acromial part.*abduction
+sh_add|Shoulder adduction|Shoulder|adducts?.*shoulder;pulls? the.*arm.*in
+sh_irot|Shoulder internal rotation|Shoulder|internally rotates? the shoulder;adducts?.*internally rotates?
+sh_erot|Shoulder external rotation|Shoulder|externally rotates? the shoulder;holds? the.*rotator cuff
+sh_hflex|Shoulder horizontal flexion|Shoulder|flexes? and adducts? the shoulder
+sh_habd|Shoulder horizontal abduction|Shoulder|horizontally abduct;retracts? it;spinal part.*extension
+el_flex|Elbow flexion|Elbow|flexes? the elbow;assists? elbow flexion
+el_ext|Elbow extension|Elbow|extends? the elbow;extends? and.*assist
+fa_pron|Forearm pronation|Forearm|pronates? the forearm;main pronator
+fa_sup|Forearm supination|Forearm|supinates? the forearm
+wr_flex|Wrist flexion|Wrist|flexes? the wrist;assists? wrist flexion
+wr_ext|Wrist extension|Wrist|extends? (the wrist|and.*deviates? the wrist)
+wr_rad|Wrist radial deviation|Wrist|radially deviates? the wrist
+wr_uln|Wrist ulnar deviation|Wrist|ulnar deviates? the wrist
+fg_flex|Finger flexion|Finger|flexes? (the.*fingers?|fingertips?|the.*phalanges?|finger joints?|knuckles?);flex the.*knuckles?
+fg_ext|Finger extension|Finger|extends? (the.*fingers?|the.*phalanges?);straightens? the pull;extends toes
+th_opp|Thumb opposition|Thumb|opposes? the (thumb|fingertips?);rotates? the thumb
+th_abd|Thumb abduction|Thumb|abducts? the thumb
+th_flex|Thumb flexion|Thumb|flexes? the thumb;flexes? the.*tip
+hp_flex|Hip flexion|Hip|flexes? the hip;iliopsoas
+hp_ext|Hip extension|Hip|extends? the hip;extends? and.*rotate;long head extends?
+hp_abd|Hip abduction|Hip|abducts? the hip;hikes? the hip
+hp_add|Hip adduction|Hip|adducts? the hip
+hp_irot|Hip internal rotation|Hip|internally rotates? the hip;adducts?.*internally rotates?
+hp_erot|Hip external rotation|Hip|externally rotates? the hip;external rotation.*hip
+kn_flex|Knee flexion|Knee|flexes? the knee;assists? knee flexion
+kn_ext|Knee extension|Knee|extends? the knee;unlocks the extended knee
+ak_plant|Ankle plantarflexion|Ankle|plantarflexes? the ankle;push.off;pointing.*toes?
+ak_dors|Ankle dorsiflexion|Ankle|dorsiflexes? the ankle;raises? the toes?
+fot_inv|Foot inversion|Foot|inverts? the foot
+fot_ev|Foot eversion|Foot|everts? the foot
+toe_flex|Toe flexion|Toe|flexes? (the|toes?|the big toe|little toe)
+toe_ext|Toe extension|Toe|extends? (toes?|the.*toe)
+jaw_elev|Jaw elevation|Jaw|elevates?.*mandible;closes? the jaw
+jaw_prot|Jaw protrusion|Jaw|protrudes? the mandible
+spir|Inspiration|Respiratory|inhalation;main muscle of inhalation;elevates? the ribs? during inhalation;assist.*inhalation
+expir|Expiration|Respiratory|exhalation;depresses? the ribs?;forced exhalation
+voc_abd|Vocal fold abduction|Larynx|abducts? the vocal folds?
+voc_add|Vocal fold adduction|Larynx|adducts? the vocal folds?;glottis
