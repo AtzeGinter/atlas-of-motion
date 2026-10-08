@@ -138,6 +138,21 @@ aside{background:var(--panel);border-right:1px solid var(--line);overflow:hidden
 .foot::before{content:"Colophon";display:block;margin-bottom:6px;font:600 14px/1 var(--f-ui);font-style:normal;font-variant-caps:all-small-caps;letter-spacing:.12em;color:var(--ink);}
 .foot a{color:inherit;text-underline-offset:3px;text-decoration-color:var(--line);}
 .foot a:hover{text-decoration-color:var(--accent);}
+.lic{margin:10px 0 12px;font-style:normal;}
+.lic>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font:600 14px/1.2 var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.1em;color:var(--ink);}
+.lic>summary::-webkit-details-marker{display:none;}
+.lic>summary::before{content:"+";display:inline-block;width:14px;color:var(--accent);}
+.lic[open]>summary::before{content:"\2212";}
+.licbadge{font:600 11.5px/1 var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--onacc);background:var(--accent);border-radius:2px;padding:3px 6px;}
+.licbadge[hidden]{display:none;}
+.licbody{margin-top:8px;}
+.licst{margin:0 0 8px;font:500 14.5px/1.4 var(--f-read);font-style:normal;color:var(--ink);overflow-wrap:anywhere;}
+.licst.bad{color:var(--bad);}
+.lic[data-pro="1"] .licst{border-left:2px solid var(--accent);padding-left:8px;}
+textarea.search{display:block;resize:vertical;min-height:64px;font:12.5px/1.35 ui-monospace,Consolas,monospace;overflow-wrap:anywhere;margin:0;}
+.licact{display:flex;align-items:center;gap:12px;margin:8px 0 0;flex-wrap:wrap;}
+.licact .btn{padding:5px 12px;}
+.licact .linkbtn{padding:0;}
 
 .vp{position:relative;overflow:hidden;background:radial-gradient(ellipse 75% 85% at 50% 44%,var(--vp-a),var(--vp-b));}
 .vp::before{content:"";position:absolute;inset:12px;border:1px solid var(--line);pointer-events:none;opacity:.85;}
@@ -698,7 +713,8 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
   .more>summary{min-height:44px;display:flex;align-items:center;}
 }
 @media (max-width:760px),(pointer:coarse){
-  input.search,select.search,input.num{font-size:16px;min-height:44px;}
+  input.search,select.search,input.num,textarea.search{font-size:16px;min-height:44px;}
+  textarea.search{min-height:88px;}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
 </style>
@@ -809,7 +825,13 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
     </div>
     </div>
 
-    <div class="foot"><p class="about">A 3D atlas of the human muscular system built from MRI-derived anatomical meshes: select any structure to see what it does, or pick an exercise to see what it trains.</p><div id="foot"></div></div>
+    <div class="foot"><p class="about">A 3D atlas of the human muscular system built from MRI-derived anatomical meshes: select any structure to see what it does, or pick an exercise to see what it trains.</p><details class="lic" id="lic" data-pro="0"><summary>Pro &amp; licence<span class="licbadge" id="licBadge" hidden>Pro</span></summary><div class="licbody">
+      <p class="licst" id="licStatus" role="status">Free version</p>
+      <textarea class="search" id="licKey" rows="3" placeholder="Paste your licence key (AOM1-…)" aria-label="Licence key" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+      <p class="licst bad" id="licMsg" role="alert" hidden></p>
+      <div class="licact"><button class="btn" id="licAct" type="button">Activate</button><button class="linkbtn" id="licDel" type="button" hidden>Remove licence</button></div>
+      <p class="fine">Pro features are not available yet; nothing is locked. A key is checked offline on this device: no account, and nothing is sent anywhere.</p>
+    </div></details><div id="foot"></div></div>
     </div>
   </aside>
 
@@ -2963,6 +2985,81 @@ function copyLink(btn){
   if(navigator.clipboard&&navigator.clipboard.writeText){ try{ navigator.clipboard.writeText(url).then(()=>done("Copied"),fallback); }catch(e){ fallback(); } } else fallback();
 }
 
+/* ---------- licence (Pro groundwork; nothing is gated yet): offline check of an ECDSA P-256 signed key, see docs/licensing.md ----------
+   Key = "AOM1-" + base64url(payload JSON) + "." + base64url(64-byte IEEE P1363 signature over the ASCII text "AOM1." + base64url(payload JSON)).
+   The public key (LICPUB) and the revoked ids (LICREV) are embedded at build time (tools/license-public.jwk, tools/data/revoked.txt). */
+const LICPUB=__LICPUB__, LICREV=__LICREV__, LIC_KEY="aom.lic.v1";
+const FEATURES={   // pattern for later: name -> {pro:true means Pro only, label}. Nothing is gated yet, so every entry is pro:false.
+  stats:{pro:false,label:"Training statistics"},
+  templates:{pro:false,label:"Programme templates"},
+  progression:{pro:false,label:"Progression suggestions"}
+};
+let licState={ok:false,reason:null,payload:null};   // result of the last verification (sync source of isPro)
+const isPro=()=>licState.ok===true;
+const hasFeature=n=>{ const f=FEATURES[n]; return !!f&&(!f.pro||isPro()); };
+const licLocalDate=()=>{ const d=new Date(),p=n=>String(n).padStart(2,"0"); return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate()); };
+const licDate=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&!isNaN(Date.parse(s+"T00:00:00Z"))&&new Date(s+"T00:00:00Z").toISOString().slice(0,10)===s;
+function licB64(s){ // base64url -> Uint8Array, or null
+  if(!/^[A-Za-z0-9_-]+$/.test(s)||s.length%4===1) return null;
+  try{ const b=atob(s.replace(/-/g,"+").replace(/_/g,"/")+"===".slice((s.length+3)%4)); const u=new Uint8Array(b.length); for(let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; }catch(e){ return null; }
+}
+function parseKey(str){   // whitespace (pasted line breaks) is ignored; -> {key, pb64, sig, payload} or null
+  const k=String(str==null?"":str).replace(/\s+/g,""), m=/^AOM1-([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)$/.exec(k); if(!m) return null;
+  const pb=licB64(m[1]), sig=licB64(m[2]); if(!pb||!sig||sig.length!==64) return null;
+  let payload; try{ payload=JSON.parse(decodeURIComponent(Array.from(pb,b=>"%"+(b<16?"0":"")+b.toString(16)).join(""))); }catch(e){ return null; }
+  if(!payload||typeof payload!=="object"||Array.isArray(payload)) return null;
+  return {key:k,pb64:m[1],sig:sig,payload:payload};
+}
+const licShape=p=>p.v===1&&typeof p.id==="string"&&/^[A-Z2-7]{10}$/.test(p.id)&&p.tier==="pro"&&typeof p.iat==="string"&&licDate(p.iat)&&(p.exp===undefined||(typeof p.exp==="string"&&licDate(p.exp)))&&(p.name===undefined||(typeof p.name==="string"&&p.name.length<=40));
+async function verifyKey(str){   // -> {ok:true,payload} | {ok:false,reason:"format"|"signature"|"expired"|"revoked"|"unsupported"}
+  const k=parseKey(str); if(!k) return {ok:false,reason:"format"};
+  const c=window.crypto, sub=c&&c.subtle; if(!sub||!sub.importKey||!sub.verify) return {ok:false,reason:"unsupported"};
+  let good=false;
+  try{
+    const pub=await sub.importKey("jwk",LICPUB,{name:"ECDSA",namedCurve:"P-256"},false,["verify"]);
+    const data=new Uint8Array(5+k.pb64.length); for(let i=0;i<5;i++) data[i]="AOM1.".charCodeAt(i); for(let i=0;i<k.pb64.length;i++) data[5+i]=k.pb64.charCodeAt(i);
+    good=await sub.verify({name:"ECDSA",hash:"SHA-256"},pub,k.sig,data);
+  }catch(e){ return {ok:false,reason:"unsupported"}; }
+  if(!good) return {ok:false,reason:"signature"};
+  const p=k.payload; if(!licShape(p)) return {ok:false,reason:"format"};
+  if(p.exp&&licLocalDate()>p.exp) return {ok:false,reason:"expired",payload:p};
+  if(LICREV.includes(p.id)) return {ok:false,reason:"revoked",payload:p};
+  return {ok:true,payload:p};
+}
+function licMsg(r){
+  const p=r.payload||{};
+  return ({format:"That is not an Atlas of Motion licence key: it should start with AOM1- and be copied completely.",
+    signature:"The signature of this key is not valid. Check that you copied the whole key without changes.",
+    expired:"This licence expired on "+(p.exp||"")+".",
+    revoked:"This licence has been revoked.",
+    unsupported:"This browser cannot check licence keys here. Open the app over https:// or on localhost, in a current browser."})[r.reason]||"The key could not be checked.";
+}
+function licRender(stored){
+  const el=$("#licStatus"), p=licState.payload;
+  let html, bad=false;
+  if(isPro()) html="Pro active"+(p.name?" · licensed to "+esc(p.name):"")+" · since "+esc(p.iat)+(p.exp?" · until "+esc(p.exp):"");
+  else if(licState.reason){ html="Free version. "+esc(licMsg(licState)); bad=true; }
+  else html="Free version";
+  el.innerHTML=html; el.classList.toggle("bad",bad);
+  $("#lic").dataset.pro=isPro()?"1":"0"; document.documentElement.dataset.pro=isPro()?"1":"0";
+  $("#licBadge").hidden=!isPro(); $("#licDel").hidden=!(stored||isPro());
+}
+const licStored=()=>{ try{ return localStorage.getItem(LIC_KEY)||""; }catch(e){ return ""; } };
+async function licStartup(){   // re-verify a stored key silently; a key that no longer verifies stays stored but does not make the app Pro
+  const k=licStored(); if(!k){ licRender(false); return; }
+  const r=await verifyKey(k); licState=r.ok?{ok:true,reason:null,payload:r.payload}:{ok:false,reason:r.reason,payload:r.payload||null}; licRender(true);
+}
+$("#licAct").onclick=async()=>{
+  const k=$("#licKey").value.replace(/\s+/g,"");
+  const note=t=>{ const m=$("#licMsg"); m.textContent=t||""; m.hidden=!t; };
+  if(!k){ note("Paste your licence key first."); return; }
+  const r=await verifyKey(k);
+  if(r.ok){ try{ localStorage.setItem(LIC_KEY,k); }catch(e){} licState={ok:true,reason:null,payload:r.payload}; $("#licKey").value=""; note(""); licRender(true); }
+  else note(licMsg(r));   // a failed attempt never changes the current status or the stored key
+};
+$("#licDel").onclick=()=>{ try{ localStorage.removeItem(LIC_KEY); }catch(e){} licState={ok:false,reason:null,payload:null}; $("#licKey").value=""; $("#licMsg").hidden=true; licRender(false); };
+//@licexport
+
 const nMus=Object.keys(DB).filter(k=>DB[k].g!==TISSUE).length;
 $("#foot").innerHTML=nMus+" muscles in "+muscleMeshes.length+" meshes, "+Object.keys(BDB).length+" bone types in "+boneMeshes.length+" meshes. "+
  "Meshes from <a href='https://lifesciencedb.jp/bp3d/' target='_blank' rel='noopener'>BodyParts3D</a> (© The Database Center for Life Science, CC BY-SA 2.1 JP) and "+
@@ -2974,6 +3071,7 @@ if(window.MutationObserver) new MutationObserver(applyTheme).observe(document.do
 buildList(); buildEq(); buildExList(); buildBest(); renderHr(); renderPlan(); renderVolSum(); renderSuggest(); syncGoalUI(); syncModeUI(); applyVisuals();
 if(store.get(NV_KEY,false)===true) setNerves(true);   // the Nerves layer is remembered per viewer
 if(applyHash(location.hash)){ hashReady=true; syncHash(); } else hashReady=true;
+licStartup();   // async, does not block start-up
 $("#loading").remove();
 })();
 </script>

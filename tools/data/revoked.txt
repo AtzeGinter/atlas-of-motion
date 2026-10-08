@@ -1,0 +1,2 @@
+# Revoked licence ids, one per line (10 characters A-Z, 2-7). Take effect in the next app release (python assemble.py).
+# Example line (do not uncomment): ABCDEFGHIJ  # refunded 2027-01-15

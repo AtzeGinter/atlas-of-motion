@@ -11,8 +11,11 @@ for L in meta['lod'].values(): L['file'] += '?v=' + md5(os.path.join(root, L['fi
 metaj = json.dumps(meta, separators=(',', ':'), ensure_ascii=False)
 # version shown in the corner: tools/version.txt (bump it for every release) + a build id hashed from the sources (reproducible, no git data)
 version = open(os.path.join(here, 'version.txt'), encoding='utf-8').read().strip()
-buildid = hashlib.md5((t + metaj + version).encode()).hexdigest()[:7]
-t = t.replace('__META__', metaj).replace('__VERSION__', version).replace('__BUILDID__', buildid)
+# licence verification (Pro groundwork): public key (JWK, tools/license-public.jwk) and the revocation list (tools/data/revoked.txt), both embedded as JSON
+licpub = json.dumps(json.load(open(os.path.join(here, 'license-public.jwk'), encoding='utf-8')), separators=(',', ':'))
+licrev = json.dumps([l.split('#')[0].strip() for l in open(os.path.join(here, 'data', 'revoked.txt'), encoding='utf-8').read().split(chr(10)) if l.split('#')[0].strip()], separators=(',', ':'))
+buildid = hashlib.md5((t + metaj + version + licpub + licrev).encode()).hexdigest()[:7]
+t = t.replace('__META__', metaj).replace('__VERSION__', version).replace('__BUILDID__', buildid).replace('__LICPUB__', licpub).replace('__LICREV__', licrev)
 open(os.path.join(here, '..', 'index.html'), 'w', encoding='utf-8', newline='\n').write(t)
 print('index.html written', round(len(t) / 1e6, 1), 'MB, version', version, 'build', buildid)
 

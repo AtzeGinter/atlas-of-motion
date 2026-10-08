@@ -107,6 +107,20 @@ for w, r in nrv:
             if f3(sp) or (sp[:1] == 's' and re.fullmatch(r'[01](\.\d+)?', sp[1:])):
                 nanch.append((w, t[0], t[1])); continue
         err.append(f'{w}: bad waypoint {a!r} (xyz:x,y,z | spine:C5[:dx,dy,dz] | bone|muscle:key:fx,fy,fz|sT[:dx,dy,dz])')
+# licence groundwork: data/revoked.txt = licence ids (10 x A-Z2-7), '#' comments; license-public.jwk = ECDSA P-256 public key
+rev, rvseen = [], set()
+if os.path.exists(P('data', 'revoked.txt')):
+    for ln, l in enumerate(rd(P('data', 'revoked.txt')).split(chr(10)), 1):
+        l = l.split('#')[0].strip()
+        if not l: continue
+        if not re.fullmatch(r'[A-Z2-7]{10}', l): err.append(f'revoked.txt:{ln}: bad licence id {l!r} (10 characters A-Z, 2-7)')
+        elif l in rvseen: err.append(f'revoked.txt:{ln}: duplicate licence id {l!r}')
+        rvseen.add(l); rev.append(l)
+if os.path.exists(P('license-public.jwk')):
+    try: jw = json.loads(rd(P('license-public.jwk')))
+    except ValueError: jw = None; err.append('license-public.jwk: not valid JSON')
+    if jw is not None and (not isinstance(jw, dict) or jw.get('kty') != 'EC' or jw.get('crv') != 'P-256' or not all(isinstance(jw.get(c), str) and re.fullmatch(r'[A-Za-z0-9_-]{43}', jw[c]) for c in 'xy') or 'd' in jw):
+        err.append('license-public.jwk: must be a public EC P-256 JWK {kty,crv,x,y} without a private part "d"')
 nex = None
 if os.path.exists(P('meta3.json')):
     M = json.loads(rd(P('meta3.json'))); db = M['db']; names = set(); nex = len(M['ex'])
@@ -171,4 +185,4 @@ if os.path.exists(P('meta3.json')):
 else: print('NOTE: meta3.json missing, exercise checks skipped (run meta.py && exercises.py first)')
 if err:
     print('\n'.join('LINT: ' + x for x in err)); print(f'{len(err)} problem(s)'); sys.exit(1)
-print(f'lint OK: {len(mus)} muscles, {len(als)} aliases, {len(acts)} activities, {len(mov)} movements, {len(nrv)} nerves, ' + (f'{nex} exercises checked' if nex is not None else 'exercise checks skipped'))
+print(f'lint OK: {len(mus)} muscles, {len(als)} aliases, {len(acts)} activities, {len(mov)} movements, {len(nrv)} nerves, {len(rev)} revoked licences, ' + (f'{nex} exercises checked' if nex is not None else 'exercise checks skipped'))

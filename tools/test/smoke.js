@@ -42,7 +42,10 @@ function boot(opts){
   w.localStorage.setItem('myology.eq.v1',JSON.stringify(OLD_EQ));
  }
  if(opts.lod) w.localStorage.setItem('aom.lod.v1',opts.lod);
- w.eval(`(async()=>{try{${js.replace('(async function(){','await (async function(){')}}catch(e){window.__fatal=e.stack||String(e)}})()`);
+ // WebCrypto for the licence check: jsdom has no crypto.subtle, so hand it Node's (opts.nosubtle: a crypto object without subtle, like an insecure context)
+ if(opts.nosubtle) Object.defineProperty(w,'crypto',{value:{getRandomValues:a=>a},configurable:true});
+ else if(!w.crypto||!w.crypto.subtle) Object.defineProperty(w,'crypto',{value:require('crypto').webcrypto,configurable:true});
+ w.eval(`(async()=>{try{${(opts.js||js).replace('(async function(){','await (async function(){')}}catch(e){window.__fatal=e.stack||String(e)}})()`);
  return w;
 }
 const w=boot();
@@ -602,6 +605,106 @@ async function migrateRun(){
  ok(d2.querySelector('#plan').textContent.includes('Back squat')&&d2.querySelector('#plan').textContent.includes('Wide, Deep'),'Day 3 holds Back squat (Wide, Deep)');
 }
 // ---- quality levels (main desktop instance) ----
+// ---- licence groundwork (Pro): offline ECDSA P-256 keys, tools/license.js CLI, the Pro & licence panel. Nothing is gated yet. Uses a TEST key pair only. ----
+async function licenseRun(){
+ const cp=require('child_process'),os=require('os'),crypto=require('crypto'),LIC=path.join(ROOT,'tools','license.js'),lib=require(LIC);
+ const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'aom-lic-'));
+ try{
+  // --- CLI round trip with a temporary key pair (never the real private key) ---
+  const pem=path.join(tmp,'license-private.pem'),pubf=path.join(tmp,'pub.jwk'),revf=path.join(tmp,'revoked.txt');
+  const cli=(...a)=>cp.spawnSync(process.execPath,[LIC,...a],{encoding:'utf8'});
+  const kg=cli('keygen','--out',tmp,'--pub',pubf);
+  ok(kg.status===0&&fs.existsSync(pem)&&fs.existsSync(pubf)&&/BACK UP/.test(kg.stdout),'license.js keygen: writes private PEM and public JWK, reminds to back up');
+  const jwk=JSON.parse(fs.readFileSync(pubf,'utf8'));
+  ok(jwk.kty==='EC'&&jwk.crv==='P-256'&&!('d' in jwk)&&/^-----BEGIN PRIVATE KEY-----/.test(fs.readFileSync(pem,'utf8')),'... the JWK is a public P-256 key, the PEM is PKCS8');
+  ok(cli('keygen','--out',tmp,'--pub',pubf).status===1&&cli('keygen','--out',tmp,'--pub',pubf,'--force').status===0,'... refuses to overwrite an existing key unless --force');
+  const jwk2=JSON.parse(fs.readFileSync(pubf,'utf8')),pem2=fs.readFileSync(pem,'utf8');
+  const sg=cli('sign','--key',pem,'--name','Ana Ünï <b>','--exp','2099-12-31');
+  const key=sg.stdout.trim();
+  ok(sg.status===0&&/^AOM1-[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{86}$/.test(key),'license.js sign: prints an AOM1- key with a 64-byte (86 character) signature');
+  const pl=lib.parseKey(key).payload;
+  ok(pl.v===1&&/^[A-Z2-7]{10}$/.test(pl.id)&&pl.tier==='pro'&&/^\d{4}-\d{2}-\d{2}$/.test(pl.iat)&&pl.exp==='2099-12-31'&&pl.name==='Ana Ünï <b>'&&Object.keys(pl).length===6,'... payload: v, random base32 id, tier, iat, exp, name (no other data)');
+  const v1=cli('verify',key,'--pub',pubf);
+  ok(v1.status===0&&/^VALID /.test(v1.stdout)&&v1.stdout.includes(pl.id),'license.js verify: accepts the key and prints the payload');
+  const parts=key.split('.');
+  const tam='AOM1-'+Buffer.from(JSON.stringify(Object.assign({},pl,{exp:'2199-01-01'}))).toString('base64url')+'.'+parts[1];
+  const v2=cli('verify',tam,'--pub',pubf),v3=cli('verify','nonsense','--pub',pubf);
+  ok(v2.status===1&&/signature/.test(v2.stdout)&&v3.status===1&&/format/.test(v3.stdout),'... tampered payload -> signature, garbage -> format (exit code 1)');
+  ok(cli('verify',key.slice(0,40)+' \n '+key.slice(40),'--pub',pubf).status===0,'... whitespace inside a pasted key is ignored');
+  const old=lib.signKey(pem2,{exp:'2020-01-01',iat:'2019-01-01'});
+  ok(/expired/.test(cli('verify',old,'--pub',pubf).stdout)&&cli('sign','--key',pem,'--exp','2020-01-01').status===1&&cli('sign','--key',pem,'--exp','31.12.2099').status===1&&cli('sign','--key',pem,'--name','x'.repeat(41)).status===1&&cli('sign','--key',pem,'--tier','gold').status===1,'... expired keys fail; sign rejects a past/odd exp, a name over 40 characters, an unknown tier');
+  fs.writeFileSync(revf,'# comment\n\n'+pl.id+' # refunded\n');
+  ok(/revoked/.test(cli('verify',key,'--pub',pubf,'--rev',revf).stdout),'... a key whose id is in the revocation file fails with "revoked"');
+  ok(cli('verify',key,'--pub',path.join(ROOT,'tools','license-public.jwk')).status===1,'... a key from another key pair does not verify against the real public key');
+  const realJwk=JSON.parse(fs.readFileSync(path.join(ROOT,'tools','license-public.jwk'),'utf8'));
+  ok(realJwk.kty==='EC'&&realJwk.crv==='P-256'&&!('d' in realJwk)&&js.includes('LICPUB='+JSON.stringify(realJwk)),'the committed tools/license-public.jwk is a public key and is the one embedded in index.html');
+  const gi=fs.readFileSync(path.join(ROOT,'.gitignore'),'utf8');
+  ok(/^\*\.pem\s*$/m.test(gi)&&/^license-private\*\s*$/m.test(gi),'.gitignore keeps *.pem and license-private* out of the repository');
+  // lint: revoked.txt format
+  const lt=path.join(tmp,'lint');fs.mkdirSync(path.join(lt,'data'),{recursive:true});fs.copyFileSync(path.join(ROOT,'tools','template.html'),path.join(lt,'template.html'));fs.copyFileSync(path.join(ROOT,'tools','meta3.json'),path.join(lt,'meta3.json'));
+  for(const f of fs.readdirSync(path.join(ROOT,'tools','data'))) fs.copyFileSync(path.join(ROOT,'tools','data',f),path.join(lt,'data',f));
+  const lint=()=>cp.spawnSync('python',[path.join(ROOT,'tools','lint.py'),lt],{encoding:'utf8'});
+  if(lint().error) ok(true,'lint check of revoked.txt skipped (python not available)');
+  else{
+   fs.writeFileSync(path.join(lt,'data','revoked.txt'),'# x\n'+pl.id+' # why\n');
+   const l1=lint();ok(l1.status===0&&/1 revoked/.test(l1.stdout),'lint.py accepts a valid revoked.txt');
+   fs.writeFileSync(path.join(lt,'data','revoked.txt'),'abc\n');const l2=lint();ok(l2.status===1&&/bad licence id/.test(l2.stdout),'lint.py rejects a malformed licence id');
+   fs.writeFileSync(path.join(lt,'data','revoked.txt'),pl.id+'\n'+pl.id+'\n');const l3=lint();ok(l3.status===1&&/duplicate licence id/.test(l3.stdout),'lint.py rejects a duplicate licence id');
+  }
+  // --- the app: an instance whose embedded public key is the TEST key (and a revocation list we control) ---
+  ok(/const LICPUB=\{[^}]*\}, LICREV=\[\]/.test(js)&&js.includes('//@licexport'),'index.html embeds LICPUB and an (empty) LICREV');
+  const mk=(rev)=>js.replace(/const LICPUB=\{[^}]*\}/,'const LICPUB='+JSON.stringify(jwk2)).replace('LICREV=[]','LICREV='+JSON.stringify(rev||[])).replace('//@licexport','window.__lic={isPro,hasFeature,FEATURES,verifyKey};');
+  const inst=async(o)=>{const x=boot(Object.assign({store:{}},o));await waitFor(()=>!x.document.getElementById('loading'),60000,'licence test instance');await waitFor(()=>x.document.documentElement.dataset.pro!==undefined,10000,'licence start-up check');return x;};
+  const sign=(f)=>lib.signKey(pem2,f);
+  const panel=x=>{const d=x.document,q=s=>d.querySelector(s);return {st:()=>q('#licStatus').textContent.replace(/\s+/g,' '),msg:()=>q('#licMsg').hidden?'':q('#licMsg').textContent,put:v=>{q('#licKey').value=v;},go:async()=>{q('#licAct').click();await sleep(250);},stored:()=>x.localStorage.getItem('aom.lic.v1'),q};};
+  // free by default
+  let x=await inst({js:mk()}),P=panel(x);
+  ok(P.q('.foot #lic summary').textContent.startsWith('Pro & licence')&&P.st()==='Free version'&&x.__lic.isPro()===false&&P.q('#licBadge').hidden&&P.q('#licDel').hidden&&P.q('#lic').dataset.pro==='0','panel "Pro & licence" is in the colophon; default status "Free version", no badge, no Remove button');
+  ok(/not available yet/.test(P.q('#lic .fine').textContent)&&/offline/.test(P.q('#lic .fine').textContent)&&P.q('#licKey').tagName==='TEXTAREA'&&P.q('#licAct').textContent==='Activate','... explains that Pro features are not available yet and keys are checked offline; textarea + Activate');
+  const F=x.__lic.FEATURES;
+  ok(Object.keys(F).length>=3&&Object.values(F).every(f=>f.pro===false&&f.label)&&Object.keys(F).every(n=>x.__lic.hasFeature(n))&&!x.__lic.hasFeature('nonexistent'),'FEATURES registry: placeholder entries are all pro:false, so hasFeature is true for them (nothing gated); unknown feature -> false');
+  // empty and malformed input
+  await P.go();ok(/Paste your licence key/.test(P.msg()),'Activate with an empty box asks for a key');
+  for(const [bad,why] of [['hello','plain text'],['AOM1-abc.def','too short'],['AOM2-'+parts[0].slice(5)+'.'+parts[1],'wrong prefix'],[key.replace('AOM1-','AOM1-@@'),'bad characters']]){P.put(bad);await P.go();ok(/not an Atlas of Motion licence key/.test(P.msg())&&P.stored()===null&&P.st()==='Free version',`malformed key (${why}) -> format, nothing stored`);}
+  // tampered / foreign signature
+  P.put(tam);await P.go();ok(/signature of this key is not valid/.test(P.msg())&&P.stored()===null&&!x.__lic.isPro(),'tampered payload -> signature error, not stored, not Pro');
+  const other=crypto.generateKeyPairSync('ec',{namedCurve:'P-256'}).privateKey.export({type:'pkcs8',format:'pem'});
+  P.put(lib.signKey(other,{}));await P.go();ok(/signature of this key is not valid/.test(P.msg())&&P.stored()===null,'a key signed by another private key -> signature');
+  P.put(old);await P.go();ok(/expired on 2020-01-01/.test(P.msg())&&P.stored()===null&&!x.__lic.isPro(),'expired key -> expired (date shown), not stored');
+  // valid key, with whitespace and an HTML-ish name
+  const nm='Ana <i>Lee</i> & "Co"',vk=sign({name:nm,exp:'2099-12-31'}),vp=lib.parseKey(vk).payload;
+  P.put('  '+vk.slice(0,30)+'\n'+vk.slice(30,90)+'\r\n   '+vk.slice(90)+'\n');await P.go();
+  ok(/^Pro active · licensed to Ana <i>Lee<\/i> & "Co" · since \d{4}-\d{2}-\d{2} · until 2099-12-31$/.test(P.st())&&P.q('#licStatus i')===null&&P.q('#licStatus').innerHTML.includes('&lt;i&gt;Lee'),'valid key (pasted with line breaks) activates: "Pro active · licensed to <name> · since … · until …", name is escaped (no <i> element created)');
+  ok(P.stored()===vk&&x.__lic.isPro()===true&&!P.q('#licBadge').hidden&&!P.q('#licDel').hidden&&P.q('#lic').dataset.pro==='1'&&x.document.documentElement.dataset.pro==='1'&&P.q('#licKey').value===''&&P.msg()==='','... stored normalised in aom.lic.v1, isPro true, Pro badge and Remove button shown, box cleared');
+  ok(Object.keys(F).every(n=>x.__lic.hasFeature(n)),'... features stay available (nothing is gated)');
+  P.put(tam);await P.go();
+  ok(/signature of this key is not valid/.test(P.msg())&&P.stored()===vk&&x.__lic.isPro()===true&&/^Pro active/.test(P.st()),'a failed attempt while Pro keeps the current licence and its status');
+  const noname=sign({});P.put(noname);await P.go();
+  ok(/^Pro active · since \d{4}-\d{2}-\d{2}$/.test(P.st())&&P.stored()===noname,'a key without name/exp: "Pro active · since …"; activating a second key replaces the first');
+  P.q('#licDel').click();
+  ok(P.stored()===null&&!x.__lic.isPro()&&P.st()==='Free version'&&P.q('#licBadge').hidden&&P.q('#licDel').hidden&&x.document.documentElement.dataset.pro==='0','Remove licence clears aom.lic.v1 and returns to "Free version"');
+  // reload with a stored key: silent re-verification at start-up
+  x=await inst({js:mk(),store:{'aom.lic.v1':vk}});P=panel(x);
+  await waitFor(()=>x.__lic.isPro(),5000,'stored key verified');
+  ok(x.__lic.isPro()&&/^Pro active · licensed to /.test(P.st())&&P.stored()===vk&&!P.q('#licDel').hidden,'reload with a stored valid key: Pro active after the start-up check');
+  x=await inst({js:mk([vp.id]),store:{'aom.lic.v1':vk}});P=panel(x);
+  ok(!x.__lic.isPro()&&/^Free version\. This licence has been revoked\.$/.test(P.st())&&P.stored()===vk&&!P.q('#licDel').hidden&&P.q('#licStatus').classList.contains('bad'),'a stored key that is revoked (revocation list of this build) -> Free version with the reason; the string stays stored, Remove is offered');
+  P.put(vk);await P.go();ok(/revoked/.test(P.msg())&&!x.__lic.isPro(),'activating a revoked licence id -> revoked');
+  x=await inst({js:mk(),store:{'aom.lic.v1':old}});P=panel(x);
+  ok(!x.__lic.isPro()&&/^Free version\. This licence expired on 2020-01-01\.$/.test(P.st())&&P.stored()===old,'a stored key that has expired -> Free version, reason shown');
+  x=await inst({js:mk(),store:{'aom.lic.v1':'junk'}});P=panel(x);
+  ok(!x.__lic.isPro()&&/^Free version\. That is not an Atlas of Motion licence key/.test(P.st()),'a stored garbage value -> Free version, format reason (no crash)');
+  // no crypto.subtle (insecure http context)
+  x=await inst({js:mk(),nosubtle:true});P=panel(x);
+  P.put(vk);await P.go();
+  ok(/over https:\/\/ or on localhost/.test(P.msg())&&P.stored()===null&&!x.__lic.isPro(),'without crypto.subtle: "unsupported" message mentions https or localhost; nothing stored');
+  x=await inst({js:mk(),nosubtle:true,store:{'aom.lic.v1':vk}});P=panel(x);
+  ok(!x.__lic.isPro()&&/^Free version\. This browser cannot check licence keys/.test(P.st())&&P.stored()===vk,'... and with a stored key: Free version + the explanation, key kept');
+  const vr=await x.__lic.verifyKey('nonsense');ok(vr.ok===false&&vr.reason==='format','verifyKey() resolves {ok:false,reason} for malformed input even without crypto.subtle');
+  // backup includes the licence key (all aom.* keys are exported)
+  ok(/function getAomKeys[^\n]*startsWith\("aom\."\)/.test(js),'the JSON backup covers aom.lic.v1 (all aom.* keys), re-verified after an import');
+ }finally{fs.rmSync(tmp,{recursive:true,force:true});}
+}
 async function lodRun(){
  const L=META.lod,ls=k=>w.localStorage.getItem(k);
  ok(['low','medium','high'].every(l=>L[l]&&L[l].file.startsWith('geo/'+l+'.bin?v=')&&L[l].file.length===('geo/'+l+'.bin?v=').length+10&&L[l].bytes>0)&&L.low.faces<L.medium.faces&&L.medium.faces<L.high.faces,'META.lod describes three increasing levels ('+['low','medium','high'].map(l=>L[l].faces).join(' < ')+' triangles)');
@@ -1654,6 +1757,7 @@ async function boardRun(){
  await camRun();
  await lodRun();
  await nerveRun();
+ await licenseRun();
  await otherRuns();
  await phoneRun();
  // no errors anywhere

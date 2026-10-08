@@ -6,3 +6,5 @@ __pycache__/
 tools/test/node_modules/
 *.zip
 .claude/
+*.pem
+license-private*
