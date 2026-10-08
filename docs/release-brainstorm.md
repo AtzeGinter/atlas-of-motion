@@ -2,6 +2,25 @@
 
 Discussion paper, 2026-10-07. Points to talk through; recommendations are marked **→**.
 
+## 0. Decisions (2026-10-08)
+
+| Topic | Decision |
+|---|---|
+| Goal | Side project that should earn a small income if feasible |
+| Target group | All types of athletes (launch/marketing: start with one niche, e.g. hybrid and combat athletes, then widen) |
+| Budget and time | Not yet clear |
+| Free vs Pro | Freemium as recommended (section 5) |
+| Platform | Web/PWA only for now (comparison in section 11) |
+| Accounts and sync | Local-first, no server, no personal data processed by us |
+| AI | Not needed |
+| Name | Keep "Atlas of Motion"; secure the trademark (section 12) |
+| Own feedback | End of the week (from training with the app) |
+
+Consequences:
+- **Pro without a server:** sell a licence key via a merchant-of-record provider (e.g. Paddle, Lemon Squeezy: they handle EU VAT); the app verifies the key offline with a signature. Not copy-proof in a web app, acceptable for a side project.
+- **Legal minimum anyway:** imprint and privacy policy once there is income (hosting logs at GitHub Pages, payment provider); trade registration and the small-business VAT rule are typical for a small income in Germany (check with a tax adviser).
+- Section 4 "Optional account + sync" and "AI coach" are dropped for now; backups stay with "Export data / Import data".
+
 ## 1. Where the app stands today (v1.10)
 
 - 3D muscular atlas (176 muscles, bones, 53 schematic nerves, 62 movements) with three quality levels, offline PWA.
@@ -116,3 +135,26 @@ Free should stay genuinely useful (atlas + planning) as the marketing engine; pa
 7. **AI:** is an AI coach a core feature or a gimmick for you?
 8. **Name and brand:** keep "Atlas of Motion" (check trademark) or rename?
 9. **Your own use:** what do you miss most when you train with it yourself? (Best source for the next features.)
+
+## 11. Web app vs "real" app
+
+| | PWA (today) | Packaged app (Capacitor / TWA) | Native rebuild |
+|---|---|---|---|
+| What | Installable web page | Same web code in a native shell, in the stores | Swift/Kotlin or React Native |
+| Effort | done | days to weeks | very large (3D part rewritten) |
+| Store visibility | no | yes | yes |
+| Phone features | limited (no HealthKit, push on iOS only when installed, no background) | Health data, notifications, haptics, files | all |
+| Costs | none | Apple $99/year, Google $25 once | plus development |
+| Selling | free choice of provider, no store cut | in-app purchase required, store takes 15% (small-business rate) | same |
+| Updates | instant | store review | store review |
+| Risks | – | Apple guideline 4.2 ("just a website"), CC BY-SA vs DRM | – |
+
+→ Stay PWA; later Android via TWA (cheap); iOS only with revenue and a concrete need (e.g. Apple Health import).
+
+## 12. Securing the trademark "Atlas of Motion"
+
+1. Search first (free): DPMAregister, EUIPO eSearch, TMview; also app stores, domains, social handles.
+2. Classes: 9 (software/apps), 41 (education, sports training), 42 (providing online software).
+3. Filing (approximate fees, check current ones): **DPMA** online about €290 for up to 3 classes (Germany, 10 years); **EUIPO** about €850 for 1 class, +€50 for the 2nd, +€150 each further (whole EU). Prefer a **word mark**.
+4. Risk: "Atlas of Motion" may be judged descriptive for anatomy education; a first opinion from a trademark attorney (a few hundred euros) before filing.
+5. Now: register domains (e.g. .app / .com / .de) and social handles; use ™ until registered, ® only afterwards.
