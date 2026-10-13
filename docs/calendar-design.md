@@ -40,7 +40,7 @@ Instance on disk: `{id, tid?, pid?, name, items, ses, status:"planned"|"done"|"s
 ## UI map (Workout tab)
 
 1. Calendar header: window bar (-7, -1, date input, +1, +7, "Last 7 days", "Next 7 days"), strip `#wstrip` of 7 date cards (weekday, date, session chips with status, sets/endurance pills, load bar, today marker, conflict mark).
-2. Selected date: `#sessList` session cards (name, status, summary, Start/Continue/View, Edit, move-to-date, Skip, Remove), `+ Add session` (template or empty), then the editor of the current session (`#plan`, `#ses`, `#qa`, endurance form, Save changes to template, Save as new template).
+2. Selected date: `#sessList` session cards (name, status, summary, Start/Continue/View, Edit, move-to-date, Skip, Remove), `+ Add session` (template or empty), then the editor of the current session (`#plan`, `#ses`, `#qa`, endurance form, Save changes to template, Save as new template), collapsed until the session card's Edit button (or an empty "+ Add session") expands it; Done or Escape collapses it (v2.1). The "Move to…" selects of its rows and of the board cards list today and the next 13 dates first, then the other dates of the window, then "Pick a date…".
 3. Templates `#tplList`: create, rename, duplicate, delete, edit contents (the same editor, bound to the template).
 4. Weekly pattern `#patList`: row = template + 7 weekday chips + from + until; preview of the next 14 days.
 5. Today view `#td`: opens an instance (any date).

@@ -76,7 +76,7 @@ Decisions: session templates + weekly pattern (auto-fills future dates) + manual
 | # | Task | Size | Agent |
 |---|------|------|-------|
 | 8.1 | **v2.0 Calendar**: templates (`aom.tpl.v1`), calendar with dated instances + weekly pattern (`aom.cal.v1`, virtual pattern sessions materialised on edit), migration from the 7-slot week and the training log, Today view per instance, movable 7-day window driving volume, heatmap, recovery, week overview and schedule board. ✅ **Done 2026-10-13 (v2.0)**; see `docs/calendar-design.md`. | XL | sonnet |
-| 8.2 | **Settings page**: goals (sets per week presets/custom, endurance minutes, 80/20, VO2max sessions), heart-rate zones, equipment, units (kg/lb), theme, default mesh quality, data export/import, Pro & licence. | M | – |
+| 8.2 | **Settings page**: goals (sets per week presets/custom, endurance minutes, 80/20, VO2max sessions), heart-rate zones, equipment, units (kg/lb), theme, default mesh quality, data export/import, Pro & licence. ✅ **Done 2026-10-13 (v2.1)**: overlay `#st` opened by a gear next to the tabs, the colophon links or `#settings[=section]`; eight numbered sections; `aom.set.v1` holds units, first weekday, theme and the endurance goals; guarded "Delete all data". Also in 2.1: the session editor is collapsed until Edit, and "Move to…" offers today + 13 days first plus "Pick a date…". | M | sonnet |
 | 8.3 | **Statistics**: sets per muscle group per week (done vs planned), volume load (sets x reps x kg), strength trend per exercise (estimated 1RM, PRs), endurance minutes per zone, adherence. Self-made SVG charts (no dependencies). | L | – |
 
 ## P1d: Anatomy additions

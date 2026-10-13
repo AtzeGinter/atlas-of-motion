@@ -72,7 +72,7 @@ const sesOf=i=>[].concat(...sess(D(i)).map(x=>x.ses)),names=i=>itemsOf(i).map(p=
 const clearAll=()=>{for(let i=6;i>=0;i--){selDay(i);let g=0;while(q('#sessList [data-sact="rm"]')&&g++<20)q('#sessList [data-sact="rm"]').click();}selDay(0);}; // remove every session of the window
 // total triangle-index count over all body meshes in the three.js scene (captured by the stubbed renderer)
 const idxCount=win=>{let n=0;win.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind&&o.userData.kind!=='nerve'&&o.geometry.index)n+=o.geometry.index.count;});return n;};
-const lodBtn=(doc,l)=>doc.querySelector('[data-lod="'+l+'"]'),lodOn=doc=>[...doc.querySelectorAll('[data-lod]')].filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.dataset.lod).join(',');
+const lodBtn=(doc,l)=>doc.querySelector('[data-lod="'+l+'"]'),lodOn=doc=>[...new Set([...doc.querySelectorAll('[data-lod]')].filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.dataset.lod))].join(','); // the Layers popover and the Settings page each hold one control; both must agree
 async function waitFor(f,ms,what){const t=Date.now();while(!f()){if(Date.now()-t>(ms||30000)) return ok(false,'timed out waiting for '+what);await sleep(50);}return true;}
 // ---- atlas look: fonts, palette tokens, one source of truth for material and legend colours ----
 async function paletteRun(){
@@ -260,7 +260,7 @@ async function weekRun(){
  // clear / move rows
  selDay(0);
  ok(!q('#wkClear').disabled&&q('#wkClear').textContent==='Clear session','"Clear session" is available for a session with exercises');
- q('#plan select.mv').value='6';ev(q('#plan select.mv'),'change');
+ q('#plan select.mv').value=D(6);ev(q('#plan select.mv'),'change');
  ok(names(6).join()==='Back squat'&&names(0).length===0&&/Monday 12 October/.test(q('#dayLbl').textContent)&&/Moved Back squat to Sun 18 Oct/.test(q('#dayMsg').textContent),'"Move to…" moves the row to Sun 18 Oct (a new session there) and stays on Mon');
  selDay(6);q('#wkClear').click();
  ok(names(6).length===0&&!dayBtn(6).classList.contains('rest')&&sess(D(6)).length===1&&q('#wkClear').disabled,'Clear session empties only that session (it stays, empty)');
@@ -857,7 +857,7 @@ async function licenseRun(){
   const panel=x=>{const d=x.document,q=s=>d.querySelector(s);return {st:()=>q('#licStatus').textContent.replace(/\s+/g,' '),msg:()=>q('#licMsg').hidden?'':q('#licMsg').textContent,put:v=>{q('#licKey').value=v;},go:async()=>{q('#licAct').click();await sleep(250);},stored:()=>x.localStorage.getItem('aom.lic.v1'),q};};
   // free by default
   let x=await inst({js:mk()}),P=panel(x);
-  ok(P.q('.foot #lic summary').textContent.startsWith('Pro & licence')&&P.st()==='Free version'&&x.__lic.isPro()===false&&P.q('#licBadge').hidden&&P.q('#licDel').hidden&&P.q('#lic').dataset.pro==='0','panel "Pro & licence" is in the colophon; default status "Free version", no badge, no Remove button');
+  ok(P.q('#stLic h2').textContent.startsWith('Pro & licence')&&P.q('.foot [data-stopen="lic"]')&&!P.q('.foot #lic')&&P.st()==='Free version'&&x.__lic.isPro()===false&&P.q('#licBadge').hidden&&P.q('#licDel').hidden&&P.q('#lic').dataset.pro==='0','panel "Pro & licence" is in Settings (the colophon links to it); default status "Free version", no badge, no Remove button');
   ok(/not available yet/.test(P.q('#lic .fine').textContent)&&/offline/.test(P.q('#lic .fine').textContent)&&P.q('#licKey').tagName==='TEXTAREA'&&P.q('#licAct').textContent==='Activate','... explains that Pro features are not available yet and keys are checked offline; textarea + Activate');
   const F=x.__lic.FEATURES;
   ok(Object.keys(F).length>=3&&Object.values(F).every(f=>f.pro===false&&f.label)&&Object.keys(F).every(n=>x.__lic.hasFeature(n))&&!x.__lic.hasFeature('nonexistent'),'FEATURES registry: placeholder entries are all pro:false, so hasFeature is true for them (nothing gated); unknown feature -> false');
@@ -906,7 +906,7 @@ async function licenseRun(){
 async function lodRun(){
  const L=META.lod,ls=k=>w.localStorage.getItem(k);
  ok(['low','medium','high'].every(l=>L[l]&&L[l].file.startsWith('geo/'+l+'.bin?v=')&&L[l].file.length===('geo/'+l+'.bin?v=').length+10&&L[l].bytes>0)&&L.low.faces<L.medium.faces&&L.medium.faces<L.high.faces,'META.lod describes three increasing levels ('+['low','medium','high'].map(l=>L[l].faces).join(' < ')+' triangles)');
- ok(qa('[data-lod]').length===3&&q('#popLayers').contains(q('#segLod'))&&q('[data-lod="high"]').dataset.faces==String(L.high.faces)&&q('[data-lod="high"]').textContent.includes((L.high.bytes/1e6).toFixed(1)+' MB'),'Quality control (Low/Medium/High with sizes) lives in the Layers popover');
+ ok(qa('#segLod [data-lod]').length===3&&qa('[data-lod]').length===6&&q('#popLayers').contains(q('#segLod'))&&q('[data-lod="high"]').dataset.faces==String(L.high.faces)&&q('[data-lod="high"]').textContent.includes((L.high.bytes/1e6).toFixed(1)+' MB'),'Quality control (Low/Medium/High with sizes) lives in the Layers popover (and again in Settings)');
  ok(lodOn(d)==='medium'&&w.__fetched.join()==='geo/medium.bin','desktop with no stored choice: Medium is pressed and only geo/medium.bin was fetched');
  ok(idxCount(w)===L.medium.faces*3,'scene holds the Medium mesh ('+L.medium.faces+' triangles)');
  ok(ls('aom.lod.v1')===null,'the default level is not persisted');
@@ -1244,6 +1244,221 @@ async function linkRun(){
  q('#card .close').click();
  ok(w.location.hash==='','closing the card clears the hash');
 }
+// ---- v2.1: collapsed session editor, "Move to…" choices, Settings page (goals, heart rate, equipment, units, display, data, licence) ----
+async function settingsRun(){
+ const mk=o=>boot(Object.assign({store:{}},o,{js:js.replace('//@licexport','window.__set={wFmt,wParse,wU,moveOpts,cleanSet,get SET(){return SET}};')}));
+ const seed={'aom.tpl.v1':JSON.stringify([{id:'t1',name:'Push',items:[{n:'Barbell bench press',sets:3,v:[]}],ses:[]}]),'aom.cal.v1':JSON.stringify({v:1,seq:1,mig:1,note:0,pattern:[{id:'p1',tid:'t1',wd:[0],from:'2026-10-01'}],days:{}})};   // Push every Monday; "today" is Monday 12 Oct
+ const x=mk({store:seed}),xd=x.document,xq=s=>xd.querySelector(s),xqa=s=>[...xd.querySelectorAll(s)],xev=(el,t)=>el.dispatchEvent(new x.Event(t,{bubbles:true}));
+ const key=(el,k)=>el.dispatchEvent(new x.KeyboardEvent('keydown',{key:k,bubbles:true}));
+ await waitFor(()=>!xd.getElementById('loading'),60000,'settings test instance');
+ const cal=()=>JSON.parse(x.localStorage.getItem('aom.cal.v1')||'null'),setj=()=>JSON.parse(x.localStorage.getItem('aom.set.v1')||'null'),dkey=i=>addDays(TODAY,i);
+ const setv=(el,v)=>{el.value=v;xev(el,'change');};
+ xq('[data-tab="wk"]').click();
+ // ---- the session editor is collapsed by default and opens with Edit ----
+ const edit=()=>xq('#sessList [data-sact="edit"]');
+ ok(xqa('#sessList .scard').length===1&&xq('#edSec').hidden&&edit().getAttribute('aria-expanded')==='false'&&edit().textContent.startsWith('Edit')&&!edit().textContent.startsWith('Editing'),'editor: collapsed by default for the selected session (hidden, Edit button not pressed)');
+ edit().click();
+ ok(!xq('#edSec').hidden&&edit().getAttribute('aria-expanded')==='true'&&edit().textContent.startsWith('Editing')&&/Push/.test(xq('#edLbl').textContent)&&xqa('#plan .prow').length===1&&xq('#edBack').textContent==='Done'&&!xq('#edBack').hidden,'editor: Edit opens it for that session (label, rows, Done button)');
+ xq('#plan [data-inc="0"]').click();
+ ok(!xq('#edSec').hidden&&xq('#plan .prow .step span').textContent==='4 sets','editor: stays open while editing that session (a change re-renders but does not collapse it)');
+ xq('#edBack').click();
+ ok(xq('#edSec').hidden&&edit().getAttribute('aria-expanded')==='false'&&xd.activeElement===edit(),'editor: Done collapses it and focus returns to the Edit button');
+ edit().click();key(edit(),'Escape');
+ ok(xq('#edSec').hidden&&xd.activeElement===edit(),'editor: Escape collapses it');
+ edit().click();edit().click();
+ ok(xq('#edSec').hidden,'editor: pressing Editing again is Done');
+ edit().click();xq('#wstrip [data-day="5"]').click();
+ ok(xq('#edSec').hidden,'editor: choosing another date collapses it');
+ xq('#wstrip [data-day="6"]').click();
+ // ---- "Move to…": today and the next 13 days first, then the other window dates, then "Pick a date…" ----
+ edit().click();
+ {const o=[...xq('#plan select.mv').options],tx=o.map(t=>t.textContent);
+  ok(tx[0]==='Move to…'&&tx[1]==='Tomorrow'&&tx[2]==='Wed 14 Oct'&&tx[13]==='Sun 25 Oct'&&o[1].value===dkey(1)&&o[13].value===dkey(13),'move to: from today, the first choices are Tomorrow, Wed 14 Oct ... Sun 25 Oct (the next 13 days): '+tx.slice(0,4).join(' | '));
+  ok(o[14].disabled&&/^─+$/.test(tx[14])&&tx.slice(15,21).join('|')==='Tue 6 Oct|Wed 7 Oct|Thu 8 Oct|Fri 9 Oct|Sat 10 Oct|Sun 11 Oct'&&o[15].value===dkey(-6)&&tx[21]==='Pick a date…'&&o.length===22,'... then a separator, the other (past) window dates, and "Pick a date…" last');
+  const m=x.__set.moveOpts(dkey(-2)),d2=xd.createElement('select');d2.innerHTML=m;const t2=[...d2.options].map(t=>t.textContent);
+  ok(t2[1]==='Today'&&t2[2]==='Tomorrow'&&!t2.includes('Sat 10 Oct')&&t2.filter(t=>t==='Mon 12 Oct').length===0,'... on a past date "Today" comes first, and the date itself is not offered');}
+ xq('#edBack').click();
+ // board card: the same choices; a window date and a date outside the window
+ xq('#ovOpen').click();
+ {const col=d=>xqa('#ovBoard .bcol[data-d="'+d+'"] .bcard'),sel=col(6)[0]&&col(6)[0].querySelector('select.bmv');
+  ok(col(6).length===1&&sel&&sel.options[1].textContent==='Tomorrow'&&sel.options[1].value===dkey(1)&&sel.nextElementSibling.matches('input.mvdate')&&sel.nextElementSibling.hidden,'board card: "Move to…" offers Tomorrow first; the date input for "Pick a date…" is hidden');
+  setv(sel,dkey(-4));
+  ok(col(6).length===0&&col(2).length===1&&cal().days[dkey(-4)]&&cal().days[dkey(-4)][0].items[0].n==='Barbell bench press','board card: moving into the past is still possible (Thu 8 Oct)');
+  const s2=col(2)[0].querySelector('select.bmv');s2.value='pick';xev(s2,'change');
+  const di=col(2)[0].querySelector('input.mvdate');
+  ok(!di.hidden&&s2.value===''&&col(2).length===1,'board card: "Pick a date…" reveals a date input and moves nothing yet');
+  setv(di,'2026-12-01');
+  ok(col(2).length===0&&cal().days['2026-12-01']&&cal().days['2026-12-01'][0].items.length===1&&/outside the 7 days/.test(xq('#ovLive').textContent),'board card: a picked date outside the window moves the card there ('+xq('#ovLive').textContent.trim()+')');}
+ xq('#ovClose').click();
+ // planner rows (exercise and endurance), "Pick a date…"
+ xq('#wstrip [data-day="6"]').click();xq('#addTpl').value='';xq('#addSess').click();
+ ok(!xq('#edSec').hidden,'an empty session added with "+ Add session" opens in the editor');
+ xq('#qa').value='back squat';xev(xq('#qa'),'input');[...xqa('#addres [data-add]')].find(b=>/^\+ Back squat/.test(b.textContent)).click();
+ xq('#endOpen').click();xq('#endAdd').click();
+ ok(xqa('#plan .prow').length===1&&xqa('#ses .srow').length===1,'... and exercise + endurance rows can be added there');
+ {const s=xq('#ses select.mv');ok(s.options[1].textContent==='Tomorrow'&&s.options[s.options.length-1].textContent==='Pick a date…','endurance row: the same "Move to…" choices');
+  setv(s,dkey(1));
+  ok(cal().days[dkey(1)]&&cal().days[dkey(1)].some(i=>i.ses&&i.ses.length===1)&&xqa('#ses .srow').length===0&&/Moved .* to Tue 13 Oct/.test(xq('#dayMsg').textContent),'endurance row: moving to Tomorrow works ('+xq('#dayMsg').textContent+')');}
+ {const s=xq('#plan select.mv');s.value='pick';xev(s,'change');const di=xq('#plan input.mvdate');
+  ok(!di.hidden&&s.value===''&&xqa('#plan .prow').length===1,'exercise row: "Pick a date…" reveals the date input');
+  setv(di,'2026-11-20');
+  ok(cal().days['2026-11-20']&&cal().days['2026-11-20'][0].items[0].n==='Back squat'&&xqa('#plan .prow').length===0&&/outside the 7 days shown/.test(xq('#dayMsg').textContent),'exercise row: a picked date moves it ('+xq('#dayMsg').textContent+')');}
+ // ---- settings page: open / close ----
+ ok(xq('#st').hidden&&xq('#stOpen')&&xq('.tabrow').contains(xq('.tabs'))&&xq('.tabrow').contains(xq('#stOpen'))&&xq('#shead').contains(xq('#stOpen'))&&xq('#stOpen').getAttribute('aria-label')==='Settings','Settings: hidden at start; the gear sits next to the tabs in the sidebar header');
+ xq('#stOpen').focus();xq('#stOpen').click();
+ ok(!xq('#st').hidden&&xq('#vp').contains(xq('#st'))&&xd.activeElement===xq('#stClose')&&/(^#|&)settings$/.test(x.location.hash)&&xqa('#st .sec h2').map(h=>h.firstChild.textContent.trim()).join('|')==='Training goals|Heart rate|Equipment|Units and calendar|Display|Data|Pro & licence|About','Settings: the gear opens the overlay in the viewport; sections I-VIII; hash #settings');
+ key(xq('#stClose'),'Escape');
+ ok(xq('#st').hidden&&!/settings/.test(x.location.hash)&&xd.activeElement===xq('#stOpen'),'Settings: Escape closes it, #settings removed from the hash, focus returns to the gear');
+ xq('#stOpen').click();xq('#stClose').click();
+ ok(xq('#st').hidden&&xd.activeElement===xq('#stOpen'),'Settings: "Show body" closes it');
+ xq('#stOpen').click();{const i=xq('#hrMax');i.focus();key(i,'Escape');}
+ ok(xq('#st').hidden,'Settings: Escape also works while typing in a field');
+ xq('.foot [data-stopen=""]').click();
+ ok(!xq('#st').hidden&&xd.activeElement===xq('#stClose'),'Settings: the colophon "Settings" link opens it');
+ xq('#stClose').click();
+ xq('.foot [data-stopen="lic"]').click();
+ ok(!xq('#st').hidden&&xd.activeElement===xq('#licKey')&&xq('#stLic').contains(xq('#lic')),'Settings: the colophon "Pro & licence" link opens it at the licence section (key field focused)');
+ xq('#stClose').click();
+ {const e=mk({store:{},url:'https://example.test/#settings'}),ed=e.document;await waitFor(()=>!ed.getElementById('loading'),60000,'settings deep link');
+  ok(!ed.getElementById('st').hidden&&/settings/.test(e.location.hash),'Settings: deep link #settings opens it at start-up');
+  const e2=mk({store:{},url:'https://example.test/#settings=lic'}),ed2=e2.document;await waitFor(()=>!ed2.getElementById('loading'),60000,'settings deep link lic');
+  ok(!ed2.getElementById('st').hidden&&ed2.activeElement===ed2.getElementById('licKey'),'... and #settings=lic opens it at the licence section');
+  const e3=mk({store:{},url:'https://example.test/#settings=nonsense'}),ed3=e3.document;await waitFor(()=>!ed3.getElementById('loading'),60000,'settings deep link bad');
+  ok(!ed3.getElementById('st').hidden,'... an unknown section still opens Settings (at the top)');}
+ // ---- I: goals ----
+ xq('[data-tab="wk"]').click();
+ ok(!xq('#paneWk #goalSel')&&xq('#stGoals #goalSel')&&!xq('#paneWk #hrMax')&&!xq('#paneEx #eqchips')&&!xq('#paneWk #exportData')&&xq('#stData #exportData')&&xq('#stEq #eqchips'),'moved: goal, heart rate, equipment chips and backup buttons are in Settings, no longer in the Workout / Exercises tabs');
+ ok(xq('#goalSum').textContent.replace(/\s+/g,' ')==='Goal: 8–12 sets per muscle group / week · Change','Workout tab: one-line goal summary ('+xq('#goalSum').textContent+')');
+ xq('#goalSum [data-stopen="goals"]').click();
+ ok(!xq('#st').hidden&&xd.activeElement===xq('#goalSel'),'... "Change" opens Settings at the goals');
+ setv(xq('#goalSel'),'maintain');
+ ok(xq('#goalSum').textContent.replace(/\s+/g,' ')==='Goal: 4–6 sets per muscle group / week · Change'&&JSON.parse(x.localStorage.getItem('aom.goal.v1')).g==='maintain'&&xqa('#volLegend span').map(s=>s.textContent).join('|')==='Under 2|2–3.5|4–6|Over 6|None','goal changed in Settings: summary, aom.goal.v1 and the volume bands/legend follow');
+ setv(xq('#goalSel'),'hyp8');
+ // endurance goals change the balance panel
+ xq('#stClose').click();
+ ok(/150–300 min/.test(xq('#bal [data-b="who"]').textContent)&&/Endurance vs WHO/.test(xq('#bal [data-b="who"] h4').textContent)&&/1–2 a week/.test(xq('#bal [data-b="vo2"]').textContent),'balance: default endurance goals are WHO 150–300 min and 1–2 VO2max-like sessions');
+ xq('#stOpen').click();
+ setv(xq('#endLo'),'30');setv(xq('#endHi'),'60');setv(xq('#vo2Lo'),'2');setv(xq('#vo2Hi'),'3');setv(xq('#easyMin'),'90');
+ // the endurance session now sits on tomorrow, outside the window: look at the whole 7 days from tomorrow on
+ xq('#stClose').click();xq('#winNext').click();
+ {const who=xq('#bal [data-b="who"]'),easy=xq('#bal [data-b="split"]'),vo=xq('#bal [data-b="vo2"]');
+  ok(JSON.stringify(setj().endMin)==='[30,60]'&&setj().easyMin===90&&JSON.stringify(setj().vo2)==='[2,3]','endurance goals are stored in aom.set.v1');
+  ok(/of 30–60 min/.test(who.textContent)&&/Endurance vs goal/.test(who.querySelector('h4').textContent)&&/Within your range/.test(who.textContent),'balance: endurance minutes use the chosen range and wording ('+who.textContent.replace(/\s+/g,' ')+')');
+  ok(/of 2–3 a week/.test(vo.textContent)&&/None yet, target 2–3 a week/.test(vo.textContent),'balance: VO2max-like sessions use the chosen target');
+  ok(/On target: mostly easy/.test(easy.textContent),'balance: easy share 100 % passes a 90 % minimum');}
+ xq('#stOpen').click();setv(xq('#easyMin'),'99');
+ ok(setj().easyMin===95&&xq('#easyMin').value==='95','easy share is clamped to 95');
+ setv(xq('#endHi'),'10');
+ ok(JSON.stringify(setj().endMin)==='[30,30]'&&xq('#endHi').value==='30','minutes range: a high end below the limit is clamped and the low end never exceeds it');
+ setv(xq('#endLo'),'500');
+ ok(JSON.stringify(setj().endMin)==='[500,500]','... raising the low end above the high end moves the high end along');
+ xq('#endReset').click();
+ ok(JSON.stringify(setj().endMin)==='[150,300]'&&setj().easyMin===75&&JSON.stringify(setj().vo2)==='[1,2]'&&xq('#endReset').disabled,'"Use the defaults" restores 150–300, 75 %, 1–2');
+ {const c=x.__set.cleanSet({units:'stone',weekStart:'x',theme:'blue',endMin:[300,100],easyMin:'a',vo2:[-1,2]});
+  ok(c.units==='kg'&&c.weekStart==='mon'&&c.theme==='auto'&&c.endMin.join()==='150,300'&&c.easyMin===75&&c.vo2.join()==='1,2','stored values are validated on load: junk falls back to the defaults');
+  const c2=x.__set.cleanSet({units:'lb',weekStart:'sun',theme:'dark',endMin:[120,240],easyMin:80,vo2:[0,3]});
+  ok(c2.units==='lb'&&c2.weekStart==='sun'&&c2.theme==='dark'&&c2.endMin.join()==='120,240'&&c2.easyMin===80&&c2.vo2.join()==='0,3','... valid values are kept');}
+ // ---- II: heart rate (moved) ----
+ setv(xq('#hrAge'),'30');
+ ok(xq('#hrMax').placeholder==='187'&&xq('#hrZones tr[data-z="2"]').lastChild.textContent==='112–131 bpm'&&JSON.stringify(JSON.parse(x.localStorage.getItem('aom.hr.v1')))==='{"max":null,"age":30,"rest":null}'&&/187 bpm max/.test(xq('#hrSum').textContent),'heart rate from Settings: age 30 -> zones and aom.hr.v1');
+ setv(xq('#hrAge'),'');
+ // ---- III: equipment (moved) ----
+ ok(/^Equipment: 8 of 8$/.test(xq('#eqSum').textContent)&&xq('#paneEx [data-stopen="eq"]'),'Exercises tab: "Equipment: 8 of 8 · Change"');
+ xq('#eqchips [data-eq="Barbell"]').click();
+ {xq('[data-tab="ex"]').click();const names=xqa('#exlist .item').map(b=>b.textContent);
+  ok(xq('#eqSum').textContent==='Equipment: 7 of 8'&&!names.includes('Back squat')&&JSON.parse(x.localStorage.getItem('aom.eq.v1')).length===7,'equipment chip in Settings: Barbell off -> list loses Back squat, summary "7 of 8", aom.eq.v1 updated');}
+ xq('#eqAll').click();
+ ok(xq('#eqSum').textContent==='Equipment: 8 of 8'&&xqa('#exlist .item').map(b=>b.textContent).includes('Back squat'),'... "All" restores everything');
+ xq('#stClose').click();xq('#paneEx [data-stopen="eq"]').click();
+ ok(!xq('#st').hidden&&xq('#stEq').contains(xd.activeElement),'the "Change" link in the Exercises tab opens Settings at the equipment');
+ // ---- IV: units ----
+ ok(x.__set.wFmt(45.359)==='45.5'&&x.__set.wFmt(100)==='100'&&x.__set.wFmt(82.6)==='82.5'&&x.__set.wFmt(undefined)===''&&Math.abs(x.__set.wParse('12.5')-12.5)<1e-9&&Number.isNaN(x.__set.wParse('abc')),'units (kg): wFmt rounds to 0.5 kg steps, wParse reads kilograms');
+ xq('#stClose').click();xq('[data-tab="wk"]').click();xq('#winLast').click();xq('#wstrip [data-day="6"]').click();
+ xq('#sessList [data-sact="edit"]').click();
+ xq('#qa').value='back squat';xev(xq('#qa'),'input');[...xqa('#addres [data-add]')].find(b=>/^\+ Back squat/.test(b.textContent)).click();
+ xq('#stOpen').click();xq('#segUnit [data-unit="lb"]').click();
+ ok(setj().units==='lb'&&xq('#segUnit [data-unit="lb"]').getAttribute('aria-pressed')==='true'&&x.__set.wU()==='lb'&&x.__set.wFmt(45.359)==='100'&&Math.abs(x.__set.wParse('100')-45.36)<0.01,'units: lb is stored in aom.set.v1; wFmt(45.359 kg) = 100 lb, wParse(100) = 45.36 kg');
+ xq('#stClose').click();xq('#sessList [data-sact="train"]').click();
+ {const w1=()=>xq('#tdBody .tset [data-f="w"]');
+  ok(!xq('#td').hidden&&w1().placeholder==='lb'&&w1().step==='1'&&/lb/.test(xq('#tdBody .tcols').textContent)&&!/kg/.test(xq('#tdBody .tcols').textContent)&&/pounds/.test(w1().getAttribute('aria-label')),'Today view in lb: column header, placeholder, step and label use pounds');
+  w1().value='100';xev(w1(),'input');
+  const lg=()=>{const d=cal().days;let r=null;Object.keys(d).forEach(k=>d[k].forEach(i=>{if(i.lg&&i.lg.ex.some(e=>e.n==='Back squat'))r=i.lg.ex.find(e=>e.n==='Back squat');}));return r;};
+  ok(lg()&&Math.abs(lg().sets[0].w-45.36)<0.1,'entering 100 lb stores ~45.4 kg ('+(lg()&&lg().sets[0].w)+')');
+  xq('#td [data-act="addset"]').click();
+  ok(xqa('#tdBody .tset [data-f="w"]').length===4&&xqa('#tdBody .tset [data-f="w"]')[0].value==='100','after a re-render (+ Add set) the stored 45.36 kg is shown back as 100 lb');
+  xq('#stOpen').click();xq('#segUnit [data-unit="kg"]').click();
+  ok(!xq('#td').hidden&&xqa('#tdBody .tset [data-f="w"]')[0].value==='45.5'&&xqa('#tdBody .tset [data-f="w"]')[0].placeholder==='kg'&&/kg/.test(xq('#tdBody .tcols').textContent),'switching back to kg re-renders the open Today view: 45.36 kg shows as 45.5 (0.5 kg steps), header kg');
+  xq('#stClose').click();
+  w1().value='60';xev(w1(),'input');
+  ok(Math.abs(lg().sets[0].w-60)<1e-9,'kg input is stored as typed');
+  xq('#tdClose').click();}
+ // week start
+ xq('#paneWk #patAdd').click();
+ ok(xqa('#patList .prw:last-child .wdc .chip').map(c=>c.textContent).join()==='Mon,Tue,Wed,Thu,Fri,Sat,Sun','weekday chips of the pattern editor start on Monday by default');
+ xq('#stOpen').click();xq('#segWeek [data-ws="sun"]').click();
+ ok(setj().weekStart==='sun'&&xqa('#patList .prw:last-child .wdc .chip').map(c=>c.textContent).join()==='Sun,Mon,Tue,Wed,Thu,Fri,Sat'&&xq('#patList .prw:last-child [data-pwd="6"]').textContent==='Sun','first day Sunday: pattern chips start on Sun (data keeps 0 = Monday)');
+ xq('#stClose').click();xq('#winWeek').click();
+ ok(xq('#winDate').value==='2026-10-11'&&xqa('#wstrip .dbtn').length===7&&xqa('#wstrip .dbtn')[0].dataset.date==='2026-10-11'&&/Sun 11 Oct/.test(xq('#winLbl').textContent),'"This week" with Sunday as first day: the window starts on Sun 11 Oct');
+ xq('#stOpen').click();xq('#segWeek [data-ws="mon"]').click();xq('#stClose').click();xq('#winWeek').click();
+ ok(xq('#winDate').value==='2026-10-12'&&xqa('#wstrip .dbtn')[0].dataset.date==='2026-10-12','... and with Monday as first day: Mon 12 Oct');
+ // ---- V: display ----
+ xq('#stOpen').click();
+ ok(!xd.documentElement.hasAttribute('data-theme')&&xq('#segTheme [data-th="auto"]').getAttribute('aria-pressed')==='true','theme: Auto by default (no data-theme attribute)');
+ xq('#segTheme [data-th="dark"]').click();
+ ok(xd.documentElement.getAttribute('data-theme')==='dark'&&setj().theme==='dark'&&xq('#segTheme [data-th="dark"]').getAttribute('aria-pressed')==='true','theme Dark: data-theme="dark" on <html>, stored');
+ xq('#segTheme [data-th="light"]').click();
+ ok(xd.documentElement.getAttribute('data-theme')==='light'&&setj().theme==='light','theme Light');
+ xq('#segTheme [data-th="auto"]').click();
+ ok(!xd.documentElement.hasAttribute('data-theme')&&setj().theme==='auto','theme Auto removes the attribute again');
+ {const css=html0.slice(html0.indexOf('<style>'),html0.indexOf('</style>')),oc=re=>{const m=css.match(re);return m?m[1]:null;},oL=oc(/:root\{[^}]*--ochre:(#[0-9A-Fa-f]{6})/),oD=oc(/:root\[data-theme="dark"\]\{[^}]*--ochre:(#[0-9A-Fa-f]{6})/);
+  const t=mk({store:{},url:'https://example.test/#m=deltoid'}),td=t.document;await waitFor(()=>!td.getElementById('loading'),60000,'theme instance');
+  const lin=h=>new t.THREE.Color(h).convertSRGBToLinear(),same=(c,h)=>{const l=lin(h);return Math.abs(c.r-l.r)<1e-5&&Math.abs(c.g-l.g)<1e-5&&Math.abs(c.b-l.b)<1e-5;};
+  const selMat=()=>{let m=null;t.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind==='muscle'&&o.userData.key==='deltoid')m=o.material;});return m;};
+  ok(same(selMat().color,oL),'theme: Auto (light system theme) shows the light --ochre on the selection');
+  td.querySelector('#segTheme [data-th="dark"]').click();await sleep(60);
+  ok(same(selMat().color,oD)&&td.documentElement.style.getPropertyValue('--m-sel').toLowerCase()===oD.toLowerCase(),'theme: choosing Dark in Settings re-colours the selection material to the dark --ochre ('+oD+')');
+  td.querySelector('#segTheme [data-th="light"]').click();await sleep(60);
+  ok(same(selMat().color,oL),'... and Light returns to the light --ochre');
+  const t2=mk({store:{'aom.set.v1':JSON.stringify({theme:'dark'})},url:'https://example.test/#m=deltoid'}),t2d=t2.document;await waitFor(()=>!t2d.getElementById('loading'),60000,'stored theme instance');
+  let m2=null;t2.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind==='muscle'&&o.userData.key==='deltoid')m2=o.material;});const l2=new t2.THREE.Color(oD).convertSRGBToLinear();
+  ok(t2d.documentElement.getAttribute('data-theme')==='dark'&&Math.abs(m2.color.r-l2.r)<1e-5,'a stored theme is applied at start-up (data-theme and materials)');}
+ // mesh quality: both controls in sync
+ ok(xqa('[data-lod]').length===6&&xq('#popLayers').contains(xq('#segLod'))&&xq('#stDisp').contains(xq('#segLod2'))&&lodOn(xd)==='medium'&&xqa('#segLod2 [data-lod]').filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.dataset.lod).join()==='medium','mesh quality: a control in Settings and one in the Layers popover, both on Medium');
+ xq('#segLod2 [data-lod="low"]').click();
+ await waitFor(()=>lodOn(xd)==='low'&&!xq('#segLod2 [data-lod="low"]').classList.contains('busy'),30000,'Low from Settings');
+ ok(xq('#segLod [data-lod="low"]').getAttribute('aria-pressed')==='true'&&xq('#segLod2 [data-lod="low"]').getAttribute('aria-pressed')==='true'&&x.localStorage.getItem('aom.lod.v1')==='"low"'&&idxCount(x)===META.lod.low.faces*3,'mesh quality: Low chosen in Settings loads Low, the Layers control follows, aom.lod.v1 stored');
+ xq('#segLod [data-lod="medium"]').click();
+ await waitFor(()=>lodOn(xd)==='medium'&&!xq('#segLod [data-lod="medium"]').classList.contains('busy'),30000,'Medium from the popover');
+ ok(xq('#segLod2 [data-lod="medium"]').getAttribute('aria-pressed')==='true','... and the Layers control drives the Settings one');
+ // ---- VI: data ----
+ {const keys=()=>{const a=[];for(let i=0;i<x.localStorage.length;i++){const k=x.localStorage.key(i);if(k&&k.startsWith('aom.'))a.push(k);}return a;};
+  x.localStorage.setItem('other.key','keep');
+  ok(keys().length>=5&&xq('#delAll')&&xq('#stData').contains(xq('#delAll')),'Data: "Delete all data" is in the Data section ('+keys().length+' aom.* keys stored)');
+  const oc=x.confirm;let n=0;
+  x.confirm=()=>{n++;return n!==2;};   // yes to the first question, no to the second
+  xq('#delAll').click();
+  ok(n===2&&keys().length>=5,'Delete all data: asks twice; saying no to the second question keeps everything');
+  n=0;x.confirm=()=>{n++;return false;};xq('#delAll').click();
+  ok(n===1&&keys().length>=5,'... saying no to the first question stops after one question');
+  n=0;x.confirm=()=>{n++;return true;};xq('#delAll').click();
+  ok(n===2&&keys().length===0&&x.localStorage.getItem('other.key')==='keep'&&/deleted/.test(xq('#dataMsg').textContent),'... confirming twice removes every aom.* key (and nothing else)');
+  x.confirm=oc;await sleep(400);}
+ // ---- VII / VIII ----
+ ok(/version \d+\.\d+ \(build [0-9a-f]{7}\)/.test(xq('#stVer').textContent)&&xq('#stAbout').contains(xq('#stCredits'))&&[...xqa('#stAbout a')].some(a=>/credits-and-licensing/.test(a.href))&&[...xqa('#stAbout a')].every(a=>a.rel.includes('noopener')),'About: version and build id, a credits link and links to the licence notes in the README');
+ xq('#stCredits').click();
+ ok(xq('#st').hidden,'About: the credits link closes Settings (and scrolls to the colophon)');
+ // ---- phone ----
+ {const p=boot({phone:true}),pd=p.document,pq=s=>pd.querySelector(s);await waitFor(()=>!pd.getElementById('loading'),60000,'phone settings instance');
+  const css=html0.slice(html0.indexOf('<style>'),html0.indexOf('</style>')),ph=css.slice(css.indexOf('@media (max-width:760px)'));
+  ok(pq('#shead').contains(pq('#stOpen'))&&/\.tabrow\{margin:0 -16px/.test(ph)&&/\.ov\{/.test(ph),'phone: the gear is in the sheet header; overlays are full screen on phones');
+  pq('#stOpen').click();
+  ok(!pq('#st').hidden&&pq('#vp').contains(pq('#st'))&&/settings/.test(p.location.hash),'phone: the gear opens Settings');
+  pq('#segUnit [data-unit="lb"]').click();pq('#segTheme [data-th="dark"]').click();
+  const sel=pq('#goalSel');sel.value='strength';sel.dispatchEvent(new p.Event('change',{bubbles:true}));
+  ok(JSON.parse(p.localStorage.getItem('aom.set.v1')).units==='lb'&&pd.documentElement.getAttribute('data-theme')==='dark'&&JSON.parse(p.localStorage.getItem('aom.goal.v1')).g==='strength','phone: units, theme and goal can be changed in Settings');
+  pq('#stClose').click();
+  ok(pq('#st').hidden,'phone: Show body closes Settings');}
+}
 // ---- phone instance: matchMedia reports max-width:760px and a coarse pointer ----
 async function phoneRun(){
  const p=boot({phone:true}),pd=p.document,pq=x=>pd.querySelector(x),pqa=x=>[...pd.querySelectorAll(x)];
@@ -1340,7 +1555,7 @@ async function phoneRun(){
  pq('#bpq').value='back squat';pq('#bpq').dispatchEvent(new p.Event('input',{bubbles:true}));
  pqa('#bpr [data-bact="pick"]').find(b=>/Back squat/.test(b.textContent)).click();
  ok(pcards(3).length===1&&pcards(3)[0].querySelector('.bnm').textContent==='Back squat'&&!pq('.bpick')&&psess(pdk(3)).length===1,'phone: picking an exercise adds it to that date (a new session)');
- const pmv=pcards(1)[0].querySelector('select.bmv');pmv.value='4';pmv.dispatchEvent(new p.Event('change',{bubbles:true}));
+ const pmv=pcards(1)[0].querySelector('select.bmv');pmv.value=pdk(4);pmv.dispatchEvent(new p.Event('change',{bubbles:true}));
  ok(pcards(4).length===1&&pcards(1).length===0&&!psw(2).classList.contains('warn')&&!psw(1).classList.contains('warn'),'phone: the "Move to…" select moves a card and clears the conflict');
  pcards(4)[0].querySelector('[data-bact="rm"]').click();pcards(3)[0].querySelector('[data-bact="rm"]').click();
  pq('#ovBoard .bslot.end[data-d="1"]').click();pq('#bpq').value='bench';pq('#bpq').dispatchEvent(new p.Event('input',{bubbles:true}));
@@ -1468,7 +1683,7 @@ async function endRun(){
  // heart-rate zones
  const zrow=z=>q('#hrZones tr[data-z="'+z+'"]').lastChild.textContent;
  ok(q('#hrZones').children.length===5&&zrow(2)==='–'&&/% of max|Enter your max HR/.test(q('#hrNote').textContent),'zone table lists 5 zones, no bpm until max HR or age is set');
- q('#hrSet').open=true;q('#hrAge').value='30';ev(q('#hrAge'),'change');
+ q('#hrAge').value='30';ev(q('#hrAge'),'change');
  ok(q('#hrMax').placeholder==='187'&&zrow(2)==='112–131 bpm'&&zrow(5)==='168–187 bpm'&&JSON.stringify(JSON.parse(w.localStorage.getItem('aom.hr.v1')))==='{"max":null,"age":30,"rest":null}','age 30 -> max 187 (208 - 0.7 x 30); Z2 = 112–131 bpm, persisted in aom.hr.v1');
  selDay(1);
  ok(/Easy · Z2 · 112–131 bpm/.test(q('#ses .sz').textContent)||/Z2 · 112–131 bpm/.test(q('#ses .sz').textContent),'session rows show bpm: '+q('#ses .sz').textContent);
@@ -1482,7 +1697,7 @@ async function endRun(){
  ok(zrow(5)==='171–190 bpm'&&/Work 4×4′ · Z5 · 171–190 bpm/.test(q('#ses').textContent),'without resting HR: Z5 = 171–190 bpm');
  q('#hrMax').value='20';ev(q('#hrMax'),'change');
  ok(q('#hrMax').value===''&&zrow(2)==='112–131 bpm','an out-of-range max HR is ignored (falls back to the age estimate)');
- q('#hrAge').value='';ev(q('#hrAge'),'change');q('#hrSet').open=false;
+ q('#hrAge').value='';ev(q('#hrAge'),'change');
  // recovery warnings (warnings only)
  clearAll();
  selDay(3);addEx('Back squat');
@@ -1674,7 +1889,7 @@ async function boardRun(){
  ok(JSON.stringify(wk())===b0,'arrow keys without Alt do nothing');
  ok(qa('#ovBoard .bcard').every(c=>c.getAttribute('aria-label')&&c.getAttribute('tabindex')==='0')&&qa('#ovBoard button').every(b=>b.getAttribute('aria-label')||b.textContent.trim()),'cards are focusable and every board button has a label');
  // planner "Move to…" still works and the board follows
- selDay(5);q('#plan select.mv').value='4';ev(q('#plan select.mv'),'change');
+ selDay(5);q('#plan select.mv').value=D(4);ev(q('#plan select.mv'),'change');
  ok(names(4).join()==='Barbell bench press'&&cn(4).join()==='Barbell bench press'&&cn(5).length===0,'planner tab "Move to…" moves the row and the board reflects it');
  // remove
  const nb=cards(4).length;cards(4)[0].querySelector('[data-bact="rm"]').click();
@@ -1948,6 +2163,7 @@ async function boardRun(){
  await run('sugRun',sugRun);
  await run('migrateRun',migrateRun);
  await run('calRun',calRun);
+ await run('settingsRun',settingsRun);
  await run('searchRun',searchRun);
  await run('movementRun',movementRun);
  await run('eyeRun',eyeRun);

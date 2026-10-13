@@ -16,7 +16,7 @@ AOM1-<base64url(payload JSON)>.<base64url(signature)>
 - **Private key:** exists once, on your machine (`%USERPROFILE%\.atlas-of-motion\license-private.pem`). It is never committed (`.gitignore` has `*.pem` and `license-private*`).
 - **Revocation list:** `tools/data/revoked.txt`, one licence id per line (`#` comments allowed). Embedded as `__LICREV__`. `lint.py` checks the id format.
 - **Dates:** `exp` is the last valid day (inclusive), compared with the device's local date. A key without `exp` does not expire (lifetime).
-- **In the app:** panel "Pro & licence" in the colophon at the bottom of the sidebar. Activate stores the key (whitespace removed) in `localStorage` `aom.lic.v1` only after it verified. On every start-up the key is verified again; if it no longer verifies (revoked, expired) the string stays stored but the app is "Free" and the panel shows the reason. `isPro()` is synchronous (last result), `hasFeature(name)` is the single gate to use later:
+- **In the app:** section "Pro & licence" of the Settings page (gear next to the tabs; the colophon at the bottom of the sidebar links to it). Activate stores the key (whitespace removed) in `localStorage` `aom.lic.v1` only after it verified. On every start-up the key is verified again; if it no longer verifies (revoked, expired) the string stays stored but the app is "Free" and the panel shows the reason. `isPro()` is synchronous (last result), `hasFeature(name)` is the single gate to use later:
 
 ```js
 const FEATURES = { stats: {pro: true, label: "Training statistics"}, ... };   // flip pro:false -> true to gate a feature

@@ -215,7 +215,10 @@ textarea.search{display:block;resize:vertical;min-height:64px;font:12.5px/1.35 u
 .actions .btn[data-act="add"]:hover,.btn.fill:hover,#endAdd:hover{color:var(--onacc);filter:brightness(1.12);}
 
 
-.tabs{display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--line);gap:0;margin:0 -20px;padding:0 20px;}
+.tabrow{display:flex;align-items:stretch;gap:2px;border-bottom:1px solid var(--line);margin:0 -20px;padding:0 20px;}
+.tabs{flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;}
+.gear{flex:none;display:inline-flex;align-items:center;justify-content:center;width:36px;margin-bottom:-1px;border:0;border-bottom:2px solid transparent;background:none;color:var(--muted);cursor:pointer;}
+.gear:hover,.gear[aria-expanded="true"]{color:var(--accent);}
 .tabs button{border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;padding:8px 0 7px;cursor:pointer;font:600 15px/1.2 var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.1em;color:var(--muted);}
 .tabs button:hover{color:var(--ink);}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);}
@@ -635,7 +638,7 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
   aside[data-sheet="half"]{--sheet-h:var(--half);}
   aside[data-sheet="full"]{--sheet-h:calc(var(--vh) - 56px - env(safe-area-inset-top,0px));}
   .shead{padding:0 16px;gap:6px;touch-action:none;user-select:none;-webkit-user-select:none;}
-  .tabs{margin:0 -16px;padding:0 16px;}
+  .tabrow{margin:0 -16px;padding:0 16px;}
   .grab{display:block;width:100%;height:22px;padding:0;border:0;background:none;cursor:grab;}
   .grab::before{content:"";display:block;width:42px;height:4px;margin:9px auto 0;border-radius:2px;background:var(--muted);opacity:.45;}
   .brand h1{font-size:21px;}
@@ -689,7 +692,8 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
   .row input.vis::before{content:"";position:absolute;inset:12px;border:2px solid var(--muted);border-radius:3px;}
   .row input.vis:checked::before{background:var(--accent);border-color:var(--accent);}
   .row input.vis:checked::after{content:"";position:absolute;left:17px;top:14px;width:6px;height:11px;border:solid var(--card);border-width:0 2px 2px 0;transform:rotate(45deg);}
-  .chip,.mchip,.vseg button,.tabs button,.seg button,.linkbtn,.close,.x,.tbtn{min-height:44px;}
+  .chip,.mchip,.vseg button,.tabs button,.gear,.seg button,.linkbtn,.close,.x,.tbtn{min-height:44px;}
+  .gear{width:44px;}
   .tbtn{height:44px;}
   .pop-view .seg{height:44px;}
   .close,.x{min-width:44px;}
@@ -804,6 +808,40 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
   .wnav{min-height:44px;min-width:44px;}
   .bsess{min-height:36px;}
 }
+/* settings overlay (v2.1) and small helpers of the 2.1 release */
+.ov.st{z-index:50;}
+.stw{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;width:100%;max-width:720px;margin:0 auto;}
+.stbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;counter-reset:sec;display:flex;flex-direction:column;gap:26px;padding:8px 4px calc(30px + env(safe-area-inset-bottom,0px));}
+.st .goal{grid-template-columns:minmax(120px,190px) minmax(0,1fr);}
+.st .goal .seg{max-width:360px;}
+.st .goal .seg button{font:500 12.5px var(--f-ui);font-style:normal;color:var(--ink);}
+.st .goal .seg3 button small{font-family:var(--f-ui);font-style:normal;}
+.st .goal select.search{max-width:360px;}
+.sec h2 small.hsum{margin-left:10px;font:italic 400 13.5px var(--f-read);letter-spacing:0;font-variant-caps:normal;color:var(--muted);}
+.sec h2 .licbadge{margin-left:6px;vertical-align:middle;}
+.stacts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;}
+.stacts.dz{margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);}
+.stacts small{flex:1 1 200px;color:var(--muted);font:italic 400 13.5px/1.4 var(--f-read);}
+.btn.warnb{color:var(--bad);border-color:var(--bad);}
+.btn.warnb:hover{background:var(--bad);color:var(--card);}
+.stver{margin:0 0 6px;font:600 15px var(--f-ui);}
+.goalsum,.sumline{margin:0 0 8px;font:italic 400 15px var(--f-read);color:var(--muted);}
+.goalsum b{font-style:normal;font-weight:600;color:var(--ink);}
+.goalsum .linkbtn,.sumline .linkbtn{padding:0;}
+.footlinks{margin:0 0 10px;font-style:normal;}
+.footlinks .linkbtn{padding:0;}
+.lic .licst{margin-top:0;}
+input.mvdate{display:block;margin-top:3px;font:inherit;font-size:12px;padding:1px 3px;border:1px solid var(--line);background:var(--card);border-radius:3px;color:var(--muted);max-width:100%;}
+input.mvdate[hidden]{display:none;}
+.sr2 input.mvdate{margin:0;}
+.sr2 select.mv + input.mvdate{margin-left:4px;}
+.mvsep{color:var(--muted);}
+@media (max-width:760px){
+  .st .goal{grid-template-columns:minmax(0,1fr);gap:4px;margin-bottom:12px;}
+  .st .goal .seg,.st .goal select.search{max-width:none;}
+  .st .goal .cust input.search{width:84px;}
+  .stbody{gap:22px;}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
 </style>
 </head>
@@ -813,10 +851,13 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
     <div class="shead" id="shead">
       <button class="grab" id="grab" type="button" aria-label="Resize panel"></button>
       <div class="brand"><h1>Atlas of Motion</h1><p class="tagline">The muscular system, plate by plate</p></div>
-      <div class="tabs" role="tablist">
-        <button role="tab" data-tab="anat" aria-selected="true">Anatomy</button>
-        <button role="tab" data-tab="ex" aria-selected="false">Exercises</button>
-        <button role="tab" data-tab="wk" aria-selected="false">Workout</button>
+      <div class="tabrow">
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="anat" aria-selected="true">Anatomy</button>
+          <button role="tab" data-tab="ex" aria-selected="false">Exercises</button>
+          <button role="tab" data-tab="wk" aria-selected="false">Workout</button>
+        </div>
+        <button class="gear" id="stOpen" type="button" data-stopen="" aria-label="Settings" title="Settings" aria-haspopup="dialog"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
       </div>
     </div>
     <div class="sbody" id="sbody">
@@ -833,8 +874,8 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
     <div class="pane" id="paneEx" hidden>
     <p class="banner" id="cmpBanner" hidden><span id="cmpText"></span><button class="linkbtn" id="cmpCancel">Cancel</button></p>
     <div class="sec">
-      <div class="chip-row"><h2>Your equipment</h2><span><button class="linkbtn" id="eqAll">All</button></span></div>
-      <div class="chips" id="eqchips"></div>
+      <h2>Your equipment</h2>
+      <p class="fine sumline" style="margin-top:0!important"><span id="eqSum"></span> · <button class="linkbtn" type="button" data-stopen="eq">Change</button></p>
     </div>
     <div class="sec">
       <h2>Best exercises for a muscle</h2>
@@ -851,9 +892,7 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
 
     <div class="pane" id="paneWk" hidden>
     <div class="sec" id="calSec">
-      <div class="chip-row"><h2>Training calendar</h2><span class="sp"></span><button class="linkbtn" id="exportData" type="button">Export data</button><button class="linkbtn" id="importData" type="button">Import data</button></div>
-      <input type="file" id="importFile" accept="application/json,.json" hidden>
-      <p class="fine" id="dataMsg" role="status" style="margin:0 0 4px!important"></p>
+      <h2>Training calendar</h2>
       <p class="banner" id="migNote" hidden><span>Your old 7-day week is now a weekly pattern: its first day repeats every Monday, its second day every Tuesday, and so on, starting this week. You can change the mapping under "Weekly pattern" below.</span><button class="linkbtn" id="migOk" type="button">Got it</button></p>
       <button class="btn prim" id="ovOpen" type="button" aria-haspopup="dialog"><span>Week overview</span><small id="ovBadge"></small></button>
       <div class="winbar" id="winbar" role="group" aria-label="7-day window">
@@ -861,15 +900,15 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
         <input class="search" type="date" id="winDate" aria-label="First day of the 7-day window">
         <button class="wnav" type="button" data-win="1" aria-label="Forward 1 day" title="Forward 1 day">›</button><button class="wnav" type="button" data-win="7" aria-label="Forward 7 days" title="Forward 7 days">»</button>
       </div>
-      <div class="winquick"><button class="linkbtn" id="winLast" type="button">Last 7 days</button><button class="linkbtn" id="winNext" type="button">Next 7 days</button><small id="winLbl"></small></div>
+      <div class="winquick"><button class="linkbtn" id="winLast" type="button">Last 7 days</button><button class="linkbtn" id="winWeek" type="button">This week</button><button class="linkbtn" id="winNext" type="button">Next 7 days</button><small id="winLbl"></small></div>
       <div class="wstrip" id="wstrip" role="group" aria-label="Days of the 7-day window"></div>
       <div class="dayhead"><span id="dayLbl"></span></div>
       <p class="fine" id="dayMsg" role="status" style="margin:0 0 4px!important"></p>
       <div id="sessList"></div>
       <div class="addsess"><select class="search" id="addTpl" aria-label="Template for the new session"></select><button class="btn" id="addSess" type="button">+ Add session</button></div>
     </div>
-    <div class="sec" id="edSec">
-      <div class="edhead"><span id="edLbl"></span><span class="sp"></span><button class="linkbtn" id="edBack" type="button" hidden>Done editing</button><button class="linkbtn" id="wkClear" type="button">Clear session</button></div>
+    <div class="sec" id="edSec" hidden>
+      <div class="edhead"><span id="edLbl"></span><span class="sp"></span><button class="linkbtn" id="edBack" type="button">Done</button><button class="linkbtn" id="wkClear" type="button">Clear session</button></div>
       <div id="plan"></div>
       <div id="ses"></div>
       <input class="search" id="qa" type="search" placeholder="Add an exercise" aria-label="Add an exercise" style="margin-top:10px">
@@ -909,20 +948,7 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
       <div id="bal"></div>
     </div>
     <div class="sec">
-      <details class="hrset" id="hrSet">
-        <summary><span>Heart rate zones</span><small id="hrSum"></small></summary>
-        <div class="hrin">
-          <label>Max HR (bpm)<input class="search" id="hrMax" type="number" min="100" max="230" step="1" inputmode="numeric" aria-label="Maximum heart rate"></label>
-          <label>or age<input class="search" id="hrAge" type="number" min="10" max="100" step="1" inputmode="numeric" aria-label="Age, used to estimate maximum heart rate"></label>
-          <label>Resting HR<input class="search" id="hrRest" type="number" min="30" max="120" step="1" inputmode="numeric" aria-label="Resting heart rate (optional)"></label>
-        </div>
-        <p class="fine" id="hrNote" style="margin-top:0!important"></p>
-        <table class="ztab"><tbody id="hrZones"></tbody></table>
-      </details>
-    </div>
-    <div class="sec">
-      <div class="goal"><label for="goalSel">Goal</label><select class="search" id="goalSel" aria-label="Volume goal per 7 days"></select></div>
-      <div class="goal" id="goalCust" hidden><span>Sets</span><div class="cust"><input class="search" id="goalLo" type="number" min="1" max="40" step="1" inputmode="numeric" aria-label="Target minimum sets per 7 days"><span>to</span><input class="search" id="goalHi" type="number" min="1" max="40" step="1" inputmode="numeric" aria-label="Target maximum sets per 7 days"></div></div>
+      <p class="goalsum" id="goalSum"></p>
       <label class="toggle"><span>Show the volume of the 7 days on the body</span><input type="checkbox" id="tVol"></label>
       <div class="seg seg2" id="volScope" role="group" aria-label="Volume scope" hidden><button data-vs="week" aria-pressed="true">7 days</button><button data-vs="day" aria-pressed="false">Selected day</button></div>
       <div class="legend" id="volLegend"></div>
@@ -937,13 +963,7 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
       <p class="fine">Around 10 hard sets per muscle per week clearly beats fewer; more still helps a little for size, with diminishing returns, while strength plateaus earlier. Sets taken close to failure count more but also cost more recovery, so 8–12 is a practical range for most people. Synergist sets count half, stabiliser work is not counted. The faint markers show your target range. Finished sessions count the sets you did, planned ones the sets you planned. Your plan and log are saved in this browser only.</p>
     </div>
     </div>
-    <div class="foot"><p class="about">A 3D atlas of the human muscular system built from MRI-derived anatomical meshes: select any structure to see what it does, or pick an exercise to see what it trains.</p><details class="lic" id="lic" data-pro="0"><summary>Pro &amp; licence<span class="licbadge" id="licBadge" hidden>Pro</span></summary><div class="licbody">
-      <p class="licst" id="licStatus" role="status">Free version</p>
-      <textarea class="search" id="licKey" rows="3" placeholder="Paste your licence key (AOM1-…)" aria-label="Licence key" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
-      <p class="licst bad" id="licMsg" role="alert" hidden></p>
-      <div class="licact"><button class="btn" id="licAct" type="button">Activate</button><button class="linkbtn" id="licDel" type="button" hidden>Remove licence</button></div>
-      <p class="fine">Pro features are not available yet; nothing is locked. A key is checked offline on this device: no account, and nothing is sent anywhere.</p>
-    </div></details><div id="foot"></div></div>
+    <div class="foot"><p class="about">A 3D atlas of the human muscular system built from MRI-derived anatomical meshes: select any structure to see what it does, or pick an exercise to see what it trains.</p><p class="footlinks"><button class="linkbtn" type="button" data-stopen="">Settings</button> · <button class="linkbtn" type="button" data-stopen="lic">Pro &amp; licence</button></p><div id="foot"></div></div>
     </div>
   </aside>
 
@@ -1007,6 +1027,76 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
         <div class="tdfoot"><button class="linkbtn" id="tdSync" type="button">Sync with plan</button><span class="tdmsg" id="tdMsg" role="status"></span><span class="sp"></span><button class="btn prim tdfin" id="tdFinish" type="button">Finish day</button></div>
       </div>
     </section>
+    <section class="ov st" id="st" role="dialog" aria-label="Settings" hidden>
+      <div class="stw">
+        <div class="ovhead"><h2>Settings</h2><button class="btn" id="stClose" type="button">Show body</button></div>
+        <div class="stbody" id="stBody">
+          <div class="sec" id="stGoals">
+            <h2>Training goals</h2>
+            <div class="goal"><label for="goalSel">Strength volume</label><select class="search" id="goalSel" aria-label="Volume goal per 7 days"></select></div>
+            <div class="goal" id="goalCust" hidden><span>Sets</span><div class="cust"><input class="search" id="goalLo" type="number" min="1" max="40" step="1" inputmode="numeric" aria-label="Target minimum sets per 7 days"><span>to</span><input class="search" id="goalHi" type="number" min="1" max="40" step="1" inputmode="numeric" aria-label="Target maximum sets per 7 days"></div></div>
+            <p class="fine" style="margin-top:0!important">Hard sets per muscle group in the 7 days. The bands of the volume heatmap, the weekly table and the week overview follow this range.</p>
+            <h3 class="subh">Endurance</h3>
+            <div class="goal"><label for="endLo">Minutes per week</label><div class="cust"><input class="search" id="endLo" type="number" min="30" max="2000" step="5" inputmode="numeric" aria-label="Target minimum endurance minutes per week"><span>to</span><input class="search" id="endHi" type="number" min="30" max="2000" step="5" inputmode="numeric" aria-label="Target maximum endurance minutes per week"></div></div>
+            <div class="goal"><label for="easyMin">Easy share, at least</label><div class="cust"><input class="search" id="easyMin" type="number" min="50" max="95" step="1" inputmode="numeric" aria-label="Minimum share of easy training in percent"><span>%</span></div></div>
+            <div class="goal"><label for="vo2Lo">VO2max-like sessions</label><div class="cust"><input class="search" id="vo2Lo" type="number" min="0" max="14" step="1" inputmode="numeric" aria-label="Target minimum VO2max-like sessions per week"><span>to</span><input class="search" id="vo2Hi" type="number" min="0" max="14" step="1" inputmode="numeric" aria-label="Target maximum VO2max-like sessions per week"></div></div>
+            <p class="fine" style="margin-top:0!important">Endurance minutes count Zone 2 and 3 once and Zone 4 and 5 twice (the WHO equivalent). Defaults: 150–300 minutes, 75 % easy, 1–2 VO2max-like sessions. <button class="linkbtn" id="endReset" type="button" style="padding:0">Use the defaults</button></p>
+          </div>
+          <div class="sec" id="stHr">
+            <h2>Heart rate<small class="hsum" id="hrSum"></small></h2>
+            <div class="hrin">
+              <label>Max HR (bpm)<input class="search" id="hrMax" type="number" min="100" max="230" step="1" inputmode="numeric" aria-label="Maximum heart rate"></label>
+              <label>or age<input class="search" id="hrAge" type="number" min="10" max="100" step="1" inputmode="numeric" aria-label="Age, used to estimate maximum heart rate"></label>
+              <label>Resting HR<input class="search" id="hrRest" type="number" min="30" max="120" step="1" inputmode="numeric" aria-label="Resting heart rate (optional)"></label>
+            </div>
+            <p class="fine" id="hrNote" style="margin-top:0!important"></p>
+            <table class="ztab"><tbody id="hrZones"></tbody></table>
+          </div>
+          <div class="sec" id="stEq">
+            <div class="chip-row"><h2>Equipment</h2><span><button class="linkbtn" id="eqAll" type="button">All</button></span></div>
+            <div class="chips" id="eqchips"></div>
+            <p class="fine">Exercise lists, the best-for lists, the add search and the suggestions only offer exercises that need this equipment.</p>
+          </div>
+          <div class="sec" id="stUnits">
+            <h2>Units and calendar</h2>
+            <div class="goal"><span id="unitLbl">Weight</span><div class="seg seg2" id="segUnit" role="group" aria-labelledby="unitLbl" style="margin:0"><button type="button" data-unit="kg" aria-pressed="true">kg</button><button type="button" data-unit="lb" aria-pressed="false">lb</button></div></div>
+            <div class="goal"><span id="wsLbl">Week starts on</span><div class="seg seg2" id="segWeek" role="group" aria-labelledby="wsLbl" style="margin:0"><button type="button" data-ws="mon" aria-pressed="true">Monday</button><button type="button" data-ws="sun" aria-pressed="false">Sunday</button></div></div>
+            <p class="fine" style="margin-top:0!important">Weights are stored in kilograms and shown in the unit you choose. The first day sets the weekday order of the weekly pattern and what "This week" shows; the 7-day window itself can start on any date.</p>
+          </div>
+          <div class="sec" id="stDisp">
+            <h2>Display</h2>
+            <div class="goal"><span id="thLbl">Theme</span><div class="seg seg3" id="segTheme" role="group" aria-labelledby="thLbl" style="margin:0"><button type="button" data-th="auto" aria-pressed="true">Auto</button><button type="button" data-th="light" aria-pressed="false">Light</button><button type="button" data-th="dark" aria-pressed="false">Dark</button></div></div>
+            <div class="goal"><span id="lodLbl">Mesh quality</span><div class="seg seg3" id="segLod2" role="group" aria-labelledby="lodLbl" style="margin:0"></div></div>
+            <p class="fine" id="lodNote2" role="status" style="margin-top:0!important"></p>
+            <p class="fine" style="margin-top:0!important">The mesh quality is also in the Layers menu on the body. Your choice is remembered; Low is the default on phones.</p>
+          </div>
+          <div class="sec" id="stData">
+            <h2>Data</h2>
+            <p class="fine" style="margin-top:0!important">Everything (calendar, templates, training log, goals, settings) lives in this browser only. Export a backup to move it to another device.</p>
+            <div class="stacts"><button class="btn" id="exportData" type="button">Export data</button><button class="btn" id="importData" type="button">Import data</button></div>
+            <input type="file" id="importFile" accept="application/json,.json" hidden>
+            <p class="fine" id="dataMsg" role="status" style="margin:6px 0 0!important"></p>
+            <div class="stacts dz"><button class="btn warnb" id="delAll" type="button">Delete all data</button><small>Removes the calendar, templates, log, settings and licence key from this browser.</small></div>
+          </div>
+          <div class="sec" id="stLic">
+            <h2>Pro &amp; licence <span class="licbadge" id="licBadge" hidden>Pro</span></h2>
+            <div class="lic" id="lic" data-pro="0"><div class="licbody" style="margin-top:0">
+              <p class="licst" id="licStatus" role="status">Free version</p>
+              <textarea class="search" id="licKey" rows="3" placeholder="Paste your licence key (AOM1-…)" aria-label="Licence key" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+              <p class="licst bad" id="licMsg" role="alert" hidden></p>
+              <div class="licact"><button class="btn" id="licAct" type="button">Activate</button><button class="linkbtn" id="licDel" type="button" hidden>Remove licence</button></div>
+              <p class="fine">Pro features are not available yet; nothing is locked. A key is checked offline on this device: no account, and nothing is sent anywhere.</p>
+            </div></div>
+          </div>
+          <div class="sec" id="stAbout">
+            <h2>About</h2>
+            <p class="stver" id="stVer">Atlas of Motion, version __VERSION__ (build __BUILDID__)</p>
+            <p class="fine" style="margin-top:0!important">A 3D atlas of the muscular system with a strength and endurance planner. Static page, no account, no tracking; it works offline once loaded.</p>
+            <p class="fine" style="margin-top:0!important"><button class="linkbtn" id="stCredits" type="button" style="padding:0">Credits and sources (colophon)</button> · <a href="https://github.com/AtzeGinter/atlas-of-motion#credits-and-licensing" target="_blank" rel="noopener">Licence notes</a> · <a href="https://github.com/AtzeGinter/atlas-of-motion#commercial-use-of-the-3d-models" target="_blank" rel="noopener">Commercial use of the 3D models</a></p>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -1022,6 +1112,23 @@ const BGROUPS=["Skull","Spine","Thorax","Arm","Hand","Pelvis & leg","Foot"];
 const TISSUE="Connective tissue";
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 const roman=n=>{ let r=""; [[1000,"M"],[900,"CM"],[500,"D"],[400,"CD"],[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]].forEach(p=>{ while(n>=p[0]){ r+=p[1]; n-=p[0]; } }); return r; };
+
+/* ---------- settings model (aom.set.v1): units, first weekday, theme, endurance goals. Read before the first paint so the stored theme does not flash ---------- */
+const SET_KEY="aom.set.v1", SET_DEF={units:"kg",weekStart:"mon",theme:"auto",endMin:[150,300],easyMin:75,vo2:[1,2]};
+const pairOk=(a,lo,hi,d)=>{ if(!Array.isArray(a)||a.length!==2||a[0]===null||a[1]===null||a[0]===""||a[1]==="") return d.slice(); const x=Math.round(+a[0]), y=Math.round(+a[1]); return x>=lo&&y<=hi&&x<=y?[x,y]:d.slice(); };
+function cleanSet(o){
+  o=o&&typeof o==="object"&&!Array.isArray(o)?o:{}; const em=o.easyMin===null||o.easyMin===""?NaN:Math.round(+o.easyMin);
+  return {units:o.units==="lb"?"lb":"kg",weekStart:o.weekStart==="sun"?"sun":"mon",theme:o.theme==="light"||o.theme==="dark"?o.theme:"auto",
+    endMin:pairOk(o.endMin,30,2000,SET_DEF.endMin),easyMin:em>=50&&em<=95?em:SET_DEF.easyMin,vo2:pairOk(o.vo2,0,14,SET_DEF.vo2)};
+}
+let SET=(function(){ let o=null; try{ o=JSON.parse(localStorage.getItem(SET_KEY)); }catch(e){} return cleanSet(o); })();
+function applyThemeAttr(){ const h=document.documentElement; if(SET.theme==="auto") h.removeAttribute("data-theme"); else h.setAttribute("data-theme",SET.theme); }
+applyThemeAttr();
+/* weights are stored in kg; wU() = unit label, wFmt(kg) = number text in the chosen unit (kg in 0.5 steps, lb in whole pounds), wParse(text) = kg (NaN when not a number) */
+const LB_PER_KG=2.20462262;
+const wU=()=>SET.units==="lb"?"lb":"kg";
+function wFmt(kg){ if(kg===undefined||kg===null||kg==="") return ""; kg=+kg; if(!isFinite(kg)) return ""; return String(SET.units==="lb"?Math.round(kg*LB_PER_KG):Math.round(kg*2)/2); }
+function wParse(v){ const x=parseFloat(String(v==null?"":v).replace(",",".")); return isFinite(x)?(SET.units==="lb"?Math.round(x/LB_PER_KG*100)/100:x):NaN; }
 
 /* ---------- renderer ---------- */
 const vp=$("#vp");
@@ -1921,17 +2028,17 @@ if(mqPhone) [mqPhone,mqCoarse].forEach(m=>{ if(m.addEventListener) m.addEventLis
 if(typeof ResizeObserver!=="undefined") new ResizeObserver(applyInset).observe(side);
 
 /* ---------- mesh quality switch (Layers popover) ---------- */
-const segLod=$("#segLod");
-LVS.forEach(lv=>{ const b=document.createElement("button"); b.type="button"; b.dataset.lod=lv; b.dataset.faces=LOD[lv].faces;
+const segLods=[$("#segLod"),$("#segLod2")];   // the Layers popover and the Settings page show the same control
+segLods.forEach(sg=>LVS.forEach(lv=>{ const b=document.createElement("button"); b.type="button"; b.dataset.lod=lv; b.dataset.faces=LOD[lv].faces;
   b.title=LVN[lv]+": "+Math.round(LOD[lv].faces/1000)+"k triangles, "+mb(LOD[lv].bytes)+" download";
-  b.innerHTML=LVN[lv]+"<small>"+mb(LOD[lv].bytes)+"</small>"; b.onclick=()=>setLod(lv); segLod.appendChild(b); });
+  b.innerHTML=LVN[lv]+"<small>"+mb(LOD[lv].bytes)+"</small>"; b.onclick=()=>setLod(lv); sg.appendChild(b); }));
 let lodReq=0, lodAbort=null, lodTo=null, lodProg=0, lodErr="";
 function syncLodUI(){
-  segLod.querySelectorAll("button").forEach(b=>{ const lv=b.dataset.lod, busy=lv===lodTo;
+  segLods.forEach(sg=>sg.querySelectorAll("button").forEach(b=>{ const lv=b.dataset.lod, busy=lv===lodTo;
     b.setAttribute("aria-pressed",String(lv===lod)); b.classList.toggle("busy",busy); b.setAttribute("aria-busy",String(busy));
-    if(busy) b.style.setProperty("--p",Math.round(lodProg*100)+"%"); else b.style.removeProperty("--p"); });
-  const big=(lodTo||lod)==="high"&&(isPhone()||isCoarse());
-  $("#lodNote").textContent=lodErr||(big?"High is a large download ("+mb(LOD.high.bytes)+") and heavy for a phone; Low or Medium run smoother.":"");
+    if(busy) b.style.setProperty("--p",Math.round(lodProg*100)+"%"); else b.style.removeProperty("--p"); }));
+  const big=(lodTo||lod)==="high"&&(isPhone()||isCoarse()), note=lodErr||(big?"High is a large download ("+mb(LOD.high.bytes)+") and heavy for a phone; Low or Medium run smoother.":"");
+  $("#lodNote").textContent=note; $("#lodNote2").textContent=note;
 }
 async function setLod(lv){
   const req=++lodReq; if(lodAbort){ lodAbort.abort(); lodAbort=null; } // last request wins
@@ -2133,7 +2240,8 @@ const volBand=s=>s<tg.lo/2?0:(s<tg.lo?1:(s<=tg.hi?2:3));
 const volStatus=s=>s<=0?"Not trained":VST[volBand(s)];
 function renderLegend(){const a=tg.lo/2, t=[["v0","Under "+fmt(a)],["v1",rng(fmt(a),fmt(tg.lo-0.5))],["v2",rng(tg.lo,tg.hi)],["v3","Over "+tg.hi]];
   $("#volLegend").innerHTML=t.map((x,b)=>'<span title="'+VST[b]+'"><i class="sw '+x[0]+'"></i>'+x[1]+'</span>').join("")+'<span><i class="sw l0"></i>None</span>'+(volOn&&volDay?'<span><i class="sw fat"></i>Still recovering</span><span><i class="sw end"></i>Endurance load</span>':'');}
-function syncGoalUI(){ $("#goalSel").value=tg.g; $("#goalCust").hidden=tg.g!=="custom"; $("#goalLo").value=tg.lo; $("#goalHi").value=tg.hi; renderLegend(); }
+function syncGoalUI(){ $("#goalSel").value=tg.g; $("#goalCust").hidden=tg.g!=="custom"; $("#goalLo").value=tg.lo; $("#goalHi").value=tg.hi; renderLegend();
+  $("#goalSum").innerHTML='Goal: <b>'+rng(tg.lo,tg.hi)+' sets</b> per muscle group / week · <button class="linkbtn" type="button" data-stopen="goals">Change</button>'; }
 function setGoal(g,lo,hi){
   tg={g:g,lo:lo,hi:hi}; store.set(GOAL_KEY,tg); syncGoalUI(); renderVolSum(); renderSuggest(); renderBal();
   if(mode==="vol"){ setMode("vol"); if(sel&&view==="sel") renderCard(); }
@@ -2212,7 +2320,7 @@ function openTab(name){
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{ openTab(b.dataset.tab); if(isPhone()){ cardAway=true; peekToHalf(); syncCardUI(); } });
 
 /* equipment */
-function buildEq(){ $("#eqchips").innerHTML=EQCATS.map(c=>'<button class="chip" data-eq="'+c+'" aria-pressed="'+eqOn.has(c)+'">'+c+'</button>').join(""); }
+function buildEq(){ $("#eqchips").innerHTML=EQCATS.map(c=>'<button class="chip" data-eq="'+c+'" aria-pressed="'+eqOn.has(c)+'">'+c+'</button>').join(""); $("#eqSum").textContent="Equipment: "+eqOn.size+" of "+EQCATS.length; }
 function eqChanged(){ store.set(EQ_KEY,[...eqOn]); buildEq(); buildExList(); buildBest(); buildAdd(); renderSuggest(); if(sel&&view==="sel") renderCard(); }
 $("#eqchips").addEventListener("click",e=>{const c=e.target.closest("[data-eq]"); if(!c) return; const k=c.dataset.eq; eqOn.has(k)?eqOn.delete(k):eqOn.add(k); eqChanged();});
 $("#eqAll").onclick=()=>{eqOn=new Set(EQCATS); eqChanged();};
@@ -2296,9 +2404,28 @@ function planRefresh(){ // plan or window changed: update every list that marks 
   else if(view==="ex"&&selEx!==null) renderCard();
 }
 /* ---------- editing: the editor works on the current session of the selected date, or on a template (edTpl) ---------- */
-let edTpl=null, renId=null, renT=null, edPin=null;   // template being edited (id), session / template being renamed (id), a finished session chosen with Edit (it then also receives additions)
+let edTpl=null, renId=null, renT=null, edPin=null, edOpen=false;   // template being edited (id), session / template being renamed (id), a finished session chosen with Edit (it then also receives additions); edOpen: the editor of the current session is expanded (collapsed by default, opened with a session card's Edit button)
+const edShown=()=>!!(edTpl||edOpen);
 const edObj=()=>edTpl?tplOf(edTpl):curInst();
 const addLabel=()=>edTpl&&tplOf(edTpl)?"template "+tplOf(edTpl).name:dShort(selDate);
+/* "Move to…" choices: today and the next 13 days first (moving forward is the common case), then the other dates of the 7-day window (usually past), then "Pick a date…" which shows a date input next to the select */
+function moveOpts(from){
+  const tk=todayKey(), seen=new Set([from]), o=['<option value="">Move to…</option>'];
+  for(let k=0;k<14;k++){ const dk=addD(tk,k); if(seen.has(dk)) continue; seen.add(dk); o.push('<option value="'+dk+'">'+(k===0?"Today":(k===1?"Tomorrow":esc(dShort(dk))))+'</option>'); }
+  const rest=week.map(w=>w.date).filter(dk=>!seen.has(dk));
+  if(rest.length){ o.push('<option value="" disabled>──────────</option>'); rest.forEach(dk=>o.push('<option value="'+dk+'">'+esc(dShort(dk))+'</option>')); }
+  o.push('<option value="pick">Pick a date…</option>');
+  return o.join("");
+}
+const moveCtl=(from,selAttr,dateAttr,label,cls)=>'<select class="mv'+(cls?' '+cls:'')+'" '+selAttr+' aria-label="'+label+'">'+moveOpts(from)+'</select><input class="search mvdate'+(cls?' '+cls+'d':'')+'" type="date" '+dateAttr+' hidden aria-label="'+label+' (date)">';
+function mvPick(t){ // the date chosen with a "Move to…" select / its date input, or null (nothing chosen yet; "Pick a date…" reveals the date input)
+  if(t.tagName==="SELECT"){
+    if(t.value==="pick"){ const n=t.nextElementSibling; t.value=""; if(n&&n.matches&&n.matches("input.mvdate")){ n.hidden=false; n.focus(); } return null; }
+    return keyDate(t.value)?t.value:null;
+  }
+  return keyDate(t.value)?t.value:null;
+}
+const outTxt=to=>dShort(to)+(slotOf(to)<0?" (outside the 7 days shown)":"");
 function targetInst(dk,create){ // the session that receives something added to a date: the current one, else the first open one, else a new empty "Session"
   let I=null; if(dk===selDate){ const c=curInst(); if(c&&c.dt===dk&&(editable(c)||(c.id===edPin&&c.status!=="skipped"))) I=c; }
   if(!I) I=insts(dk).find(editable)||null;
@@ -2312,7 +2439,7 @@ function addToPlan(i,v,d,sets){
   const item={n:EX[i].n,sets:sets||3,v:(v||[]).slice()};
   if(edTpl&&d===undefined){ const T=edObj(); if(T){ T.items.push(item); tplChanged(); return; } }
   if(d===undefined) d=day;
-  const dk=week[d].date, I=targetInst(dk,true); I.items.push(item); edTpl=null; selDate=dk; curBy[dk]=I.id; planChanged();
+  const dk=week[d].date, I=targetInst(dk,true); I.items.push(item); edTpl=null; if(dk!==selDate) edOpen=false; selDate=dk; curBy[dk]=I.id; planChanged();
 }
 function refreshAll(){ syncPlan(); clampSel(); volCache=null; dayCache=null; renderPlan(); renderVolSum(); renderSuggest(); renderOv(); planRefresh(); if(mode==="vol") setMode("vol"); }
 function planChanged(){ saveCal(); refreshAll(); }
@@ -2320,7 +2447,7 @@ function tplChanged(){ saveTpl(); vgen++; planChanged(); }
 function patChanged(){ vgen++; planChanged(); }
 function clampSel(){ let s=slotOf(selDate); if(s<0){ s=dnum(selDate)<dnum(winFrom())?0:ND-1; selDate=addD(winFrom(),s); } day=s; }
 function setDate(dk){
-  edTpl=null; renId=null; edPin=null; selDate=dk; clampSel(); $("#dayMsg").textContent=""; renderPlan(); renderOv();
+  edTpl=null; renId=null; edPin=null; edOpen=false; selDate=dk; clampSel(); $("#dayMsg").textContent=""; renderPlan(); renderOv();
   if(view==="ex"&&selEx!==null) renderCard();
   if(mode==="vol"&&volDay) setMode("vol");
 }
@@ -2328,17 +2455,20 @@ const selectDay=i=>setDate(week[i].date);
 /* ---------- the 7-day window ---------- */
 function setWin(start,persist,sd){
   winStart=start; if(persist){ if(start) store.set(WIN_KEY,start); else store.del(WIN_KEY); }
-  if(sd) selDate=sd; $("#dayMsg").textContent=""; edTpl=null; edPin=null; refreshAll();
+  if(sd) selDate=sd; $("#dayMsg").textContent=""; edTpl=null; edPin=null; edOpen=false; refreshAll();
 }
 const shiftWin=n=>setWin(addD(winFrom(),n),true);
 document.querySelectorAll("[data-win]").forEach(b=>b.onclick=()=>shiftWin(+b.dataset.win));
 $("#winLast").onclick=()=>setWin(null,true,todayKey());
 $("#winNext").onclick=()=>setWin(todayKey(),true,todayKey());
+const weekStartOf=dk=>addD(dk,-((wdOf(dk)-(SET.weekStart==="sun"?6:0)+7)%7));   // first day of the calendar week (Monday or Sunday, see Settings) that contains dk
+$("#winWeek").onclick=()=>setWin(weekStartOf(todayKey()),true,todayKey());
 $("#winDate").addEventListener("change",e=>{ const v=e.target.value; if(keyDate(v)) setWin(v,true); else renderWin(); });
 function renderWin(){
   const f=winFrom(), l=addD(f,ND-1); $("#winDate").value=f;
   $("#winLbl").textContent=dShort(f)+" – "+dShort(l)+(winStart===null?" · the 7 days ending today":"");
 }
+const wdOrder=()=>SET.weekStart==="sun"?[6,0,1,2,3,4,5]:[0,1,2,3,4,5,6];   // weekday indices (0 = Monday) in display order
 const abbr=i=>WDS[wdOf(week[i].date)]+" "+keyDate(week[i].date).getDate();
 function renderStrip(M){
   const st=$("#wstrip"), sl=st.scrollLeft, tk=todayKey();
@@ -2362,7 +2492,7 @@ function sessCard(I,isCur,M){
   return '<article class="scard s-'+z+(isCur?' sel':'')+'" data-id="'+esc(I.id)+'" aria-label="'+nm+', '+STATE_TXT[z]+'"><div class="sc1">'+
     (renId===I.id?'<input class="search" id="sessIn" maxlength="'+NAMEMAX+'" aria-label="Session name" value="'+nm+'">':'<b class="snm">'+nm+'</b><button class="pen" type="button" data-sact="ren" aria-label="Rename '+nm+'" title="Rename session">✎</button>')+
     '<span class="schip s-'+z+'">'+STATE_MARK[z]+' '+STATE_TXT[z]+(ls&&ls.units&&(z==="doing"||z==="done")?' · '+markTxt(I,ls).replace(/^✓ /,''):'')+'</span></div><small class="sc2">'+esc(sum)+'</small><div class="sc4">'+(sets?'<span class="pl ps">'+sets+' sets</span>':'')+I.ses.slice(0,3).map(x=>'<span class="pl '+pillCls(x)+'" title="'+esc(sesTip(x))+'">'+esc(pillOf(x))+'</span>').join("")+'</div>'+
-    '<div class="sc3"><button class="btn strain" type="button" data-sact="train"'+(!n&&!e&&!I.lg?' disabled title="Add exercises or an endurance session first"':'')+'>'+train+'<span class="sronly"> '+nm+'</span></button><button class="linkbtn" type="button" data-sact="edit" aria-pressed="'+isCur+'">'+(isCur?'Editing':'Edit')+'<span class="sronly"> '+nm+'</span></button>'+
+    '<div class="sc3"><button class="btn strain" type="button" data-sact="train"'+(!n&&!e&&!I.lg?' disabled title="Add exercises or an endurance session first"':'')+'>'+train+'<span class="sronly"> '+nm+'</span></button><button class="linkbtn" type="button" data-sact="edit" aria-pressed="'+(isCur&&edOpen)+'" aria-expanded="'+(isCur&&edOpen)+'" aria-controls="edSec">'+(isCur&&edOpen?'Editing':'Edit')+'<span class="sronly"> '+nm+'</span></button>'+
     '<label class="mvd">Move to <input class="search" type="date" data-sdate value="'+I.dt+'" aria-label="Move '+nm+' to a date"></label>'+
     '<button class="linkbtn" type="button" data-sact="skip">'+(z==="skipped"?'Unskip':'Skip')+'<span class="sronly"> '+nm+'</span></button><button class="linkbtn warnb" type="button" data-sact="rm">Remove<span class="sronly"> '+nm+'</span></button></div></article>';
 }
@@ -2380,11 +2510,11 @@ function commitRename(save){
 function renderEditor(M){
   const tm=!!edTpl, O=edObj(), items=O?O.items:[], ses=O?O.ses:[], nM=tm?null:M, nm=O?esc(O.name):"", tot=items.reduce((a,p)=>a+p.sets,0), wt=plan.reduce((a,p)=>a+p.sets,0);
   $("#edLbl").innerHTML=tm?'Editing template <b>'+nm+'</b>':(O?'Editing <b>'+nm+'</b> · '+esc(dShort(O.dt)):'No session on '+esc(dShort(selDate)));
-  $("#edBack").hidden=!tm; $("#wkClear").disabled=!O||!(items.length+ses.length); $("#wkClear").textContent=tm?"Clear template":"Clear session";
+  $("#edSec").hidden=!edShown(); $("#edBack").hidden=!edShown(); $("#wkClear").disabled=!O||!(items.length+ses.length); $("#wkClear").textContent=tm?"Clear template":"Clear session";
   $("#edSave").hidden=tm||!O; $("#saveTpl").disabled=!(O&&O.tid&&tplOf(O.tid));
-  const mv=tm?"":'<select class="mv" data-mv="@" aria-label="Move to another date"><option value="">Move to…</option>'+week.map((d,i)=>i===day?'':'<option value="'+i+'">'+esc(d.name)+'</option>').join("")+'</select>';
+  const mv=tm||!O?"":moveCtl(O.dt,'data-mv="@"','data-mvd="@"','Move to another date');
   $("#plan").innerHTML=(O&&O.status==="done"&&!tm?'<p class="fine" style="margin-top:0!important">This session is finished: the volume counts the sets you logged. Use Sync with plan in its log (View) to pull in what you add here.</p>':"")+(items.length?items.map((p,ix)=>{const i=EXI[p.n], vt=varText(i,p.v);
-    return '<div class="prow"><div><button class="exlink" data-open="'+ix+'">'+p.n+'</button>'+(vt?'<small>'+vt+'</small>':'')+rowNotes(p,nM)+mv.replace('"@"','"'+ix+'"').replace('aria-label="Move to another date"','aria-label="Move '+esc(p.n)+' to another date"')+'</div><div class="step"><button data-dec="'+ix+'" aria-label="Fewer sets">−</button><span>'+p.sets+' sets</span><button data-inc="'+ix+'" aria-label="More sets">+</button></div><button class="x" data-rm="'+ix+'" aria-label="Remove">×</button></div>';}).join("")+
+    return '<div class="prow"><div><button class="exlink" data-open="'+ix+'">'+p.n+'</button>'+(vt?'<small>'+vt+'</small>':'')+rowNotes(p,nM)+mv.split('"@"').join('"'+ix+'"').replace('aria-label="Move to another date"','aria-label="Move '+esc(p.n)+' to another date"')+'</div><div class="step"><button data-dec="'+ix+'" aria-label="Fewer sets">−</button><span>'+p.sets+' sets</span><button data-inc="'+ix+'" aria-label="More sets">+</button></div><button class="x" data-rm="'+ix+'" aria-label="Remove">×</button></div>';}).join("")+
     '<p class="fine">'+items.length+' exercise'+(items.length===1?'':'s')+', '+tot+' sets '+(tm?'in this template':'in this session')+(tm?'':' · '+wt+' sets in the 7 days')+'.</p>'
     :(ses.length?'':'<p class="empty">'+(tm?'This template is empty. ':(O?'':'No session on '+esc(dShort(selDate))+'. '))+'Add exercises below or with "Add to …" on any exercise.</p>'));
   const dm=ses.reduce((a,s)=>a+sesTot(s),0);
@@ -2409,22 +2539,26 @@ $("#wstrip").addEventListener("wheel",e=>{ const st=e.currentTarget; if(Math.abs
 $("#sessList").addEventListener("click",e=>{
   const t=e.target.closest("[data-sact]"); if(!t) return; const c=t.closest(".scard"), I=c&&findInst(c.dataset.id); if(!I) return; const a=t.dataset.sact;
   if(a==="ren"){ renId=I.id; renderSessions(dayModel()); }
-  else if(a==="edit"){ edTpl=null; curBy[selDate]=I.id; edPin=I.id; renderPlan(); const f=$("#sessList").querySelector('.scard[data-id="'+I.id+'"] [data-sact="edit"]'); if(f) f.focus(); }
+  else if(a==="edit"){
+    if(edOpen&&!edTpl&&curInst()&&curInst().id===I.id){ closeEditor(true); return; }   // Edit again = Done
+    edTpl=null; edOpen=true; curBy[selDate]=I.id; edPin=I.id; renderPlan(); const f=$("#sessList").querySelector('.scard[data-id="'+I.id+'"] [data-sact="edit"]'); if(f) f.focus();
+    const es=$("#edSec"); if(es&&es.scrollIntoView) try{ es.scrollIntoView({block:"nearest"}); }catch(_){}
+  }
   else if(a==="train") startInst(I,t);
   else if(a==="skip"){ mat(I); I.status=I.status==="skipped"?(I.finishedAt?"done":"planned"):"skipped"; $("#dayMsg").textContent=I.status==="skipped"?"Skipped "+I.name+". It no longer counts.":""; planChanged(); }
   else if(a==="rm"){
     if(I.lg&&lgAnyDone(I.lg)&&typeof confirm==="function"&&!confirm("Remove “"+I.name+"” with the sets you logged?")) return;
-    removeInst(I); delete curBy[selDate]; edPin=null; $("#dayMsg").textContent="Removed "+I.name+"."; planChanged();
+    removeInst(I); delete curBy[selDate]; edPin=null; edOpen=false; $("#dayMsg").textContent="Removed "+I.name+"."; planChanged();
   }
 });
 $("#sessList").addEventListener("change",e=>{
   const t=e.target.closest("[data-sdate]"); if(!t) return; const c=t.closest(".scard"), I=c&&findInst(c.dataset.id); if(!I) return; const to=t.value;
   if(!keyDate(to)){ renderSessions(dayModel()); return; }
-  if(moveInst(I,to)){ delete curBy[selDate]; $("#dayMsg").textContent="Moved "+I.name+" to "+dShort(to)+(slotOf(to)<0?" (outside the 7 days shown)":"")+"."; planChanged(); }
+  if(moveInst(I,to)){ delete curBy[selDate]; edOpen=false; $("#dayMsg").textContent="Moved "+I.name+" to "+dShort(to)+(slotOf(to)<0?" (outside the 7 days shown)":"")+"."; planChanged(); }
 });
 $("#addSess").onclick=()=>{
   const T=tplOf($("#addTpl").value), I=T?addInst(selDate,T.name,copyItems(T.items),copySes(T.ses),T.id):addInst(selDate,"Session");
-  edTpl=null; edPin=null; curBy[selDate]=I.id; planChanged(); $("#dayMsg").textContent="Added "+I.name+" to "+dShort(selDate)+".";
+  edTpl=null; edPin=null; edOpen=!T; curBy[selDate]=I.id; planChanged();   // an empty session opens in the editor; one made from a template stays collapsed $("#dayMsg").textContent="Added "+I.name+" to "+dShort(selDate)+".";
 };
 /* the editor */
 $("#plan").addEventListener("click",e=>{
@@ -2437,13 +2571,18 @@ $("#plan").addEventListener("click",e=>{
   else return;
   edDone();
 });
-function moveEntry(x,kind,toSlot){ delete x.o; const T=targetInst(week[toSlot].date,true); (kind==="s"?T.items:T.ses).push(x); return T; }
+function moveEntry(x,kind,toDate){ delete x.o; const T=targetInst(toDate,true); (kind==="s"?T.items:T.ses).push(x); return T; }
 $("#plan").addEventListener("change",e=>{
-  const t=e.target.closest("select[data-mv]"); if(!t||t.value==="") return; const to=+t.value, O=edMut(); if(!O||edTpl) return;
-  const p=O.items.splice(+t.dataset.mv,1)[0]; moveEntry(p,"s",to); planChanged(); $("#dayMsg").textContent="Moved "+p.n+" to "+dayName(to)+".";
+  const t=e.target.closest("select[data-mv],input[data-mvd]"); if(!t) return; const to=mvPick(t); if(!to) return; const O=edMut(); if(!O||edTpl) return;
+  const p=O.items.splice(+(t.dataset.mv!==undefined?t.dataset.mv:t.dataset.mvd),1)[0]; if(!p) return; moveEntry(p,"s",to); planChanged(); $("#dayMsg").textContent="Moved "+p.n+" to "+outTxt(to)+".";
 });
 $("#wkClear").onclick=()=>{ const O=edMut(); if(!O||!(O.items.length+O.ses.length)) return; O.items=[]; O.ses=[]; sesOpen.clear(); edDone(); $("#dayMsg").textContent=""; };
-$("#edBack").onclick=()=>{ edTpl=null; renderPlan(); };
+function closeEditor(focusBack){   // Done / Escape: collapse the editor (of a session or a template)
+  if(!edShown()) return false; const wasT=!!edTpl, id=!wasT&&curInst()?curInst().id:null; edTpl=null; edOpen=false; edPin=null; $("#endForm").hidden=true; $("#endOpen").setAttribute("aria-expanded","false"); renderPlan();
+  if(focusBack){ const f=wasT?$('#tplList [data-tact="edit"]'):(id&&$("#sessList").querySelector('.scard[data-id="'+id+'"] [data-sact="edit"]')); if(f&&f.focus) f.focus(); }
+  return true;
+}
+$("#edBack").onclick=()=>closeEditor(true);
 $("#saveTpl").onclick=()=>{
   const I=curInst(), T=I&&I.tid?tplOf(I.tid):null; if(!I||!T) return;
   T.items=copyItems(I.items); T.ses=copySes(I.ses); tplChanged(); $("#dayMsg").textContent="Template “"+T.name+"” updated from "+I.name+". Sessions already planned from it stay as they are.";
@@ -2471,7 +2610,7 @@ $("#tplList").addEventListener("click",e=>{
   const t=e.target.closest("[data-tact]"); if(!t) return; const c=t.closest(".trow"), T=c&&tplOf(c.dataset.tid); if(!T) return; const a=t.dataset.tact;
   if(a==="ren"){ renT=T.id; renderTpl(); }
   else if(a==="edit"){ edTpl=edTpl===T.id?null:T.id; renderPlan(); if(edTpl){ const s=$("#edSec"); if(s&&s.scrollIntoView) try{ s.scrollIntoView({block:"nearest"}); }catch(_){} } }
-  else if(a==="use"){ const I=addInst(selDate,T.name,copyItems(T.items),copySes(T.ses),T.id); edTpl=null; curBy[selDate]=I.id; planChanged(); $("#dayMsg").textContent="Added "+T.name+" to "+dShort(selDate)+"."; }
+  else if(a==="use"){ const I=addInst(selDate,T.name,copyItems(T.items),copySes(T.ses),T.id); edTpl=null; edOpen=false; curBy[selDate]=I.id; planChanged(); $("#dayMsg").textContent="Added "+T.name+" to "+dShort(selDate)+"."; }
   else if(a==="dup"){ const N={id:nid("t"),name:uniqueName(T.name),items:copyItems(T.items),ses:copySes(T.ses)}; TPL.splice(TPL.indexOf(T)+1,0,N); tplChanged(); }
   else if(a==="del"){
     const pats=CAL.pattern.filter(p=>p.tid===T.id);
@@ -2484,7 +2623,7 @@ $("#tplNew").onclick=()=>{ const T={id:nid("t"),name:uniqueName("New template"),
 function renderPat(){
   const tk=todayKey();
   $("#patList").innerHTML=CAL.pattern.length?CAL.pattern.map(p=>'<div class="prw" data-pid="'+esc(p.id)+'"><select class="search" data-pf="tid" aria-label="Template">'+TPL.map(t=>'<option value="'+esc(t.id)+'"'+(t.id===p.tid?' selected':'')+'>'+esc(t.name)+'</option>').join("")+'</select>'+
-    '<div class="wdc" role="group" aria-label="Weekdays">'+WDS.map((w,i)=>'<button type="button" class="chip" data-pwd="'+i+'" aria-pressed="'+(p.wd.indexOf(i)>=0)+'" aria-label="'+WDL[i]+'">'+w+'</button>').join("")+'</div>'+
+    '<div class="wdc" role="group" aria-label="Weekdays">'+wdOrder().map(i=>'<button type="button" class="chip" data-pwd="'+i+'" aria-pressed="'+(p.wd.indexOf(i)>=0)+'" aria-label="'+WDL[i]+'">'+WDS[i]+'</button>').join("")+'</div>'+
     '<div class="pdt"><label>From <input class="search" type="date" data-pf="from" value="'+p.from+'" aria-label="From date"></label><label>Until <input class="search" type="date" data-pf="until" value="'+(p.until||"")+'" aria-label="Until date (optional)"></label></div>'+
     '<button class="x" type="button" data-pact="rm" aria-label="Remove this pattern entry">×</button></div>').join(""):'<p class="empty">The pattern is empty, so nothing fills in by itself.</p>';
   $("#patAdd").disabled=!TPL.length; $("#patAdd").title=TPL.length?"":"Create a template first";
@@ -2518,7 +2657,7 @@ function sesDet(s){
 }
 function sesRow(s,ix,M,tm){
   const A=actOf(s), det=s.k!=="easy"&&s.k!=="long", op=det&&sesOpen.has((edTpl||selDate)+":"+ix), tot=Math.round(sesTot(s));
-  const mv=tm?"":'<select class="mv" data-smv="'+ix+'" aria-label="Move '+esc(A.n)+' session to another date"><option value="">Move to…</option>'+week.map((d,i)=>i===day?'':'<option value="'+i+'">'+esc(d.name)+'</option>').join("")+'</select>';
+  const mv=tm||!selDate?"":moveCtl(selDate,'data-smv="'+ix+'"','data-smvd="'+ix+'"','Move '+esc(A.n)+' session to another date');
   return '<div class="srow" data-s="'+ix+'"><div class="sr1"><select class="sv" data-sf="a" aria-label="Activity">'+actOptions(s.a)+'</select><select class="sv" data-sf="k" aria-label="Session type">'+kindOptions(A,s.k)+'</select><button class="x" data-srm="'+ix+'" aria-label="Remove '+esc(A.n)+' session">×</button></div>'+
     '<div class="sr2"><label><input class="num" type="number" data-sf="min" value="'+s.min+'" min="5" max="600" step="5" inputmode="numeric" aria-label="Total minutes"> min</label>'+(tot>s.min+.5?'<span>(structure needs '+tot+')</span>':'')+
     (det?'<button class="linkbtn" data-sx="'+ix+'" aria-expanded="'+op+'" type="button">'+(op?'Hide ':'Edit ')+DETL[s.k]+'</button>':'')+mv+'</div>'+
@@ -2532,8 +2671,12 @@ $("#ses").addEventListener("click",e=>{
   else if(t.dataset.sx!==undefined){ const k=(edTpl||selDate)+":"+t.dataset.sx; if(sesOpen.has(k)) sesOpen.delete(k); else sesOpen.add(k); renderPlan(); const n=$("#ses").querySelector('[data-sx="'+t.dataset.sx+'"]'); if(n) n.focus(); }
 });
 $("#ses").addEventListener("change",e=>{
-  const t=e.target.closest("[data-sf],select[data-smv]"); if(!t) return; const had=t===document.activeElement, O=edMut(); if(!O) return; const it=O.ses;
-  if(t.dataset.smv!==undefined){ if(t.value===""||edTpl) return; const to=+t.value, s=it.splice(+t.dataset.smv,1)[0]; moveEntry(s,"e",to); sesOpen.clear(); planChanged(); $("#dayMsg").textContent="Moved "+actOf(s).n+" to "+dayName(to)+"."; return; }
+  const t=e.target.closest("[data-sf],select[data-smv],input[data-smvd]"); if(!t) return;
+  if(t.dataset.smv!==undefined||t.dataset.smvd!==undefined){
+    const to=mvPick(t); if(!to||edTpl) return; const O=edMut(); if(!O) return; const s=O.ses.splice(+(t.dataset.smv!==undefined?t.dataset.smv:t.dataset.smvd),1)[0]; if(!s) return;
+    moveEntry(s,"e",to); sesOpen.clear(); planChanged(); $("#dayMsg").textContent="Moved "+actOf(s).n+" to "+outTxt(to)+"."; return;
+  }
+  const had=t===document.activeElement, O=edMut(); if(!O) return; const it=O.ses;
   const ix=+t.closest("[data-s]").dataset.s, s=it[ix], f=t.dataset.sf, A=actOf(s);
   if(f==="a"){ const B=ACT[ACTI[t.value]]; if(!B) return; const k=kindsOf(B).indexOf(s.k)>=0?s.k:B.d[0]; it[ix]=mkSes(B,k,s.min,k===s.k?s:null); }
   else if(f==="k") it[ix]=mkSes(A,t.value,s.min);
@@ -2579,16 +2722,17 @@ function balance(){
 function balHtml(){
   const B=balance(), M=dayModel(), sets=plan.reduce((a,p)=>a+p.sets,0), NG=SUMMARY.length, inT=M.W.filter(w=>w>0&&volBand(w)===2).length, over=M.W.filter(w=>w>0&&volBand(w)===3).length;
   const who=Math.round(B.who), pe=B.tot?Math.round(B.easy/B.tot*100):0, pm=B.tot?Math.round(B.mod/B.tot*100):0, ph=B.tot?Math.max(0,100-pe-pm):0;
+  const eLo=SET.endMin[0], eHi=SET.endMin[1], eDef=eLo===SET_DEF.endMin[0]&&eHi===SET_DEF.endMin[1], eName=eDef?"the WHO":"your", eSc=Math.max(1,Math.round(eHi*4/3)), vLo=SET.vo2[0], vHi=SET.vo2[1], vR=rng(vLo,vHi), easyT=SET.easyMin;
   const ss=!sets?["nl","Add exercises to see your groups"]:[inT===NG?"ok":"nl",inT+" of "+NG+" groups in target"+(over?", "+over+" above":"")];
-  const ws=!B.n?["nl","Add an endurance session"]:(who<150?["wr","Below the WHO minimum of 150"]:(who<=300?["ok","Within the WHO range"]:["ok","Above 300: extra benefit, mind recovery"]));
-  const is=!B.n?["nl","Aim for 75–80 % easy"]:(pe>=75?["ok","On target: mostly easy"]:["wr","Aim for 75–80 % easy"]);
-  const vs=!B.n?["nl","Target: 1–2 a week"]:(B.vo===0?["wr","None yet, target 1–2 a week"]:(B.vo<=2?["ok","In target (1–2 a week)"]:["wr","More than 2: mind recovery"]));
+  const ws=!B.n?["nl","Add an endurance session"]:(who<eLo?["wr","Below "+eName+" minimum of "+eLo]:(who<=eHi?["ok","Within "+eName+" range"]:["ok","Above "+eHi+": extra benefit, mind recovery"]));
+  const eTxt=easyT===SET_DEF.easyMin?"75–80 %":easyT+" % or more", is=!B.n?["nl","Aim for "+eTxt+" easy"]:(pe>=easyT?["ok","On target: mostly easy"]:["wr","Aim for "+eTxt+" easy"]);
+  const vs=!B.n?["nl","Target: "+vR+" a week"]:(B.vo<vLo?["wr",(B.vo===0?"None yet, target ":"Below target, ")+vR+" a week"]:(B.vo<=vHi?["ok","In target ("+vR+" a week)"]:["wr","More than "+vHi+": mind recovery"]));
   const seg=(m,c,l)=>m>0?'<u style="flex:'+m+' 0 0;background:'+c+'" title="'+l+'"></u>':"";
   return '<div class="bal" role="group" aria-label="Week balance">'+
     '<div class="bc" data-b="str" data-sets="'+sets+'" data-in="'+inT+'"><h4>Strength</h4><div class="bv">'+sets+'<small> sets / week</small></div><div class="bs '+ss[0]+'">'+ss[1]+'</div></div>'+
-    '<div class="bc" data-b="who" data-v="'+who+'"><h4>Endurance vs WHO</h4><div class="bv">'+who+'<small> of 150–300 min</small></div><div class="bk" aria-hidden="true"><i style="width:'+Math.min(100,who/4).toFixed(1)+'%"></i><b style="left:37.5%;width:37.5%"></b></div><div class="bs '+ws[0]+'">'+ws[1]+'</div></div>'+
+    '<div class="bc" data-b="who" data-v="'+who+'"><h4>Endurance vs '+(eDef?'WHO':'goal')+'</h4><div class="bv">'+who+'<small> of '+eLo+'–'+eHi+' min</small></div><div class="bk" aria-hidden="true"><i style="width:'+Math.min(100,who/eSc*100).toFixed(1)+'%"></i><b style="left:'+Math.min(100,eLo/eSc*100).toFixed(1)+'%;width:'+Math.max(0,Math.min(100,eHi/eSc*100)-Math.min(100,eLo/eSc*100)).toFixed(1)+'%"></b></div><div class="bs '+ws[0]+'">'+ws[1]+'</div></div>'+
     '<div class="bc" data-b="split" data-easy="'+pe+'" data-mod="'+pm+'" data-hard="'+ph+'"><h4>Intensity split</h4><div class="bv">'+(B.tot?pe+' %<small> easy</small>':'–')+'</div><div class="sbar" role="img" aria-label="Easy '+pe+' %, moderate '+pm+' %, hard '+ph+' %">'+seg(B.easy,"var(--z2)","Easy (Z1–Z2): "+pe+" %")+seg(B.mod,"var(--z3)","Moderate (Z3): "+pm+" %")+seg(B.hard,"var(--z5)","Hard (Z4–Z5): "+ph+" %")+'</div><div class="bs '+is[0]+'">'+(B.tot?pe+" / "+pm+" / "+ph+" % easy / moderate / hard. ":"")+is[1]+'</div></div>'+
-    '<div class="bc" data-b="vo2" data-v="'+B.vo+'"><h4>VO2max-like sessions</h4><div class="bv">'+B.vo+'<small> of 1–2 a week</small></div><div class="bs '+vs[0]+'">'+vs[1]+'</div></div>'+
+    '<div class="bc" data-b="vo2" data-v="'+B.vo+'"><h4>VO2max-like sessions</h4><div class="bv">'+B.vo+'<small> of '+vR+' a week</small></div><div class="bs '+vs[0]+'">'+vs[1]+'</div></div>'+
     '<div class="zwrap" data-b="zones"><h4><span>Minutes per heart-rate zone</span><span>'+Math.round(B.tot)+' min</span></h4><div class="zbar" role="img" aria-label="Minutes per zone: '+B.Z.map((m,i)=>"Z"+(i+1)+" "+Math.round(m)).join(", ")+'">'+B.Z.map((m,i)=>seg(m,"var(--z"+(i+1)+")","Z"+(i+1)+": "+Math.round(m)+" min")).join("")+'</div><div class="zleg">'+B.Z.map((m,i)=>'<span data-z="'+(i+1)+'" data-m="'+Math.round(m)+'"><i style="background:var(--z'+(i+1)+')"></i>Z'+(i+1)+'<br>'+Math.round(m)+'′</span>').join("")+'</div></div></div>';
 }
 function renderBal(){ const h=balHtml(); $("#bal").innerHTML=h; if(ovOn){ $("#ovBal").innerHTML=h; $("#ovBal2").innerHTML=h; } }
@@ -2674,7 +2818,7 @@ function cardNote(d,e,M){ // short recovery note: groups this card trains that a
   return nm.length?'<small class="warn">⚠ '+esc(listN(nm))+' still recovering</small>':"";
 }
 function cardHtml(d,i,e,n,M){
-  const x=e.x, nt=cardNote(d,e,M), nm=esc(entName(e)), mv='<select class="mv bmv" data-bact="mv" aria-label="Move '+nm+' to another date"><option value="">Move to…</option>'+week.map((w,k)=>k===d?'':'<option value="'+k+'">'+esc(w.name)+'</option>').join("")+'</select>';
+  const x=e.x, nt=cardNote(d,e,M), nm=esc(entName(e)), mv=moveCtl(week[d].date,'data-bact="mv"','data-bact="mvd"','Move '+nm+' to another date','bmv');
   const base='" tabindex="0" role="group" data-d="'+d+'" data-i="'+i+'" data-t="'+e.t+'" aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight Alt+ArrowUp Alt+ArrowDown"'+(x===bFocusX?' data-focus="1"':'');
   const rm='<button class="bxb" type="button" data-bact="rm" aria-label="Remove '+nm+'" title="Remove">×</button>', pos=", "+esc(dayName(d))+", position "+(i+1)+" of "+n+". Alt plus arrow keys move it.";
   if(e.t==="e"){
@@ -2759,13 +2903,18 @@ function boardMove(fd,fi,td,ti){
   } else {
     const tl=boardList(td); fl.splice(fi,1); ti=Math.max(0,Math.min(ti,tl.length)); e.inst=pickInst(tl,ti,week[td].date); tl.splice(ti,0,e); boardSet(fd,fl); boardSet(td,tl); sesOpen.clear(); fin=ti;
   }
-  edTpl=null; selDate=week[td].date; curBy[selDate]=e.inst.id; bPick=null; bFocusX=e.x; planChanged();
+  edTpl=null; edOpen=false; selDate=week[td].date; curBy[selDate]=e.inst.id; bPick=null; bFocusX=e.x; planChanged();
   say("Moved "+entName(e)+" to "+dayName(td)+", position "+(fin+1)+" of "+boardList(td).length+".");
   return true;
 }
+function boardMoveOut(fd,fi,to){   // to a date outside the 7 days shown: the entry leaves the board
+  const fl=boardList(fd), e=fl[fi]; if(!e) return false;
+  fl.splice(fi,1); boardSet(fd,fl); delete e.x.o; const T=targetInst(to,true); (e.t==="s"?T.items:T.ses).push(e.x);
+  edTpl=null; bPick=null; planChanged(); say("Moved "+entName(e)+" to "+outTxt(to)+"."); return true;
+}
 function boardInsert(d,i,e,msg){
   const l=boardList(d); i=Math.max(0,Math.min(i,l.length)); e.inst=pickInst(l,i,week[d].date); l.splice(i,0,e); boardSet(d,l);
-  edTpl=null; selDate=week[d].date; curBy[selDate]=e.inst.id; bPick=null; bFocusX=e.x; planChanged(); say(msg+" at position "+(i+1)+" of "+l.length+" on "+dayName(d)+".");
+  edTpl=null; edOpen=false; selDate=week[d].date; curBy[selDate]=e.inst.id; bPick=null; bFocusX=e.x; planChanged(); say(msg+" at position "+(i+1)+" of "+l.length+" on "+dayName(d)+".");
 }
 const slotSel=(d,i)=>'.bslot[data-d="'+d+'"][data-i="'+i+'"]';
 const board=$("#ovBoard");
@@ -2791,8 +2940,9 @@ board.addEventListener("change",e=>{
   if(a==="min"){
     const c=t.closest(".bcard"), d=+c.dataset.d, e0=boardList(d)[+c.dataset.i]; if(!e0||e0.t!=="e") return;
     const s=e0.x, A=actOf(s), o=Object.assign({},s); o.min=+t.value; const n=mkSes(A,s.k,+t.value,o); n.o=s.o; const I=mat(e0.inst); I.ses[I.ses.indexOf(s)]=n; planChanged(); say(A.n+": "+n.min+" minutes.");
-  } else if(a==="mv"){
-    if(t.value==="") return; const c=t.closest(".bcard"); boardMove(+c.dataset.d,+c.dataset.i,+t.value,boardList(+t.value).length);
+  } else if(a==="mv"||a==="mvd"){
+    const to=mvPick(t); if(!to) return; const c=t.closest(".bcard"), fd=+c.dataset.d, fi=+c.dataset.i, td=slotOf(to);
+    if(td>=0) boardMove(fd,fi,td,boardList(td).length); else boardMoveOut(fd,fi,to);
   } else if(bPick&&bPick.tab==="en"&&(t.id==="bpa"||t.id==="bpk"||t.id==="bpm")){
     const en=bPick.en;
     if(t.id==="bpa"){ const A=ACT[ACTI[t.value]]; if(!A) return; bPick.en={a:A.id,k:A.d[0],min:A.d[1]}; }
@@ -2906,7 +3056,7 @@ function tdSetRow(t,k,nm){
   const n=k+1, v=a=>a===undefined?"":a;
   return '<div class="tset'+(t.done?' done':'')+'" data-s="'+k+'"><span class="tsn">'+n+'</span><label class="tck"><input type="checkbox" data-f="done"'+(t.done?' checked':'')+' aria-label="Set '+n+' done, '+nm+'"><i aria-hidden="true"></i></label>'+
     '<input class="num" type="number" data-f="r" min="0" max="999" step="1" inputmode="numeric" placeholder="reps" value="'+v(t.r)+'" aria-label="Reps, set '+n+', '+nm+'">'+
-    '<input class="num" type="number" data-f="w" min="0" max="999" step="0.5" inputmode="decimal" placeholder="kg" value="'+v(t.w)+'" aria-label="Weight in kg, set '+n+', '+nm+'">'+
+    '<input class="num" type="number" data-f="w" min="0" max="'+(SET.units==="lb"?2200:999)+'" step="'+(SET.units==="lb"?1:0.5)+'" inputmode="decimal" placeholder="'+wU()+'" value="'+(t.w===undefined?"":wFmt(t.w))+'" aria-label="Weight in '+(SET.units==="lb"?"pounds":"kilograms")+', set '+n+', '+nm+'">'+
     '<button class="x" type="button" data-act="rmset" aria-label="Remove set '+n+', '+nm+'">×</button></div>';
 }
 function tdBlock(e,i){
@@ -2914,7 +3064,7 @@ function tdBlock(e,i){
   if(e.t==="s"){
     const dn=x.sets.filter(t=>t.done).length, nm=esc(x.n), vt=x.v.filter(Boolean).join(", ");
     return '<article class="tx s'+(sk?' skip':'')+(!sk&&x.sets.length&&dn===x.sets.length?' done':'')+'" data-i="'+i+'" aria-label="'+nm+'"><header><div class="tn"><b>'+nm+'</b>'+(vt?'<small>'+esc(vt)+'</small>':'')+'</div><span class="tcnt" title="Sets done">'+dn+'/'+x.sets.length+'</span>'+skb(nm)+'</header>'+
-      '<div class="tcols" aria-hidden="true"><span>Set</span><span>Done</span><span>Reps</span><span>kg</span><span></span></div>'+x.sets.map((t,k)=>tdSetRow(t,k,nm)).join("")+
+      '<div class="tcols" aria-hidden="true"><span>Set</span><span>Done</span><span>Reps</span><span>'+wU()+'</span><span></span></div>'+x.sets.map((t,k)=>tdSetRow(t,k,nm)).join("")+
       '<button class="linkbtn tadd" type="button" data-act="addset">+ Add set<span class="sronly"> to '+nm+'</span></button></article>';
   }
   const A=actOf(x), nm=esc(A.n);
@@ -2958,7 +3108,7 @@ function tdField(t){
     const r=t.closest(".tset"), s=r&&x.sets[+r.dataset.s]; if(!s) return;
     if(f==="done") s.done=t.checked;
     else if(f==="r"||f==="w"){
-      const v=t.value===""?undefined:nN(t.value,0,999); if(t.value!==""&&v===undefined) return;
+      const v=t.value===""?undefined:nN(f==="w"?wParse(t.value):t.value,0,999); if(t.value!==""&&v===undefined) return;
       if(v!==s[f]){ if(v===undefined) delete s[f]; else { s[f]=v; s.done=true; } } // entering reps or weight marks the set done
     }
   } else if(f==="done") x.done=t.checked;
@@ -3021,7 +3171,7 @@ $("#tdSync").onclick=()=>{
   });
   if(n) saveCal(); tdMsg(n?"Added "+n+" from the plan.":"Already in sync with the plan."); tdRender();
 };
-window.addEventListener("keydown",e=>{ if(e.key==="Escape"&&tdOn){ e.preventDefault(); e.stopImmediatePropagation(); closeToday(); } },true);
+window.addEventListener("keydown",e=>{ if(e.key==="Escape"&&tdOn&&!stOn){ e.preventDefault(); e.stopImmediatePropagation(); closeToday(); } },true);
 function buildAdd(){
   const q=$("#qa").value.trim().toLowerCase();
   if(!q){$("#addres").innerHTML=""; return;}
@@ -3268,9 +3418,10 @@ $("#opM").oninput=e=>{nvAuto=false;state.opM=e.target.value/100;$("#opMo").textC
 $("#opB").oninput=e=>{state.opB=e.target.value/100;$("#opBo").textContent=e.target.value+"%";applyVisuals();};
 document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{ setView(b.dataset.view); if(isPhone()) closePops(); });
 document.addEventListener("keydown",e=>{
-  if(e.target.tagName==="INPUT"&&e.target.type!=="checkbox"&&e.target.type!=="range") return;
+  if((e.target.tagName==="INPUT"&&e.target.type!=="checkbox"&&e.target.type!=="range")||e.target.tagName==="TEXTAREA") return;
   if(e.key==="Escape"&&ovOn){ closeOv(); return; }
   if(e.key==="Escape"&&popOpen()){ const b=POPS.map(p=>$("#"+p[0])).find(x=>x.getAttribute("aria-expanded")==="true"); closePops(); if(b&&document.activeElement&&document.activeElement.closest&&document.activeElement.closest(".tb-group")) b.focus(); return; }
+  if(e.key==="Escape"&&curTab==="wk"&&edShown()&&!tdOn){ closeEditor(true); return; }   // Escape collapses the session editor
   if(e.key==="Escape"){ if(cmpPick){cmpPick=false;syncBanner();if(view==="ex")renderCard();} else if(sel) select(null); else if(cmp||selEx!==null) clearEx(); }
   if((e.key==="h"||e.key==="H")&&sel) toggleHide();
 });
@@ -3332,6 +3483,7 @@ function hashNow(){
   if(cmp) p.push("cmp="+cmpSide(cmp[0])+"|"+cmpSide(cmp[1]));
   else if(selEx!==null){ p.push("ex="+enc(EX[selEx].n)); const vl=vList(selEx,exVars[selEx]); if(vl) p.push("v="+vl); }
   if(curTab!=="anat") p.push("tab="+curTab);
+  if(stOn) p.push("settings");
   return p.join("&");
 }
 function syncHash(){
@@ -3346,7 +3498,7 @@ function varFromNames(i,names){
 }
 const decList=s=>s.split(",").map(x=>dec(x)||"");
 function applyHash(raw){
-  const o=Object.create(null); String(raw||"").replace(/^#/,"").split("&").forEach(s=>{const j=s.indexOf("="); if(j>0&&!own(o,s.slice(0,j))) o[s.slice(0,j)]=s.slice(j+1);});
+  const o=Object.create(null); String(raw||"").replace(/^#/,"").split("&").forEach(s=>{const j=s.indexOf("="); if(j>0&&!own(o,s.slice(0,j))) o[s.slice(0,j)]=s.slice(j+1); else if(s==="settings") o.settings="";});
   const exI=n=>{const d=dec(n); return d!==null&&own(EXI,d)?EXI[d]:-1;};
   const side=x=>{const j=x.indexOf(":"), i=exI(j<0?x:x.slice(0,j)); return i<0?null:{i:i,v:varFromNames(i,j<0?[]:decList(x.slice(j+1)))};};
   let any=false, exTab=false;
@@ -3367,6 +3519,7 @@ function applyHash(raw){
   else if(vk!==null&&own(MOVEMENTS,vk)){ select("movement",vk,true); any=true; }
   if(own(o,"tab")&&(o.tab==="anat"||o.tab==="ex"||o.tab==="wk")){ openTab(o.tab); any=true; }
   else if(exTab) openTab("ex");
+  if(own(o,"settings")){ if(!stOn) openSettings(own(STSEC,o.settings)?o.settings:""); any=true; }
   return any;
 }
 window.addEventListener("hashchange",()=>{ const h=location.hash.replace(/^#/,""); if(!h||h===lastHash) return; if(applyHash(h)) syncHash(); });
@@ -3458,6 +3611,60 @@ $("#licAct").onclick=async()=>{
 $("#licDel").onclick=()=>{ try{ localStorage.removeItem(LIC_KEY); }catch(e){} licState={ok:false,reason:null,payload:null}; $("#licKey").value=""; $("#licMsg").hidden=true; licRender(false); };
 //@licexport
 
+/* ---------- settings page (v2.1): one place for everything that is configuration. An overlay on the viewport like the week overview (full screen on phones) ---------- */
+// The controls keep their ids when they moved here (goal #goalSel, heart rate #hrMax, equipment #eqchips, backup #exportData, licence #lic ...). Persisted: aom.set.v1 (units, weekStart, theme, endMin, easyMin, vo2);
+// the goal stays in aom.goal.v1, heart rate in aom.hr.v1, equipment in aom.eq.v1, mesh quality in aom.lod.v1 and the licence in aom.lic.v1.
+const stEl=$("#st"), STSEC={goals:"#stGoals",hr:"#stHr",eq:"#stEq",units:"#stUnits",display:"#stDisp",data:"#stData",lic:"#stLic",about:"#stAbout"}; let stOn=false, stFrom=null;
+function saveSet(){ store.set(SET_KEY,SET); }
+function syncSetUI(){
+  const pr=(sel,attr,val)=>document.querySelectorAll(sel).forEach(b=>b.setAttribute("aria-pressed",String(b.dataset[attr]===val)));
+  pr("#segUnit [data-unit]","unit",SET.units); pr("#segWeek [data-ws]","ws",SET.weekStart); pr("#segTheme [data-th]","th",SET.theme);
+  $("#endLo").value=SET.endMin[0]; $("#endHi").value=SET.endMin[1]; $("#easyMin").value=SET.easyMin; $("#vo2Lo").value=SET.vo2[0]; $("#vo2Hi").value=SET.vo2[1];
+  $("#endReset").disabled=SET.endMin.join()===SET_DEF.endMin.join()&&SET.easyMin===SET_DEF.easyMin&&SET.vo2.join()===SET_DEF.vo2.join();
+}
+function setChanged(what){   // a setting changed: persist and refresh whatever shows it
+  saveSet(); syncSetUI();
+  if(what==="theme"){ applyThemeAttr(); applyTheme(); }
+  else if(what==="units"){ if(tdOn) tdRender(); }
+  else if(what==="week"){ renderPat(); }
+  else if(what==="endurance"){ renderBal(); renderOv(); }
+}
+document.querySelectorAll("#segUnit [data-unit]").forEach(b=>b.onclick=()=>{ if(SET.units!==b.dataset.unit){ SET.units=b.dataset.unit; setChanged("units"); } });
+document.querySelectorAll("#segWeek [data-ws]").forEach(b=>b.onclick=()=>{ if(SET.weekStart!==b.dataset.ws){ SET.weekStart=b.dataset.ws; setChanged("week"); } });
+document.querySelectorAll("#segTheme [data-th]").forEach(b=>b.onclick=()=>{ if(SET.theme!==b.dataset.th){ SET.theme=b.dataset.th; setChanged("theme"); } });
+// endurance goals: values are clamped to their limits, and the other end of a range follows (like the strength goal)
+function pairInput(key,loId,hiId,lo,hi,hiEdited){
+  const c=id=>{ const v=Math.round(+$(id).value); return Math.min(hi,Math.max(lo,isFinite(v)?v:lo)); }; let a=c(loId), b=c(hiId);
+  if($(loId).value===""&&!hiEdited) a=SET[key][0]; if($(hiId).value===""&&hiEdited) b=SET[key][1];
+  if(a>b){ if(hiEdited) a=b; else b=a; } SET[key]=[a,b]; setChanged("endurance");
+}
+$("#endLo").onchange=()=>pairInput("endMin","#endLo","#endHi",30,2000,false); $("#endHi").onchange=()=>pairInput("endMin","#endLo","#endHi",30,2000,true);
+$("#vo2Lo").onchange=()=>pairInput("vo2","#vo2Lo","#vo2Hi",0,14,false); $("#vo2Hi").onchange=()=>pairInput("vo2","#vo2Lo","#vo2Hi",0,14,true);
+$("#easyMin").onchange=()=>{ const v=Math.round(+$("#easyMin").value); SET.easyMin=isFinite(v)&&$("#easyMin").value!==""?Math.min(95,Math.max(50,v)):SET.easyMin; setChanged("endurance"); };
+$("#endReset").onclick=()=>{ SET.endMin=SET_DEF.endMin.slice(); SET.easyMin=SET_DEF.easyMin; SET.vo2=SET_DEF.vo2.slice(); setChanged("endurance"); };
+// open / close
+function openSettings(sec,from){
+  stFrom=from||document.activeElement; stOn=true; stEl.hidden=false; closePops(); syncSetUI(); renderHr(); syncGoalUI(); syncLodUI();
+  const t=sec&&STSEC[sec]?$(STSEC[sec]):null, body=$("#stBody");
+  if(t){ if(t.scrollIntoView) try{ t.scrollIntoView({block:"start"}); }catch(_){} else body.scrollTop=t.offsetTop; } else body.scrollTop=0;
+  const f=t&&t.querySelector("input,select,textarea,button"); (f||$("#stClose")).focus(); syncHash();
+}
+function closeSettings(){
+  if(!stOn) return; stOn=false; stEl.hidden=true; syncHash();
+  const f=stFrom&&stFrom.isConnected&&!stFrom.closest("[hidden]")?stFrom:$("#stOpen"); stFrom=null; if(f&&f.focus) f.focus();
+}
+document.addEventListener("click",e=>{ const t=e.target.closest&&e.target.closest("[data-stopen]"); if(!t) return; const k=t.dataset.stopen; if(stOn&&t.closest("#st")) return; openSettings(k,t); });
+$("#stClose").onclick=closeSettings;
+window.addEventListener("keydown",e=>{ if(e.key==="Escape"&&stOn){ e.preventDefault(); e.stopImmediatePropagation(); closeSettings(); } },true);
+$("#stCredits").onclick=()=>{ closeSettings(); const f=document.querySelector(".foot"); if(isPhone()&&sheet==="peek") setSheet("half"); if(f&&f.scrollIntoView) try{ f.scrollIntoView({block:"nearest"}); }catch(_){} };
+// delete everything this app stored in the browser (two confirmations), then reload
+$("#delAll").onclick=()=>{
+  if(typeof confirm==="function"&&!confirm("Delete all Atlas of Motion data in this browser: calendar, templates, training log, goals, settings and the licence key?\n\nExport a backup first if you want to keep anything.")) return;
+  if(typeof confirm==="function"&&!confirm("Really delete everything? This cannot be undone.")) return;
+  getAomKeys().forEach(k=>{ try{ localStorage.removeItem(k); }catch(_){} });
+  const m=$("#dataMsg"); m.textContent="All data deleted. Reloading…"; m.style.color="var(--ok)"; setTimeout(()=>location.reload(),300);
+};
+
 const nMus=Object.keys(DB).filter(k=>DB[k].g!==TISSUE).length;
 $("#foot").innerHTML=nMus+" muscles in "+muscleMeshes.length+" meshes, "+Object.keys(BDB).length+" bone types in "+boneMeshes.length+" meshes. "+
  "Meshes from <a href='https://lifesciencedb.jp/bp3d/' target='_blank' rel='noopener'>BodyParts3D</a> (© The Database Center for Life Science, CC BY-SA 2.1 JP) and "+
@@ -3466,7 +3673,7 @@ $("#foot").innerHTML=nMus+" muscles in "+muscleMeshes.length+" meshes, "+Object.
 applyTheme();
 if(mqDark){ const onTheme=()=>applyTheme(); if(mqDark.addEventListener) mqDark.addEventListener("change",onTheme); else if(mqDark.addListener) mqDark.addListener(onTheme); }
 if(window.MutationObserver) new MutationObserver(applyTheme).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
-buildList(); buildEq(); buildExList(); buildBest(); renderHr(); renderPlan(); renderVolSum(); renderSuggest(); syncGoalUI(); syncModeUI(); applyVisuals();
+syncSetUI(); buildList(); buildEq(); buildExList(); buildBest(); renderHr(); renderPlan(); renderVolSum(); renderSuggest(); syncGoalUI(); syncModeUI(); applyVisuals();
 if(store.get(NV_KEY,false)===true) setNerves(true);   // the Nerves layer is remembered per viewer
 if(applyHash(location.hash)){ hashReady=true; syncHash(); } else hashReady=true;
 licStartup();   // async, does not block start-up
