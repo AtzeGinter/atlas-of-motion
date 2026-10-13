@@ -69,6 +69,16 @@ Goal: less clutter on desktop, and a phone layout that actually works. The curre
 | 6.6 | **Schedule board** (user request 2026-10-05): calendar-like schedule in the week overview ("Schedule" / "Muscles" switch): day columns with exercise and endurance cards, drag and drop (mouse and touch long-press) between and within days, sets stepper on cards, "+ add" at any position (inline picker), keyboard moves (Alt+arrows). ✅ **Done 2026-10-05 (v1.3).** | L | sonnet |
 | 6.7 | ✅ **Done 2026-10-07 (v1.8)**: Today view with set ticking, reps/kg prefill, skip, endurance actuals, progress, Finish day, history (aom.log.v1). **Training-day tracking** (user request 2026-10-05, *after the schedule is finished*): a "Today" / training-day view that shows the day's plan; check off sets as done, log reps and weight per set (and minutes/zones for endurance), progress bar of done vs left, "what's still left" list, finish/skip the day; history per date in localStorage (export later), feeding back into the week overview (done vs planned). Needs a small design pass first (what to log, how detailed). | L | – |
 
+## P1e: Calendar-based training (user request 2026-10-13)
+
+Decisions: session templates + weekly pattern (auto-fills future dates) + manual placing/moving/skipping; editing one dated session never changes its template; several sessions per day; volume/heatmap/recovery over a rolling 7-day window that can be moved to any 7 consecutive days (default: the 7 days ending today).
+
+| # | Task | Size | Agent |
+|---|------|------|-------|
+| 8.1 | **v2.0 Calendar**: templates (`aom.tpl.v1`), calendar with dated instances + weekly pattern (`aom.cal.v1`, virtual pattern sessions materialised on edit), migration from the 7-slot week and the training log, Today view per instance, movable 7-day window driving volume, heatmap, recovery, week overview and schedule board. 🔄 In progress. | XL | sonnet |
+| 8.2 | **Settings page**: goals (sets per week presets/custom, endurance minutes, 80/20, VO2max sessions), heart-rate zones, equipment, units (kg/lb), theme, default mesh quality, data export/import, Pro & licence. | M | – |
+| 8.3 | **Statistics**: sets per muscle group per week (done vs planned), volume load (sets x reps x kg), strength trend per exercise (estimated 1RM, PRs), endurance minutes per zone, adherence. Self-made SVG charts (no dependencies). | L | – |
+
 ## P1d: Anatomy additions
 
 | # | Task | Size | Agent |
