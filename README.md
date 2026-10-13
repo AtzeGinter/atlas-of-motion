@@ -1,6 +1,6 @@
 # Atlas of Motion
 
-An interactive 3D atlas of the human muscular system that runs entirely in the browser. Click any muscle or bone to see what it does, pick a strength exercise to see which muscles it trains, and plan a training week with a per-muscle volume check.
+An interactive 3D atlas of the human muscular system that runs entirely in the browser. Click any muscle or bone to see what it does, pick a strength exercise to see which muscles it trains, and plan your training on a calendar with a per-muscle volume check.
 
 **Live:** `https://AtzeGinter.github.io/atlas-of-motion/` (after enabling GitHub Pages, see below)
 
@@ -12,7 +12,7 @@ An interactive 3D atlas of the human muscular system that runs entirely in the b
 - **Muscle view**: every exercise that trains the selected muscle, with involvement and specificity.
 - **Best exercises for a muscle**, sortable by effectiveness or specificity.
 - **Comparison mode**: two exercises side by side, coloured by which one works each muscle more.
-- **Equipment filter** and a **workout builder**: a seven-day training week with a week overview (sets per muscle group and day, plus a rough fatigue / recovery estimate that flags muscles trained again while still recovering), weekly sets per muscle, a volume heatmap and a gap filler that suggests what to add and on which day. The week also takes **endurance sessions** (running, cycling, rowing, swimming, boxing, Muay Thai, football and more; easy, long, tempo, VO2max intervals, sprints or combat rounds) with **heart-rate zones** (max HR or age, optional Karvonen), a week balance panel (WHO minutes, 80/20 easy/hard split, VO2max-like sessions, minutes per zone) and recovery warnings that include endurance load. The plan is stored in the browser's localStorage.
+- **Equipment filter** and a **training calendar** (v2.0): session **templates** and a **weekly pattern** that fills future dates automatically, plus manual placing, moving and skipping of single sessions (editing one dated session never changes its template). Several sessions per day. Volume, heatmap, recovery and balance are computed over a **rolling 7-day window** that you can move to any 7 consecutive days (default: the 7 days ending today). A week overview with a **schedule board** (drag and drop between dates) and a muscle grid (sets per group and date, plus a rough fatigue / recovery estimate that flags muscles trained again while still recovering), sets per muscle, a volume heatmap and a gap filler that suggests what to add and on which date. Sessions take **endurance work** (running, cycling, rowing, swimming, boxing, Muay Thai, football and more; easy, long, tempo, VO2max intervals, sprints or combat rounds) with **heart-rate zones** (max HR or age, optional Karvonen), a balance panel (WHO minutes, 80/20 easy/hard split, VO2max-like sessions, minutes per zone) and recovery warnings that include endurance load. **Start** a session to log sets, reps, weights and actual minutes (Today view), with progress and history. Everything is stored in the browser's localStorage; export and import a JSON backup.
 - **Pro (planned)**: a paid tier is being prepared. The groundwork (offline-verified licence keys, a "Pro & licence" panel in the sidebar footer) is in, but nothing is locked: every feature stays free for now. See `docs/licensing.md`.
 
 ## Run it

@@ -13,13 +13,19 @@ const js=html0.match(/<script>([\s\S]*?)<\/script>/)[1];
 const mi=js.indexOf('const META='),META=JSON.parse(js.slice(mi+11,js.indexOf('\n',mi)).replace(/;\s*$/,'')); // embedded data, to derive expectations
 const errs=[];
 const OLD_EQ=['Barbell','Dumbbells','Kettlebell','Cable','Machine','Bodyweight','Other'];
-// boot one page instance. opts.url: page URL; opts.failFetch: every fetch rejects (w.__failFetch toggles it later); opts.lod: stored "aom.lod.v1" value. opts.phone: stub matchMedia so "(max-width:760px)" and "(pointer:coarse)" match (w.__setPhone(false) flips them and fires the change listeners); otherwise matchMedia is absent (exercises the guard)
+const TODAY='2026-10-12';   // the fixed "today" of every page instance: a Monday (opts.today overrides)
+const dLab=k=>{const t=new Date(k+'T12:00:00');return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][t.getDay()]+' '+t.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][t.getMonth()];};   // 'Mon 12 Oct'
+const addDays=(k,n)=>{const [y,m,d]=k.split('-').map(Number),t=new Date(y,m-1,d+n);return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');};
+// boot one page instance. opts.today: the page's "today" (YYYY-MM-DD, default TODAY); opts.win: stored window start (aom.win.v1); opts.url: page URL; opts.failFetch: every fetch rejects (w.__failFetch toggles it later); opts.lod: stored "aom.lod.v1" value. opts.phone: stub matchMedia so "(max-width:760px)" and "(pointer:coarse)" match (w.__setPhone(false) flips them and fires the change listeners); otherwise matchMedia is absent (exercises the guard)
 function boot(opts){
  opts=opts||{};
  const vc=new VirtualConsole();
  vc.on('error',(...a)=>errs.push('console.error: '+a.join(' ')));vc.on('jsdomError',e=>{const m=e.stack||e.message||'';if(/Not implemented: navigation/.test(m)) return;errs.push('jsdomError: '+m);});
  const dom=new JSDOM(html0,{runScripts:'outside-only',pretendToBeVisual:true,url:opts.url||'https://example.test/',virtualConsole:vc});const w=dom.window;const THREE=require('three');
  w.addEventListener('error',e=>errs.push('uncaught: '+(e.message||e.error)));
+ {const [ty,tm,td]=(opts.today||TODAY).split('-').map(Number),RD=w.Date,base=new RD(ty,tm-1,td,12,0,0).getTime(),t0=RD.now(),now=()=>base+(RD.now()-t0);
+  class FD extends RD{constructor(...a){if(a.length===0)super(now());else super(...a);}static now(){return now();}}
+  w.Date=FD;}
  class FR{constructor(){this.domElement=w.document.createElement('canvas');}setPixelRatio(r){w.__dpr=r;}setClearColor(){}setSize(){}render(s,c){w.__scene=s;w.__cam=c;}}
  w.THREE=Object.assign({},THREE,{WebGLRenderer:FR});w.ResizeObserver=class{observe(){}};
  // geometry is no longer embedded: serve geo/<level>.bin from the repo root, like a web server would
@@ -40,7 +46,9 @@ function boot(opts){
   // seed legacy (pre-rename) storage to exercise the migration: variation INDEX arrays (Back squat Stance=Wide), an entry without v, an exercise that no longer exists, equipment minus Band
   w.localStorage.setItem('myology.plan.v1',JSON.stringify([{n:'Back squat',sets:4,v:[1,0]},{n:'Hip thrust',sets:2},{n:'Removed exercise',sets:3,v:[]}]));
   w.localStorage.setItem('myology.eq.v1',JSON.stringify(OLD_EQ));
+  w.localStorage.setItem('aom.win.v1',JSON.stringify(opts.win||TODAY));   // the main instance looks at the 7 days starting today
  }
+ if(opts.win&&(opts.store||opts.phone)) w.localStorage.setItem('aom.win.v1',JSON.stringify(opts.win));
  if(opts.lod) w.localStorage.setItem('aom.lod.v1',opts.lod);
  // WebCrypto for the licence check: jsdom has no crypto.subtle, so hand it Node's (opts.nosubtle: a crypto object without subtle, like an insecure context)
  if(opts.nosubtle) Object.defineProperty(w,'crypto',{value:{getRandomValues:a=>a},configurable:true});
@@ -55,11 +63,13 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const exItem=n=>qa('#exlist .item').find(b=>b.textContent===n),exNames=()=>qa('#exlist .item').map(b=>b.textContent);
 const roleKeys=r=>{const h=qa('#card h3').find(x=>x.textContent===r);return h?[...h.nextElementSibling.querySelectorAll('[data-key]')].map(b=>b.dataset.key):[];};
 const bestNames=()=>qa('#best [data-ex]').map(b=>b.textContent),bestPct=()=>qa('#best small').map(s=>parseFloat(s.textContent));
-const wk=()=>JSON.parse(w.localStorage.getItem('aom.plan.v3')||'null'),plan=()=>{const o=wk();return o?[].concat(...o.days.map(d=>d.items)):null;}; // plan(): flat list over all days of the stored week
+const wk=()=>JSON.parse(w.localStorage.getItem('aom.cal.v1')||'null'),tpls=()=>JSON.parse(w.localStorage.getItem('aom.tpl.v1')||'[]'); // the stored calendar and templates
+const D=i=>addDays(TODAY,i),sess=dk=>((wk()||{days:{}}).days[dk]||[]).filter(x=>x.id),itemsOf=i=>[].concat(...sess(D(i)).map(x=>x.items)); // D(i): date of slot i of the main instance (window = 7 days from today); sess(): stored sessions of a date
+const plan=()=>{const o=wk();return o?[].concat(...Object.keys(o.days).sort().map(k=>[].concat(...o.days[k].filter(x=>x.id).map(x=>x.items)))):null;}; // plan(): flat list over all stored sessions
 const addRes=n=>qa('#addres [data-add]').find(b=>b.firstChild.textContent.trim()==='+ '+n);
 const addEx=n=>{q('#qa').value=n.toLowerCase();ev(q('#qa'),'input');const b=addRes(n);if(!ok(b,'search offers "'+n+'"')) return;b.click();};
-const days=()=>wk().days,names=i=>days()[i].items.map(p=>p.n),nameOf=i=>days()[i].name,dayBtn=i=>q('#wstrip [data-day="'+i+'"]'),selDay=i=>dayBtn(i).click();
-const clearAll=()=>{for(let i=6;i>=0;i--){selDay(i);if(!q('#wkClear').disabled)q('#wkClear').click();}selDay(0);}; // empty every day
+const sesOf=i=>[].concat(...sess(D(i)).map(x=>x.ses)),names=i=>itemsOf(i).map(p=>p.n),dayBtn=i=>q('#wstrip [data-day="'+i+'"]'),selDay=i=>dayBtn(i).click();
+const clearAll=()=>{for(let i=6;i>=0;i--){selDay(i);let g=0;while(q('#sessList [data-sact="rm"]')&&g++<20)q('#sessList [data-sact="rm"]').click();}selDay(0);}; // remove every session of the window
 // total triangle-index count over all body meshes in the three.js scene (captured by the stubbed renderer)
 const idxCount=win=>{let n=0;win.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind&&o.userData.kind!=='nerve'&&o.geometry.index)n+=o.geometry.index.count;});return n;};
 const lodBtn=(doc,l)=>doc.querySelector('[data-lod="'+l+'"]'),lodOn=doc=>[...doc.querySelectorAll('[data-lod]')].filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.dataset.lod).join(',');
@@ -208,82 +218,83 @@ async function weekRun(){
  const VF={0:0,1:0,2:0.5,3:1};
  const ovOpen=()=>{if(q('#ov').hidden)q('#ovOpen').click();};
  const cell=(g,dd)=>q('#ovGrid tr.g[data-g="'+g+'"] .cb[data-d="'+dd+'"]'),GCHEST=1;
- const enter=()=>q('#dayIn').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
- const rename=t=>{q('#dayRen').click();q('#dayIn').value=t;enter();};
- q('[data-tab="wk"]').click();clearAll();selDay(0);
- // week strip
- ok(qa('#wstrip [data-day]').length===7&&qa('#wstrip [data-day]').map(b=>b.firstChild.textContent).join()==='Day 1,Day 2,Day 3,Day 4,Day 5,Day 6,Day 7','week strip: seven day cards named Day 1..Day 7');
- ok(dayBtn(0).getAttribute('aria-pressed')==='true'&&qa('#wstrip .rest').length===7&&q('#dayLbl').textContent.includes('Day 1'),'Day 1 selected, all seven days are rest days (dashed)');
- // adding to the selected day
+ const enter=()=>q('#sessIn').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
+ const rename=t=>{q('#sessList .scard.sel [data-sact="ren"]').click();q('#sessIn').value=t;enter();};
+ const sname=i=>sess(D(i)).map(x=>x.name).join('|');
+ q('[data-tab="wk"]').click();if(!q('#ov').hidden)q('#ovClose').click();clearAll();selDay(0);
+ // date strip
+ ok(qa('#wstrip [data-day]').length===7&&qa('#wstrip [data-day]').map(b=>b.firstChild.textContent).join()==='Mon,Tue,Wed,Thu,Fri,Sat,Sun'&&qa('#wstrip [data-day] .dd').map(b=>b.textContent).join()==='12 Oct · today,13 Oct,14 Oct,15 Oct,16 Oct,17 Oct,18 Oct','date strip: seven cards Mon 12 Oct (today) .. Sun 18 Oct');
+ ok(dayBtn(0).getAttribute('aria-pressed')==='true'&&dayBtn(0).classList.contains('today')&&qa('#wstrip .rest').length===7&&/Monday 12 October/.test(q('#dayLbl').textContent)&&!/\bDay [1-7]\b/.test(q('#wstrip').textContent+q('#dayLbl').textContent),'today is selected and marked, all seven dates are rest days (dashed), no "Day N" naming');
+ // adding to the selected date
  selDay(2);addEx('Barbell bench press');
- ok(names(2).join()==='Barbell bench press'&&names(0).length===0&&qa('#plan .prow').length===1,'with Day 3 selected, the add search puts the exercise into Day 3');
- ok(!dayBtn(2).classList.contains('rest')&&dayBtn(2).textContent.includes('3')&&dayBtn(0).classList.contains('rest')&&q('#qa').placeholder==='Add an exercise to Day 3','Day 3 button shows its 3 sets, Day 1 stays a rest day');
+ ok(names(2).join()==='Barbell bench press'&&names(0).length===0&&qa('#plan .prow').length===1&&sname(2)==='Session','with Wed 14 Oct selected, the add search puts the exercise into a new session on that date ("Session")');
+ ok(!dayBtn(2).classList.contains('rest')&&dayBtn(2).textContent.includes('3 sets')&&dayBtn(0).classList.contains('rest')&&q('#qa').placeholder==='Add an exercise to Session','Wed card shows its 3 sets, Mon stays a rest day');
  q('[data-tab="ex"]').click();exItem('Barbell bench press').click();
- ok(q('[data-act="add"]').textContent==='Add again to Day 3 (3 sets planned)','exercise card button names the selected day: "'+q('[data-act="add"]').textContent+'"');
+ ok(q('[data-act="add"]').textContent==='Add again to Wed 14 Oct (3 sets planned)','exercise card button names the selected date: "'+q('[data-act="add"]').textContent+'"');
  selDay(4);
- ok(q('[data-act="add"]').textContent.startsWith('Add again to Day 5'),'selecting another day updates the open exercise card');
+ ok(q('[data-act="add"]').textContent.startsWith('Add again to Fri 16 Oct'),'selecting another date updates the open exercise card');
  q('[data-act="add"]').click();
- ok(names(4).join()==='Barbell bench press'&&names(2).length===1,'"Add to Day 5" on the exercise card adds to Day 5');
+ ok(names(4).join()==='Barbell bench press'&&names(2).length===1,'"Add to Fri 16 Oct" on the exercise card adds to that date');
  q('#exClear').click();q('[data-tab="wk"]').click();
- // weekly table = sum over the days
+ // weekly table = sum over the dates of the window
  selDay(0);addEx('Back squat');selDay(5);addEx('Back squat');
- ok(rowVal('Quadriceps')===6&&rowVal('Mid and lower chest')===6,'weekly table sums the days: Quadriceps 3+3, Mid and lower chest 3+3 ('+rowVal('Quadriceps')+', '+rowVal('Mid and lower chest')+')');
- ok(/3 sets on Day 6 · 12 sets in the week/.test(q('#plan').textContent),'day footer mentions the day and the week total: '+q('#plan .fine').textContent);
- // rename
- selDay(1);q('#dayRen').click();
- ok(!!q('#dayIn')&&q('#dayIn').value==='Day 2','pencil turns the day name into an input');
- q('#dayIn').value='Push day';enter();
- ok(!q('#dayIn')&&nameOf(1)==='Push day'&&dayBtn(1).firstChild.textContent==='Push day'&&q('#dayLbl').textContent.includes('Push day'),'Enter renames the day (stored "Push day", card shows the name)');
+ ok(rowVal('Quadriceps')===6&&rowVal('Mid and lower chest')===6,'the 7-day table sums the dates: Quadriceps 3+3, Mid and lower chest 3+3 ('+rowVal('Quadriceps')+', '+rowVal('Mid and lower chest')+')');
+ ok(/3 sets in this session · 12 sets in the 7 days/.test(q('#plan').textContent),'editor footer mentions the session and the 7-day total: '+q('#plan .fine').textContent);
+ // rename a session
+ selDay(1);q('#addSess').click();
+ ok(sname(1)==='Session'&&qa('#sessList .scard').length===1&&q('#sessList .scard').classList.contains('sel'),'"+ Add session" adds an empty session to the selected date');
+ q('#sessList [data-sact="ren"]').click();
+ ok(!!q('#sessIn')&&q('#sessIn').value==='Session','pencil turns the session name into an input');
+ q('#sessIn').value='Push day';enter();
+ ok(!q('#sessIn')&&sname(1)==='Push day'&&q('#sessList .snm').textContent==='Push day'&&q('#qa').placeholder==='Add an exercise to Push day','Enter renames the session (stored "Push day", card and add placeholder follow)');
  rename('');
- ok(nameOf(1)==='Day 2'&&dayBtn(1).firstChild.textContent==='Day 2','an empty name falls back to "Day 2"');
- rename('Legs and glutes day long');
- ok(nameOf(1)==='Legs and glutes'&&nameOf(1).length<=16,'names are cut at 16 characters ("'+nameOf(1)+'")');
+ ok(sname(1)==='Push day','an empty name keeps the old one');
+ rename('Legs and glutes day long extra');
+ ok(sname(1)==='Legs and glutes day long'&&sname(1).length<=24,'names are cut at 24 characters ("'+sname(1)+'")');
  rename('<b>Push</b>');
- ok(!q('#dayLbl b')&&qa('#wstrip b').length===7&&q('#dayLbl').textContent.includes('<b>Push</b>'),'day names are escaped in the UI');
- q('#dayRen').click();q('#dayIn').value='Pull';q('#dayIn').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
- ok(!q('#dayIn')&&nameOf(1)!=='Pull','Escape cancels the rename');
+ ok(!q('#sessList .snm b')&&qa('#wstrip b').length===7&&q('#sessList .snm').textContent==='<b>Push</b>'&&q('#dayLbl b')===null,'session names are escaped in the UI');
+ q('#sessList [data-sact="ren"]').click();q('#sessIn').value='Pull';q('#sessIn').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+ ok(!q('#sessIn')&&sname(1)!=='Pull','Escape cancels the rename');
  rename('Pull');
- ok(nameOf(1)==='Pull'&&dayBtn(1).firstChild.textContent==='Pull'&&q('#qa').placeholder==='Add an exercise to Pull','rename persisted in aom.plan.v3, used in the strip and the add placeholder');
- // copy / clear / move
+ ok(sname(1)==='Pull'&&/Pull/.test(dayBtn(1).textContent),'rename persisted in aom.cal.v1 and shown on the date card');
+ // clear / move rows
  selDay(0);
- ok(!q('#dayCopy').disabled&&qa('#dayCopy option').length===7,'copy select lists the six other days');
- q('#dayCopy').value='3';ev(q('#dayCopy'),'change');
- ok(names(3).join()==='Back squat'&&names(0).join()==='Back squat'&&/Copied 1 exercise to Day 4/.test(q('#dayMsg').textContent),'Copy day to… copies the exercises ('+q('#dayMsg').textContent+')');
- q('#dayCopy').value='3';ev(q('#dayCopy'),'change');
- ok(names(3).length===1&&/already/.test(q('#dayMsg').textContent),'copying again does not duplicate');
- selDay(3);q('#wkClear').click();
- ok(names(3).length===0&&dayBtn(3).classList.contains('rest')&&names(0).length===1,'Clear day empties only the selected day');
- selDay(0);q('#plan select.mv').value='6';ev(q('#plan select.mv'),'change');
- ok(names(6).join()==='Back squat'&&names(0).length===0&&q('#dayLbl').textContent.includes('Day 1'),'"Move to…" moves the row to Day 7 and stays on Day 1');
- selDay(1);rename('');selDay(0);
- // recovery model: bench Day 1 + Day 2 flags, Day 1 + Day 3 does not
+ ok(!q('#wkClear').disabled&&q('#wkClear').textContent==='Clear session','"Clear session" is available for a session with exercises');
+ q('#plan select.mv').value='6';ev(q('#plan select.mv'),'change');
+ ok(names(6).join()==='Back squat'&&names(0).length===0&&/Monday 12 October/.test(q('#dayLbl').textContent)&&/Moved Back squat to Sun 18 Oct/.test(q('#dayMsg').textContent),'"Move to…" moves the row to Sun 18 Oct (a new session there) and stays on Mon');
+ selDay(6);q('#wkClear').click();
+ ok(names(6).length===0&&!dayBtn(6).classList.contains('rest')&&sess(D(6)).length===1&&q('#wkClear').disabled,'Clear session empties only that session (it stays, empty)');
+ selDay(1);q('#sessList [data-sact="rm"]').click();selDay(6);q('#sessList [data-sact="rm"]').click();selDay(0);
+ ok(sess(D(1)).length===0&&sess(D(6)).length===0&&dayBtn(1).classList.contains('rest')&&dayBtn(6).classList.contains('rest'),'Remove deletes a session and the date is a rest day again');
+ // recovery model: bench Mon + Tue flags, Mon + Wed does not
  clearAll();selDay(0);addEx('Barbell bench press');selDay(1);
- ok(!q('#wstrip .warn'),'bench on Day 1 alone: no conflict');
+ ok(!q('#wstrip .warn'),'bench on Mon alone: no conflict');
  addEx('Barbell bench press');
- ok(dayBtn(1).classList.contains('warn')&&dayBtn(1).textContent.includes('⚠')&&!dayBtn(0).classList.contains('warn'),'bench Day 1 + Day 2: week strip shows ⚠ on Day 2 only');
- ok(/Mid and lower chest/.test(q('#plan .prow small.warn').textContent)&&/still recovering from Day 1/.test(q('#plan .prow small.warn').textContent),'row note: "'+q('#plan .prow small.warn').textContent+'"');
+ ok(dayBtn(1).classList.contains('warn')&&dayBtn(1).textContent.includes('⚠')&&!dayBtn(0).classList.contains('warn'),'bench Mon + Tue: the date strip shows ⚠ on Tue only');
+ ok(/Mid and lower chest/.test(q('#plan .prow small.warn').textContent)&&/still recovering from Mon 12 Oct/.test(q('#plan .prow small.warn').textContent),'row note: "'+q('#plan .prow small.warn').textContent+'"');
  ok(!/Upper chest/.test(q('#plan .prow small.warn').textContent),'Upper chest (1.5 effective sets) is not flagged at 3 sets');
  ok(/1 exercise, 3 sets/.test(q('#plan').textContent),'singular exercise wording');
  ovOpen();
- ok(cell(GCHEST,1).dataset.c==='1'&&cell(GCHEST,1).textContent.includes('⚠')&&cell(GCHEST,1).dataset.e==='3'&&cell(GCHEST,0).dataset.c==='0','overview: Mid and lower chest on Day 2 is flagged (⚠), Day 1 is not');
- ok(/Mid and lower chest: 3 sets on Day 1, still recovering on Day 2/.test(cell(GCHEST,1).title),'cell tooltip: "'+cell(GCHEST,1).title+'"');
- ok(cell(GCHEST,1).dataset.f==='1.8'&&cell(GCHEST,0).dataset.f==='0','carry-over on Day 2 = 0.6 x 3 sets = 1.8, none on Day 1');
+ ok(cell(GCHEST,1).dataset.c==='1'&&cell(GCHEST,1).textContent.includes('⚠')&&cell(GCHEST,1).dataset.e==='3'&&cell(GCHEST,0).dataset.c==='0','overview: Mid and lower chest on Tue is flagged (⚠), Mon is not');
+ ok(/Mid and lower chest: 3 sets on Mon 12 Oct, still recovering on Tue 13 Oct/.test(cell(GCHEST,1).title),'cell tooltip: "'+cell(GCHEST,1).title+'"');
+ ok(cell(GCHEST,1).dataset.f==='1.8'&&cell(GCHEST,0).dataset.f==='0','carry-over on Tue = 0.6 x 3 sets = 1.8, none on Mon');
  ok(/Recovery conflicts <b>1<\/b>/.test(q('#ovSum').innerHTML),'summary line counts the conflict: "'+q('#ovSum').textContent+'"');
  q('#ovClose').click();
  selDay(1);q('#plan [data-rm="0"]').click();selDay(2);addEx('Barbell bench press');
- ok(!q('#wstrip .warn'),'bench Day 1 + Day 3: no conflict flagged for 3 sets');
+ ok(!q('#wstrip .warn'),'bench Mon + Wed: no conflict flagged for 3 sets');
  q('#plan [data-inc="0"]').click();selDay(0);q('#plan [data-inc="0"]').click();
- ok(!q('#wstrip .warn'),'bench Day 1 + Day 3 with 4 sets each: still no conflict');
+ ok(!q('#wstrip .warn'),'bench Mon + Wed with 4 sets each: still no conflict');
  selDay(1);addEx('Barbell bench press');q('#plan [data-inc="0"]').click();
- ok(dayBtn(1).classList.contains('warn')&&dayBtn(2).classList.contains('warn')&&!dayBtn(0).classList.contains('warn'),'4-set bench on Days 1, 2 and 3 flags Day 2 and Day 3');
+ ok(dayBtn(1).classList.contains('warn')&&dayBtn(2).classList.contains('warn')&&!dayBtn(0).classList.contains('warn'),'4-set bench on Mon, Tue and Wed flags Tue and Wed');
  clearAll();selDay(6);addEx('Barbell bench press');selDay(0);addEx('Barbell bench press');
- ok(dayBtn(0).classList.contains('warn')&&!dayBtn(6).classList.contains('warn'),'the week wraps: bench on Day 7 and Day 1 flags Day 1');
+ ok(!dayBtn(0).classList.contains('warn')&&!dayBtn(6).classList.contains('warn')&&!q('#wstrip .warn'),'the window does not wrap: bench on Sun and on the first date flags nothing');
  // overview open / close
  clearAll();selDay(0);addEx('Barbell bench press');addEx('Barbell row');selDay(3);addEx('Back squat');
  ok(q('#ov').hidden,'overview closed by default');
  q('#ovOpen').click();
  ok(!q('#ov').hidden&&q('#vp').contains(q('#ov'))&&d.activeElement===q('#ovClose'),'"Week overview" opens the overlay inside #vp and focuses its close button');
- ok(qa('#ovGrid tr.g').length===27&&qa('#ovGrid tr.g').every(r=>r.querySelectorAll('.cb').length===7&&r.querySelectorAll('.wb').length===1)&&qa('#ovGrid thead [data-oday]').length===7,'grid: 27 group rows x 7 day columns + a week column, 7 day headers');
+ ok(qa('#ovGrid tr.g').length===27&&qa('#ovGrid tr.g').every(r=>r.querySelectorAll('.cb').length===7&&r.querySelectorAll('.wb').length===1)&&qa('#ovGrid thead [data-oday]').length===7,'grid: 27 group rows x 7 date columns + a 7-day column, 7 date headers');
+ ok(qa('#ovGrid thead [data-oday] .full').map(x=>x.textContent).join()==='Mon 12 Oct,Tue 13 Oct,Wed 14 Oct,Thu 15 Oct,Fri 16 Oct,Sat 17 Oct,Sun 18 Oct','the headers are the dates of the window');
  ok(qa('#ovGrid tr.sec th').map(t=>t.textContent).join()==='Upper push,Upper pull,Arms,Core,Lower body','rows grouped into Upper push / Upper pull / Arms / Core / Lower body');
  ok(qa('#ovGrid tr.g th.rl').map(t=>t.textContent).sort().join('|')===qa('#volsum tr').map(r=>r.cells[0].textContent.trim()).sort().join('|'),'overview rows are exactly the 27 weekly-table groups');
  ok(/Fatigue is a rough estimate/.test(q('#ov').textContent)&&q('#ovLeg').textContent.includes('Carried-over fatigue')&&q('#ovLeg').textContent.includes('still recovering'),'legend and note explain the fatigue overlay as an approximation');
@@ -294,33 +305,33 @@ async function weekRun(){
  q('#ovOpen').click();
  // cell values = e_g(d)
  const exp=(n,key,part,sets)=>sets*VF[lvl(n,key,part)];
- ok(+cell(GCHEST,0).dataset.e===exp('Barbell bench press','pectoralis major','sternocostal part',3)&&+cell(GCHEST,3).dataset.e===0,'Mid and lower chest: Day 1 = bench 3 sets x prime mover (3), Day 4 = 0');
+ ok(+cell(GCHEST,0).dataset.e===exp('Barbell bench press','pectoralis major','sternocostal part',3)&&+cell(GCHEST,3).dataset.e===0,'Mid and lower chest: Mon = bench 3 sets x prime mover (3), Thu = 0');
  const rowOf=l=>qa('#ovGrid tr.g').find(r=>r.querySelector('th').textContent===l);
- ok(+rowOf('Quadriceps').querySelector('.cb[data-d="3"]').dataset.e===exp('Back squat','vastus lateralis','',3)&&+rowOf('Quadriceps').querySelector('.cb[data-d="0"]').dataset.e===0,'Quadriceps: Day 4 = back squat 3 sets x prime mover');
- ok(qa('#ovGrid tr.g').every(r=>{const v=rowVal(r.querySelector('th').textContent),dsum=qa('.cb',r).reduce((a,c)=>a+(+c.dataset.e),0);return Math.abs(v-(+r.querySelector('.wb').dataset.w))<1e-9&&v<=dsum+1e-9;}),'week column equals the weekly table for all 27 groups (and never exceeds the sum of the days)');
- ok(+rowOf('Quadriceps').querySelector('.wb').dataset.w===3&&rowOf('Quadriceps').querySelector('.wb').className.includes('v0'),'week column carries the goal band class (3 of 8 sets = Low, v0)');
+ ok(+rowOf('Quadriceps').querySelector('.cb[data-d="3"]').dataset.e===exp('Back squat','vastus lateralis','',3)&&+rowOf('Quadriceps').querySelector('.cb[data-d="0"]').dataset.e===0,'Quadriceps: Thu = back squat 3 sets x prime mover');
+ ok(qa('#ovGrid tr.g').every(r=>{const v=rowVal(r.querySelector('th').textContent),dsum=qa('.cb',r).reduce((a,c)=>a+(+c.dataset.e),0);return Math.abs(v-(+r.querySelector('.wb').dataset.w))<1e-9&&v<=dsum+1e-9;}),'the 7-day column equals the weekly table for all 27 groups (and never exceeds the sum of the dates)');
+ ok(+rowOf('Quadriceps').querySelector('.wb').dataset.w===3&&rowOf('Quadriceps').querySelector('.wb').className.includes('v0'),'the 7-day column carries the goal band class (3 of 8 sets = Low, v0)');
  ok(/Training days <b>2<\/b>/.test(q('#ovSum').innerHTML)&&/Total sets <b>9<\/b>/.test(q('#ovSum').innerHTML),'summary: 2 training days, 9 sets');
  cell(GCHEST,0).click();
- ok(/Mid and lower chest · Day 1/.test(q('#ovDet').textContent)&&q('#ovDet').textContent.includes('Barbell bench press')&&cell(GCHEST,0).classList.contains('sel'),'clicking a cell lists the exercises that hit the group: '+q('#ovDet').textContent.slice(0,90));
+ ok(/Mid and lower chest · Mon 12 Oct/.test(q('#ovDet').textContent)&&q('#ovDet').textContent.includes('Barbell bench press')&&cell(GCHEST,0).classList.contains('sel'),'clicking a cell lists the exercises that hit the group: '+q('#ovDet').textContent.slice(0,90));
  cell(GCHEST,1).click();
- ok(/not trained/.test(q('#ovDet').textContent)&&/Carry-over 1\.8 \(recovering/.test(q('#ovDet').textContent),'an untrained cell shows its carry-over: '+q('#ovDet').textContent);
+ ok(/not trained/.test(q('#ovDet').textContent)&&/Carry-over 1\.8 \(recovering/.test(q('#ovDet').textContent)&&/mostly from Mon 12 Oct/.test(q('#ovDet').textContent),'an untrained cell shows its carry-over: '+q('#ovDet').textContent);
  q('#ovGrid [data-oday="4"]').click();
- ok(dayBtn(4).getAttribute('aria-pressed')==='true'&&q('#dayLbl').textContent.includes('Day 5'),'clicking a day header selects that day in the planner');
+ ok(dayBtn(4).getAttribute('aria-pressed')==='true'&&q('#dayLbl').textContent.includes('Friday 16 October'),'clicking a date header selects that date in the planner');
  selDay(1);addEx('Barbell bench press');
  ok(cell(GCHEST,1).dataset.c==='1'&&/Recovery conflicts <b>1<\/b>/.test(q('#ovSum').innerHTML),'overview updates live while open');
  q('#ovClose').click();
- // volume heatmap: whole week / selected day
+ // volume heatmap: 7 days / selected day
  const amberHex=new w.THREE.Color(d.documentElement.style.getPropertyValue('--m-fat')).convertSRGBToLinear(); // carried-over fatigue colour: the palette entry that also colours the legend swatch
  const amberOf=key=>{let n=0;w.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind==='muscle'&&(!key||o.userData.key===key)&&o.material.color&&Math.abs(o.material.color.r-amberHex.r)<1e-6&&Math.abs(o.material.color.g-amberHex.g)<1e-6)n++;});return n;};
  q('#tVol').checked=true;ev(q('#tVol'),'change');
- ok(!q('#volScope').hidden&&q('[data-vs="week"]').getAttribute('aria-pressed')==='true','volume mode shows the Whole week / Selected day toggle');
+ ok(!q('#volScope').hidden&&q('[data-vs="week"]').getAttribute('aria-pressed')==='true','volume mode shows the 7 days / Selected day toggle');
  q('[data-vs="day"]').click();selDay(1);
  ok(q('[data-vs="day"]').getAttribute('aria-pressed')==='true'&&/Still recovering/.test(q('#volLegend').textContent),'Selected day: the legend adds "Still recovering"');
- ok(amberOf('pectoralis major')===0&&amberOf()>0,'Day 2 trains chest: chest keeps its volume colour, other groups still recovering from Day 1 are amber ('+amberOf()+' meshes)');
+ ok(amberOf('pectoralis major')===0&&amberOf()>0,'Tue trains chest: chest keeps its volume colour, other groups still recovering from Mon are amber ('+amberOf()+' meshes)');
  selDay(2);
- ok(amberOf('pectoralis major')>0,'Day 3: chest (trained on Days 1 and 2) shows the amber recovery material');
+ ok(amberOf('pectoralis major')>0,'Wed: chest (trained on Mon and Tue) shows the amber recovery material');
  q('[data-vs="week"]').click();
- ok(amberOf()===0&&!/Still recovering/.test(q('#volLegend').textContent),'Whole week: no amber again');
+ ok(amberOf()===0&&!/Still recovering/.test(q('#volLegend').textContent),'7 days: no amber again');
  q('#tVol').checked=false;ev(q('#tVol'),'change');
  ok(q('#volScope').hidden,'toggle hidden when volume mode is off');
  // ---- planned exercises are marked wherever exercises are listed ----
@@ -330,161 +341,163 @@ async function weekRun(){
  q('[data-tab="wk"]').click();selDay(3);q('[data-tab="ex"]').click();
  qa('[data-var]').find(b=>b.textContent==='Shoulder-width').click();qa('[data-var]').find(b=>b.textContent==='Parallel').click();q('[data-act="add"]').click();
  q('[data-tab="wk"]').click();
- ok(JSON.stringify(days()[0].items[0].v)==='["Wide",""]'&&names(3).join()==='Back squat'&&days()[3].items[0].v.join('')==='','Back squat (Wide) on Day 1, default Back squat on Day 4');
+ ok(JSON.stringify(itemsOf(0)[0].v)==='["Wide",""]'&&names(3).join()==='Back squat'&&itemsOf(3)[0].v.join('')==='','Back squat (Wide) on Mon, default Back squat on Thu');
  q('#volsum [data-key="adductor magnus"]').click();
  const xrow=t=>qa('#card .ext tbody tr').find(r=>r.querySelector('.exlink').textContent===t);
  let rb=xrow('Back squat'),rw=xrow('Back squat (Wide)');
  ok(rb&&rw,'adductor magnus card lists both the base and the Wide entry of Back squat');
- ok(rb.classList.contains('inplan')&&/In plan · Day 4 · 3 sets/.test(rb.querySelector('.pbadge').textContent),'base row marked: "'+(rb.querySelector('.pbadge')||{}).textContent+'"');
- ok(rw.classList.contains('inplan')&&/In plan · Day 1 · 3 sets/.test(rw.querySelector('.pbadge').textContent),'Wide row marked with Day 1 only: "'+(rw.querySelector('.pbadge')||{}).textContent+'"');
+ ok(rb.classList.contains('inplan')&&/In plan · Thu 15 Oct · 3 sets/.test(rb.querySelector('.pbadge').textContent),'base row marked: "'+(rb.querySelector('.pbadge')||{}).textContent+'"');
+ ok(rw.classList.contains('inplan')&&/In plan · Mon 12 Oct · 3 sets/.test(rw.querySelector('.pbadge').textContent),'Wide row marked with Mon only: "'+(rw.querySelector('.pbadge')||{}).textContent+'"');
  ok(qa('#card .ext tbody tr').filter(r=>r.classList.contains('inplan')).length===2&&qa('#card .ext tbody tr').some(r=>!r.classList.contains('inplan')&&!r.querySelector('.pbadge')),'unplanned rows carry no mark');
  selDay(3);q('#plan [data-rm="0"]').click();
  rb=xrow('Back squat');rw=xrow('Back squat (Wide)');
  ok(!rb.classList.contains('inplan')&&/Planned as: Wide/.test(rb.querySelector('.pother').textContent)&&rw.classList.contains('inplan'),'only the Wide variation planned: the base row gets the subtle "Planned as: Wide", the Wide row stays marked (card re-rendered live)');
  selDay(0);q('#plan [data-inc="0"]').click();selDay(5);addEx('Back squat');
  rw=xrow('Back squat (Wide)');rb=xrow('Back squat');
- ok(/Day 1 · 4 sets/.test(rw.querySelector('.pbadge').textContent)&&/Day 6 · 3 sets/.test(rb.querySelector('.pbadge').textContent),'badges follow edits (Wide 4 sets on Day 1, base on Day 6)');
+ ok(/Mon 12 Oct · 4 sets/.test(rw.querySelector('.pbadge').textContent)&&/Sat 17 Oct · 3 sets/.test(rb.querySelector('.pbadge').textContent),'badges follow edits (Wide 4 sets on Mon, base on Sat)');
  selDay(5);q('#plan [data-rm="0"]').click();selDay(0);q('#plan [data-rm="0"]').click();
  ok(!qa('#card .ext tbody tr').some(r=>r.classList.contains('inplan')||r.querySelector('.pbadge')||r.querySelector('.pother')),'removing the exercises from the plan clears every mark');
  q('#card .close').click();
  selDay(1);addEx('Hip thrust');
  q('[data-tab="ex"]').click();q('#bestM').value='gluteus maximus';ev(q('#bestM'),'change');q('[data-sort="eff"]').click();
  const bl=qa('#best li').find(l=>l.querySelector('.exlink').textContent==='Hip thrust');
- ok(bl&&bl.classList.contains('inplan')&&bl.querySelector('.ptag')&&/Day 2/.test(bl.querySelector('.ptag').title),'Best-for list marks the planned Hip thrust ("planned" tag)');
+ ok(bl&&bl.classList.contains('inplan')&&bl.querySelector('.ptag')&&/Tue 13 Oct/.test(bl.querySelector('.ptag').title),'Best-for list marks the planned Hip thrust ("planned" tag)');
  ok(qa('#best li.inplan').every(l=>/^Hip thrust/.test(l.querySelector('.exlink').textContent)),'no other best-for entry is marked');
- ok(exItem('Hip thrust').classList.contains('inplan')&&!exItem('Back squat').classList.contains('inplan')&&/Day 2/.test(exItem('Hip thrust').title),'exercise list marks Hip thrust only');
+ ok(exItem('Hip thrust').classList.contains('inplan')&&!exItem('Back squat').classList.contains('inplan')&&/Tue 13 Oct/.test(exItem('Hip thrust').title),'exercise list marks Hip thrust only');
  q('[data-tab="wk"]').click();selDay(1);q('#plan [data-rm="0"]').click();
  ok(!exItem('Hip thrust').classList.contains('inplan')&&qa('#best li.inplan').length===0,'marks vanish when the exercise leaves the plan');
  clearAll();selDay(0);
 }
 // ---- gap filler: summary chips, top picks, alternatives, options, day placement ----
-// ---- v1.8: training-day tracking (Start training, Today view, aom.log.v1, progress marks, history) ----
+// ---- v1.8 / v2.0: training-session tracking (Start on a session, Today view = the session's log, progress marks, history) on a booted instance with an earlier finished session ----
 async function logRun(){
- const KEY='aom.log.v1',dk=t=>t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
- const tk=(back)=>{const t=new w.Date();t.setDate(t.getDate()-(back||0));return dk(t);};
- const lg=()=>JSON.parse(w.localStorage.getItem(KEY)||'{}'),tdo=()=>!q('#td').hidden;
+ const seed={v:1,mig:1,seq:5,note:0,pattern:[],days:{'2020-01-02':[{id:'i1',name:'Old',items:[{n:'Barbell bench press',sets:2,v:[''],o:0}],ses:[],status:'done',startedAt:1,finishedAt:2,lg:{ex:[{n:'Barbell bench press',v:[''],o:0,sets:[{r:8,w:60,done:true},{r:6,w:65,done:true}]}],ses:[]}}]}};
+ const w=boot({win:TODAY,store:{'aom.cal.v1':JSON.stringify(seed)}}),d=w.document,q=s=>d.querySelector(s),qa=s=>[...d.querySelectorAll(s)],ev=(el,t)=>el.dispatchEvent(new w.Event(t,{bubbles:true}));
+ await waitFor(()=>!d.getElementById('loading'),60000,'training log instance');
+ const wk=()=>JSON.parse(w.localStorage.getItem('aom.cal.v1')||'null'),sess=dk=>((wk()||{days:{}}).days[dk]||[]).filter(x=>x.id),dayBtn=i=>q('#wstrip [data-day="'+i+'"]'),selDay=i=>dayBtn(i).click();
+ const addEx=n=>{q('#qa').value=n.toLowerCase();ev(q('#qa'),'input');const b=qa('#addres [data-add]').find(b=>b.firstChild.textContent.trim()==='+ '+n);if(!ok(b,'search offers "'+n+'"')) return;b.click();};
+ const tdo=()=>!q('#td').hidden,today=()=>sess(TODAY),train=()=>q('#sessList .scard.sel [data-sact="train"]');
  const prog=()=>q('#tdProg').textContent.replace(/\s+/g,' ').trim(),left=()=>q('#tdLeft').textContent.replace(/\s+/g,' ').trim();
  const blocks=()=>qa('#tdBody .tx'),setsOf=b=>[...b.querySelectorAll('.tset')],bn=b=>b.querySelector('.tn b').textContent;
  const setv=(el,v)=>{el.value=v;ev(el,'input');},esc=()=>d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
  const runS=META.act.find(a=>a.id==='running').s;
  const confirms=[];let answer=true;w.confirm=m=>{confirms.push(m);return answer;};
- w.localStorage.removeItem(KEY);
- q('[data-tab="wk"]').click();if(!q('#ov').hidden)q('#ovClose').click();clearAll();selDay(0);
- // an earlier log provides the prefill (bench: 8 x 60 kg, 6 x 65 kg)
- w.localStorage.setItem(KEY,JSON.stringify({'2020-01-02':{d:0,name:'Old',startedAt:1,finishedAt:2,ex:[{n:'Barbell bench press',v:[''],o:0,sets:[{r:8,w:60,done:true},{r:6,w:65,done:true}]}],ses:[]}}));
+ q('[data-tab="wk"]').click();
+ ok(/1 finished/.test(q('#histSum').textContent)&&qa('#hist .hrow').length===1&&/Thu 2 Jan/.test(q('#hist .hrow').textContent),'History lists the finished session of 2 Jan 2020 ('+q('#histSum').textContent+')');
  addEx('Barbell bench press');addEx('Barbell row');q('#endOpen').click();[['#endAct','running'],['#endKind','easy'],['#endMin','45']].forEach(x=>{q(x[0]).value=x[1];ev(q(x[0]),'change');});q('#endAdd').click();
- ok(!q('#trainBtn').disabled&&/Start training/.test(q('#trainLbl').textContent)&&/Day 1/.test(q('#trainSub').textContent),'Workout tab: prominent "Start training" button for the selected day ('+q('#trainLbl').textContent+' / '+q('#trainSub').textContent+')');
- selDay(3);ok(q('#trainBtn').disabled,'an empty day cannot be started');selDay(0);
- ok(!q('#histSec').hidden&&/1 log/.test(q('#histSum').textContent)&&qa('#hist .hrow').length===1,'History lists the seeded log');
- q('#trainBtn').click();
- ok(tdo()&&q('#vp').contains(q('#td'))&&q('#td').classList.contains('ov')&&q('#ov').hidden,'Start training opens the Today view over the viewport');
- ok(q('#tdTitle').textContent==='Day 1'&&/Today/.test(q('#tdDate').textContent)&&blocks().map(bn).join()==='Barbell bench press,Barbell row,Running','Today view: date, plan day name and one block per planned entry in schedule order ('+blocks().map(bn).join()+')');
+ ok(!train().disabled&&/Start/.test(train().textContent)&&today().length===1&&today()[0].status==='planned'&&!today()[0].lg,'the session card of today has a "▶ Start" button; nothing is logged yet ('+train().textContent+')');
+ selDay(3);q('#addSess').click();
+ ok(train().disabled,'an empty session cannot be started');
+ q('#sessList [data-sact="rm"]').click();selDay(0);
+ train().click();
+ ok(tdo()&&q('#vp').contains(q('#td'))&&q('#td').classList.contains('ov')&&q('#ov').hidden,'Start opens the Today view over the viewport');
+ ok(q('#tdTitle').textContent==='Session'&&/Today · Monday 12 October/.test(q('#tdDate').textContent)&&blocks().map(bn).join()==='Barbell bench press,Barbell row,Running','Today view: date, session name and one block per planned entry in schedule order ('+blocks().map(bn).join()+')');
  const bench=blocks()[0],row=blocks()[1],run0=blocks()[2];
  ok(setsOf(bench).length===3&&setsOf(row).length===3&&run0.classList.contains('e'),'one row per planned set (3 + 3) and an endurance block');
  const vals=b=>setsOf(b).map(r=>r.querySelector('[data-f="r"]').value+'x'+r.querySelector('[data-f="w"]').value).join(' ');
- ok(vals(bench)==='8x60 6x65 6x65'&&vals(row)==='x x x','sets are prefilled from the last log of the same exercise ('+vals(bench)+'), none for a new exercise ('+vals(row)+')');
+ ok(vals(bench)==='8x60 6x65 6x65'&&vals(row)==='x x x','sets are prefilled from the last finished session of the same exercise ('+vals(bench)+'), none for a new exercise ('+vals(row)+')');
  ok(prog()==='0 / 6 sets · 0 / 45 min'&&q('#tdProg').dataset.pct==='0'&&left()==='Still left: 2 exercises, 6 sets, '+runS+' 45′','progress "0 / 6 sets · 0 / 45 min", still left: "'+left()+'"');
  ok(bench.querySelector('input[data-f="r"]').getAttribute('inputmode')==='numeric'&&bench.querySelector('input[data-f="w"]').getAttribute('step')==='0.5'&&bench.querySelector('input[data-f="done"]').getAttribute('aria-label')!=='','set rows: done checkbox, numeric reps, weight with step 0.5, labelled');
  // done checkbox
  setsOf(bench)[0].querySelector('[data-f="done"]').click();
  ok(prog()==='1 / 6 sets · 0 / 45 min'&&setsOf(bench)[0].classList.contains('done')&&bench.querySelector('.tcnt').textContent==='1/3'&&q('#tdProg').dataset.pct==='11','checking a set updates the progress ('+prog()+', '+q('#tdProg').dataset.pct+' %)');
- let L=lg()[tk()];
- ok(L&&L.d===0&&L.name==='Day 1'&&L.startedAt>0&&!L.finishedAt&&L.ex.length===2&&L.ses.length===1&&L.ex[0].sets[0].done===true&&L.ex[0].sets[0].r===8&&L.ex[0].sets[0].w===60,'saved in aom.log.v1 under today\'s date ('+tk()+'): plan day, start time, prefilled reps/weight persisted');
+ let L=today()[0];
+ ok(L&&L.lg&&L.startedAt>0&&!L.finishedAt&&L.status==='planned'&&L.lg.ex.length===2&&L.lg.ses.length===1&&L.lg.ex[0].sets[0].done===true&&L.lg.ex[0].sets[0].r===8&&L.lg.ex[0].sets[0].w===60,'saved in the session in aom.cal.v1 (date '+TODAY+'): start time, prefilled reps/weight persisted');
  // reps / weight entry marks a set done
  setv(setsOf(row)[0].querySelector('[data-f="r"]'),'10');
  ok(setsOf(row)[0].classList.contains('done')&&setsOf(row)[0].querySelector('[data-f="done"]').checked&&prog().startsWith('2 / 6'),'entering reps marks the set done');
  setv(setsOf(row)[1].querySelector('[data-f="w"]'),'42.5');
- L=lg()[tk()];
- ok(prog().startsWith('3 / 6')&&L.ex[1].sets[0].r===10&&L.ex[1].sets[0].done&&L.ex[1].sets[1].w===42.5&&L.ex[1].sets[1].done&&L.ex[1].sets[2].done===false,'entering a weight (42.5 kg) marks the set done and persists');
+ L=today()[0];
+ ok(prog().startsWith('3 / 6')&&L.lg.ex[1].sets[0].r===10&&L.lg.ex[1].sets[0].done&&L.lg.ex[1].sets[1].w===42.5&&L.lg.ex[1].sets[1].done&&L.lg.ex[1].sets[2].done===false,'entering a weight (42.5 kg) marks the set done and persists');
  // unchecking
  setsOf(row)[1].querySelector('[data-f="done"]').click();
- ok(prog().startsWith('2 / 6')&&lg()[tk()].ex[1].sets[1].done===false&&lg()[tk()].ex[1].sets[1].w===42.5,'unchecking a set keeps its values');
+ ok(prog().startsWith('2 / 6')&&today()[0].lg.ex[1].sets[1].done===false&&today()[0].lg.ex[1].sets[1].w===42.5,'unchecking a set keeps its values');
  // extra and fewer sets
  row.querySelector('[data-act="addset"]').click();
- ok(setsOf(blocks()[1]).length===4&&prog().startsWith('2 / 7')&&lg()[tk()].ex[1].sets.length===4&&setsOf(blocks()[1])[3].querySelector('[data-f="r"]').value==='','"+ Add set" adds a row (7 sets in total, saved)');
+ ok(setsOf(blocks()[1]).length===4&&prog().startsWith('2 / 7')&&today()[0].lg.ex[1].sets.length===4&&setsOf(blocks()[1])[3].querySelector('[data-f="r"]').value==='','"+ Add set" adds a row (7 sets in total, saved)');
  setsOf(blocks()[1])[3].querySelector('[data-act="rmset"]').click();
  ok(setsOf(blocks()[1]).length===3&&prog().startsWith('2 / 6'),'remove-set drops it again');
  // skip an exercise
  blocks()[0].querySelector('[data-act="skip"]').click();
- ok(blocks()[0].classList.contains('skip')&&prog().startsWith('1 / 3 sets')&&left()==='Still left: 1 exercise, 2 sets, '+runS+' 45′'&&lg()[tk()].ex[0].skip===true,'skipping an exercise removes it from progress and "still left" ('+prog()+' | '+left()+')');
+ ok(blocks()[0].classList.contains('skip')&&prog().startsWith('1 / 3 sets')&&left()==='Still left: 1 exercise, 2 sets, '+runS+' 45′'&&today()[0].lg.ex[0].skip===true,'skipping an exercise removes it from progress and "still left" ('+prog()+' | '+left()+')');
  blocks()[0].querySelector('[data-act="skip"]').click();
- ok(!blocks()[0].classList.contains('skip')&&prog().startsWith('2 / 6')&&!lg()[tk()].ex[0].skip,'skip can be undone');
+ ok(!blocks()[0].classList.contains('skip')&&prog().startsWith('2 / 6')&&!today()[0].lg.ex[0].skip,'skip can be undone');
  // endurance: done + actual minutes + heart rate
  const run=blocks()[2],act=run.querySelector('[data-f="act"]'),hr=run.querySelector('[data-f="hr"]');
  ok(act.placeholder==='45'&&run.querySelector('.pl')&&run.querySelector('.tzone').textContent==='','endurance block: pill, planned minutes as placeholder, no zone text yet');
  setv(act,'40');
- L=lg()[tk()];
- ok(prog()==='2 / 6 sets · 40 / 45 min'&&run.querySelector('[data-f="done"]').checked&&L.ses[0].act===40&&L.ses[0].done===true&&L.ses[0].min===45&&L.ses[0].a==='running'&&!/Run/.test(left()),'actual minutes mark the session done ('+prog()+')');
- const hm=q('#hrMax');hm.value='190';ev(hm,'change');
+ L=today()[0];
+ ok(prog()==='2 / 6 sets · 40 / 45 min'&&run.querySelector('[data-f="done"]').checked&&L.lg.ses[0].act===40&&L.lg.ses[0].done===true&&L.lg.ses[0].min===45&&L.lg.ses[0].a==='running'&&!/Run/.test(left()),'actual minutes mark the session done ('+prog()+')');
+ const hm=d.getElementById('hrMax');hm.value='190';ev(hm,'change');
  setv(hr,'150');
- ok(lg()[tk()].ses[0].hr===150&&/Z3/.test(run.querySelector('.tzone').textContent)&&/bpm/.test(run.querySelector('.tzone').textContent),'average heart rate is shown with its zone ('+run.querySelector('.tzone').textContent+')');
- // finish the strength sets so the day is complete
+ ok(today()[0].lg.ses[0].hr===150&&/Z3/.test(run.querySelector('.tzone').textContent)&&/bpm/.test(run.querySelector('.tzone').textContent),'average heart rate is shown with its zone ('+run.querySelector('.tzone').textContent+')');
+ // finish the strength sets so the session is complete
  qa('#tdBody .tset [data-f="done"]').filter(c=>!c.checked).forEach(c=>c.click());
  ok(prog()==='6 / 6 sets · 40 / 45 min'&&/Everything is done/.test(q('#tdLeft').textContent)&&q('#tdProg').dataset.pct==='100'&&blocks().every(b=>b.classList.contains('done')),'all done: 100 %, "Everything is done"');
- // close with Show body, button on the day card
- ok(q('#tdFinish').textContent==='Finish day','Finish day button while unfinished');
+ ok(q('#tdFinish').textContent==='Finish session','Finish session button while unfinished');
  q('#tdFinish').click();
- L=lg()[tk()];
- ok(!tdo()&&L.finishedAt>0,'Finish day stores finishedAt and closes');
- const pd0=q('#wstrip [data-day="0"] .pl.pd');
- ok(pd0&&/^✓\s*6\/6$/.test(pd0.textContent.trim())&&pd0.querySelector('u').style.width==='100%'&&/finished/.test(pd0.title),'day card shows the progress mark: "'+(pd0&&pd0.textContent.trim())+'"');
- ok(/Open today/.test(q('#trainLbl').textContent)&&/6\/6 sets/.test(q('#trainSub').textContent),'the Start button now reopens today\'s log ('+q('#trainLbl').textContent+')');
- ok(qa('#hist .hrow').length===2&&qa('#hist .hrow')[0].dataset.k===tk()&&/6\/6 sets/.test(qa('#hist .hrow')[0].textContent)&&/finished/.test(qa('#hist .hrow')[0].textContent)&&/2 logs/.test(q('#histSum').textContent),'History lists today\'s log first ('+qa('#hist .hrow')[0].textContent+')');
- // board column header mark and Train button
+ L=today()[0];
+ ok(!tdo()&&L.finishedAt>0&&L.status==='done','Finish session stores finishedAt, status "done" and closes');
+ const pd0=q('#wstrip [data-day="0"] .pl.se.s-done');
+ ok(pd0&&/^✓\s*Session$/.test(pd0.textContent.trim())&&pd0.querySelector('u').style.width==='100%'&&/done/.test(pd0.title)&&/6\/6/.test(pd0.title),'date card shows a done chip with a full progress line: "'+(pd0&&pd0.textContent.trim())+'", '+(pd0&&pd0.title));
+ ok(/View/.test(train().textContent)&&/done/.test(q('#sessList .scard.sel .schip').textContent),'the session card now says "View" and "done" ('+train().textContent+', '+q('#sessList .scard.sel .schip').textContent.trim()+')');
+ ok(qa('#hist .hrow').length===2&&qa('#hist .hrow')[0].dataset.k===TODAY&&/6\/6 sets/.test(qa('#hist .hrow')[0].textContent)&&/finished/.test(qa('#hist .hrow')[0].textContent)&&/2 finished/.test(q('#histSum').textContent),'History lists today\'s session first ('+qa('#hist .hrow')[0].textContent+')');
+ ok(/done/.test(dayBtn(0).title)&&dayBtn(0).classList.contains('today'),'the date card title names the session state');
+ // board column: progress mark; a finished session is a line that reopens it
  q('#ovOpen').click();
  const bh=q('#ovBoard .bcol[data-d="0"] .bh3');
- ok(bh&&/^✓\s*6\/6$/.test(bh.querySelector('.bpd').textContent.trim())&&bh.querySelector('[data-bact="train"]').textContent.includes('Train')&&!q('#ovBoard .bcol[data-d="3"] .bh3'),'schedule board: progress mark and "▶ Train" in the Day 1 header, none on an empty day');
- q('#ovBoard .bcol[data-d="0"] [data-bact="train"]').click();
- ok(tdo()&&q('#ov').hidden&&q('#tdTitle').textContent==='Day 1'&&q('#tdFinish').textContent==='Close'&&/Finished at/.test(q('#tdState').textContent),'"▶ Train" in a board column closes the overview and reopens the log (edits still allowed)');
- // Show body closes, focus returns
+ ok(bh&&/^✓\s*6\/6$/.test(bh.querySelector('.bpd').textContent.trim())&&!bh.querySelector('[data-bact="train"]')&&!q('#ovBoard .bcol[data-d="3"] .bh3'),'schedule board: progress mark in the header of a finished session, no Train button for it, none on an empty date');
+ q('#ovBoard .bcol[data-d="0"] .bsess').click();
+ ok(tdo()&&q('#ov').hidden&&q('#tdTitle').textContent==='Session'&&q('#tdFinish').textContent==='Close'&&/Finished at/.test(q('#tdState').textContent),'the finished-session line in a board column closes the overview and reopens the log (edits still allowed)');
  q('#tdClose').click();
- ok(!tdo()&&d.activeElement===q('#trainBtn'),'Show body closes the Today view and returns focus ('+(d.activeElement&&d.activeElement.id)+')');
- // history reopens a log; Escape closes; an old log opens as well
+ ok(!tdo()&&d.activeElement&&d.activeElement.classList.contains('strain'),'Show body closes the Today view and returns focus ('+(d.activeElement&&d.activeElement.className)+')');
+ // history reopens a session; Escape closes; an old session opens as well
  qa('#hist .hrow').find(b=>b.dataset.k==='2020-01-02').click();
- ok(tdo()&&q('#tdTitle').textContent==='Old'&&!/Today/.test(q('#tdDate').textContent)&&prog()==='2 / 2 sets'&&blocks().length===1,'History opens an older log ('+q('#tdDate').textContent+', '+prog()+')');
+ ok(tdo()&&q('#tdTitle').textContent==='Old'&&!/Today/.test(q('#tdDate').textContent)&&/Thursday 2 January/.test(q('#tdDate').textContent)&&prog()==='2 / 2 sets'&&blocks().length===1,'History opens an older session ('+q('#tdDate').textContent+', '+prog()+')');
  setv(setsOf(blocks()[0])[1].querySelector('[data-f="w"]'),'67.5');
- ok(lg()['2020-01-02'].ex[0].sets[1].w===67.5,'an old log is editable');
+ ok(sess('2020-01-02')[0].lg.ex[0].sets[1].w===67.5,'an old session is editable');
  esc();
  ok(!tdo(),'Escape closes the Today view');
- q('#trainBtn').click();
+ train().click();
  const ri=setsOf(blocks()[1])[0].querySelector('[data-f="r"]');ri.focus();ri.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
  ok(!tdo(),'Escape also closes it while typing in a field');
- // Sync with plan
- selDay(0);addEx('Back squat');
- q('#trainBtn').click();q('#tdSync').click();
- ok(blocks().length===4&&blocks()[3].querySelector('.tn b').textContent==='Back squat'&&/Added 1/.test(q('#tdMsg').textContent)&&lg()[tk()].ex.length===3,'"Sync with plan" pulls a newly planned exercise into the log');
+ // Sync with plan: Edit on the finished session, then add an exercise to it
+ selDay(0);q('#sessList .scard.sel [data-sact="edit"]').click();addEx('Back squat');
+ train().click();q('#tdSync').click();
+ ok(blocks().length===4&&blocks()[3].querySelector('.tn b').textContent==='Back squat'&&/Added 1/.test(q('#tdMsg').textContent)&&today()[0].lg.ex.length===3,'"Sync with plan" pulls a newly planned exercise into the log');
  q('#tdSync').click();
  ok(blocks().length===4&&/in sync/.test(q('#tdMsg').textContent),'a second sync adds nothing');
  q('#tdClose').click();
  // a log stays independent of later plan edits
  selDay(0);q('#plan [data-rm="0"]').click();
- q('#trainBtn').click();
+ train().click();
  ok(blocks().map(bn).includes('Barbell bench press')&&blocks().length===4,'the log keeps what was planned at start when the plan changes later');
  q('#tdClose').click();
- // starting another plan day on the same date replaces the log after a confirm
- selDay(1);addEx('Overhead press');
- answer=false;confirms.length=0;q('#trainBtn').click();
- ok(confirms.length===1&&/Day 1/.test(confirms[0])&&/Day 2/.test(confirms[0])&&!tdo()&&lg()[tk()].d===0,'a different day on the same date asks to confirm; "cancel" keeps today\'s log ('+confirms[0]+')');
- answer=true;q('#trainBtn').click();
- L=lg()[tk()];
- ok(confirms.length===2&&tdo()&&L.d===1&&L.name==='Day 2'&&L.ex.length===1&&L.ex[0].n==='Overhead press'&&!L.finishedAt&&q('#tdTitle').textContent==='Day 2'&&qa('#hist .hrow').length===1+1,'confirming replaces it with the new day\'s log (one entry per date)');
+ // several sessions on one date, each with its own log; no confirmation is needed
+ q('#addSess').click();addEx('Overhead press');
+ ok(qa('#sessList .scard').length===2&&sess(TODAY).length===2,'a second session on the same date');
+ confirms.length=0;train().click();
+ L=sess(TODAY)[1];
+ ok(confirms.length===0&&tdo()&&L.lg.ex.length===1&&L.lg.ex[0].n==='Overhead press'&&!L.finishedAt&&sess(TODAY)[0].finishedAt>0&&q('#tdTitle').textContent==='Session','starting the second session of a date needs no confirm and does not touch the first one\'s log');
  q('#tdClose').click();
- // an untouched log is replaced without asking
- selDay(0);confirms.length=0;q('#trainBtn').click();
- ok(confirms.length===0&&tdo()&&lg()[tk()].d===0,'a log without progress is replaced silently');
- q('#tdClose').click();
- // marks only for logs of the last 7 days
- const all=lg();all[tk(10)]={d:2,name:'Day 3',startedAt:1,ex:[{n:'Back squat',v:['',''],o:0,sets:[{done:true}]}],ses:[]};all[tk(3)]={d:4,name:'Day 5',startedAt:1,ex:[{n:'Back squat',v:['',''],o:0,sets:[{done:true,r:5,w:100},{done:false}]}],ses:[]};
- w.localStorage.setItem(KEY,JSON.stringify(all));selDay(0);
- ok(!q('#wstrip [data-day="2"] .pl.pd')&&/^1\/2$/.test(q('#wstrip [data-day="4"] .pl.pd').textContent.trim())&&q('#wstrip [data-day="4"] .pl.pd').querySelector('u').style.width==='50%','progress marks appear only for plan days with a log from the last 7 days (10 days old: none; 3 days old: 1/2)');
+ ok(qa('#hist .hrow').length===2&&qa('#wstrip [data-day="0"] .pl.se').length===2&&qa('#wstrip [data-day="0"] .pl.se.s-doing').length===1,'the date card shows both sessions (one done, one in progress)');
  // garbage in storage does not break anything
- w.localStorage.setItem(KEY,'{bad json');selDay(0);
- ok(!q('#wstrip .pl.pd')&&/Start training/.test(q('#trainLbl').textContent),'a corrupt log is ignored');
- w.localStorage.setItem(KEY,JSON.stringify({'nope':{d:1},'2021-02-03':{d:99,name:'  x  ',ex:[{n:'A',sets:[{r:-3,w:'abc',done:1},{r:12}]},7,{sets:[]}],ses:[{a:'nonexistent'},{a:'running',k:'bogus',min:9999}]}}));
- selDay(0);q('#trainBtn').click();q('#tdClose').click();
- const cl=lg();
- ok(Object.keys(cl).length===2&&cl['2021-02-03'].d===0&&cl['2021-02-03'].name==='x'&&cl['2021-02-03'].ex.length===1&&cl['2021-02-03'].ex[0].sets.length===2&&cl['2021-02-03'].ex[0].sets[0].r===undefined&&cl['2021-02-03'].ex[0].sets[0].done===true&&cl['2021-02-03'].ses.length===1&&cl['2021-02-03'].ses[0].k==='easy'&&cl['2021-02-03'].ses[0].min===45&&!cl.nope,'malformed entries are cleaned on load (bad date, day, set values, unknown activity or kind)');
- w.localStorage.removeItem(KEY);w.confirm=()=>true;hm.value='';ev(hm,'change');clearAll();selDay(0);
+ w.close();
+ {
+  const bad=boot({win:TODAY,store:{'aom.cal.v1':'{bad json'}}),bd=bad.document;
+  await waitFor(()=>!bd.getElementById('loading'),60000,'corrupt calendar instance');
+  ok(!bad.__fatal&&bd.querySelectorAll('#wstrip [data-day]').length===7&&bd.querySelectorAll('#sessList .scard').length===0,'a corrupt calendar is ignored: an empty calendar, no crash');
+  bad.close();
+  const cal={v:1,mig:1,seq:0,pattern:[{id:'p1',tid:'nope',wd:[0],from:'2021-02-01'},7],days:{'nope':[{id:'x'}],'2021-02-03':[{id:'a',name:'  x  ',status:'zzz',items:[{n:'Back squat',sets:3,v:[]},{n:'No such exercise',sets:3},{n:'constructor',sets:3}],ses:[{a:'running',k:'bogus',min:9999},{a:'nonexistent'}],lg:{ex:[{n:'A',sets:[{r:-3,w:'abc',done:1},{r:12}]},7,{sets:[]}],ses:[{a:'nonexistent'},{a:'running',k:'bogus',min:9999}]}},{id:'a',name:'dup'},7,{pid:'p1',status:'removed'},{status:'removed'}]}};
+  const y=boot({win:'2021-02-01',store:{'aom.cal.v1':JSON.stringify(cal)}}),yd=y.document;
+  await waitFor(()=>!yd.getElementById('loading'),60000,'malformed calendar instance');
+  yd.querySelector('#addSess').click();   // any change writes the cleaned calendar back
+  const sc=JSON.parse(y.localStorage.getItem('aom.cal.v1')),ds=sc.days['2021-02-03'];
+  ok(!y.__fatal&&Object.keys(sc.days).sort().join()==='2021-02-01,2021-02-03'&&sc.pattern.length===0&&ds.filter(x=>x.id).length===2&&ds.filter(x=>x.id).every((x,i,a)=>a.findIndex(z=>z.id===x.id)===i)&&ds.some(x=>x.status==='removed'&&x.pid==='p1')&&ds.length===3,'malformed calendar entries are cleaned on load (bad date, dangling pattern row, duplicate ids, tombstone kept)');
+  const A=ds.find(x=>x.name==='x');
+  ok(A&&A.status==='planned'&&A.items.length===1&&A.items[0].n==='Back squat'&&A.ses.length===1&&A.ses[0].k==='easy'&&A.ses[0].min===45&&A.lg.ex.length===1&&A.lg.ex[0].sets.length===2&&A.lg.ex[0].sets[0].r===undefined&&A.lg.ex[0].sets[0].done===true&&A.lg.ses.length===1&&A.lg.ses[0].k==='easy'&&A.lg.ses[0].min===45,'... and so are the session values (unknown exercise or activity, kind and minutes fall back, set values, status)');
+  y.close();
+ }
 }
 async function sugRun(){
  const numOf=x=>parseFloat(x),rowVal=n=>{const r=qa('#volsum tr').find(r=>r.cells[0].textContent.trim()===n);return r?parseFloat(r.cells[2].textContent):NaN;};
@@ -508,8 +521,8 @@ async function sugRun(){
  ok(qa('#sug .sgt')[0].textContent==='Top picks'&&q('[data-gap="all"]').getAttribute('aria-pressed')==='true','"Top picks" heading, "All gaps" pressed');
  // top picks: day, reason, equipment
  const c0=cards()[0];
- ok(cards().length>=1&&cards().length<=3&&/^(⚠ )?Day \d · (no recovery conflict|rest day, no recovery conflict|still overlaps recovery)$/.test(c0.querySelector('.dy').textContent),'top pick shows its day and why: "'+c0.querySelector('.dy').textContent+'"');
- ok(/^(Prime mover|Synergist) for /.test(c0.querySelector('.rsn').textContent)&&/^\+ Add to Day \d/.test(c0.querySelector('[data-sadd]').textContent),'top pick shows a reason ("'+c0.querySelector('.rsn').textContent+'") and "+ Add to Day N"');
+ ok(cards().length>=1&&cards().length<=3&&/^(⚠ )?[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2} · (no recovery conflict|rest day, no recovery conflict|still overlaps recovery)$/.test(c0.querySelector('.dy').textContent),'top pick shows its day and why: "'+c0.querySelector('.dy').textContent+'"');
+ ok(/^(Prime mover|Synergist) for /.test(c0.querySelector('.rsn').textContent)&&/^\+ Add to [A-Z][a-z]{2} \d{1,2} [A-Z][a-z]{2}/.test(c0.querySelector('[data-sadd]').textContent),'top pick shows a reason ("'+c0.querySelector('.rsn').textContent+'") and "+ Add to <date>"');
  ok(q('#sugMore').open&&qa('#sugMore .alt').length===under.length&&qa('#sugMore .altr').length>=qa('#sugMore .alt').length,'"More options" is open on desktop with a block per gap group');
  // filter by a chip: only prime movers of that group
  const HAMS=['biceps femoris','semitendinosus','semimembranosus'];
@@ -542,10 +555,10 @@ async function sugRun(){
  ok(cards()[0].querySelector('.step span').textContent==='1 sets'&&cards()[0].querySelector('[data-ss$=":-1"]').disabled,'stepper stops at 1');
  for(let k=0;k<4;k++) cards()[0].querySelector('[data-ss$=":1"]').click();
  c1=cards()[0];const sd=+c1.querySelector('[data-sadd]').dataset.sday,label=c1.querySelector('[data-sadd]').textContent;
- ok(c1.querySelector('.step span').textContent==='5 sets'&&label==='+ Add to '+nameOf(sd),'button names the target day: "'+label+'"');
+ ok(c1.querySelector('.step span').textContent==='5 sets'&&label==='+ Add to '+dLab(D(sd)),'button names the target date: "'+label+'"');
  c1.querySelector('[data-sadd]').click();
- const it=days()[sd].items.find(p=>p.n===name1);
- ok(it&&it.sets===5&&dayBtn(sd).getAttribute('aria-pressed')==='true','the 5-set entry landed on the shown day ('+nameOf(sd)+'), which is now selected');
+ const it=itemsOf(sd).find(p=>p.n===name1);
+ ok(it&&it.sets===5&&dayBtn(sd).getAttribute('aria-pressed')==='true','the 5-set entry landed on the shown date ('+dLab(D(sd))+'), which is now selected');
  // variation select
  let found=null;
  for(const ch of chips()){ const gl=ch.firstChild.textContent.trim(); chip(gl).click(); const c=cards().find(c=>c.querySelector('select.sv')); if(c){found=c;break;} }
@@ -555,7 +568,7 @@ async function sugRun(){
   const f2=cards().find(c=>nm(c)===fn),sd2=+f2.querySelector('[data-sadd]').dataset.sday;
   ok(f2.querySelector('select.sv').value===String(opts.length-1),'variation select keeps the choice after re-render');
   f2.querySelector('[data-sadd]').click();
-  const it2=days()[sd2].items.find(p=>p.n===fn);
+  const it2=itemsOf(sd2).find(p=>p.n===fn);
   ok(it2&&it2.v[gi]===opts[opts.length-1][0],'adding stores the chosen variation: '+fn+' / '+(it2&&JSON.stringify(it2.v)));
  }
  // hover preview on the body
@@ -567,12 +580,12 @@ async function sugRun(){
  ok(g0===0&&grey()>100,'hovering a suggestion previews its muscles on the body (others greyed: '+grey()+' meshes)');
  sg.dispatchEvent(new w.MouseEvent('mouseout',{bubbles:true,relatedTarget:q('#sug')}));
  ok(grey()===0,'leaving restores the previous view');
- // placement: chest trained on Day 1 -> chest exercises are not put on Day 2 or Day 7
+ // placement: chest trained on Mon -> chest exercises are not put on Tue (the window does not wrap, so Sun is free)
  goal('hyp8');clearAll();selDay(0);addEx('Barbell bench press');
  more();
  chip('Mid and lower chest').click();
  const days4=cards().map(c=>+c.querySelector('[data-sadd]').dataset.sday);
- ok(cards().length>=2&&days4.every(x=>x!==1&&x!==6),'chest options never land the day after (Day 2) or before (Day 7) the bench day: Days '+days4.map(x=>x+1).join(','));
+ ok(cards().length>=2&&days4.every(x=>x!==1),'chest options never land the day after the bench day (Tue): slots '+days4.join(','));
  ok(cards().every(c=>!/⚠|overlaps/.test(c.querySelector('.dy').textContent)),'and are shown without a recovery warning');
  cards()[0].querySelector('[data-sadd]').click();
  ok(!q('#wstrip .warn'),'adding the first chest option creates no conflict');
@@ -580,29 +593,214 @@ async function sugRun(){
  clearAll();selDay(0);addEx('Barbell bench press');selDay(1);addEx('Barbell row');selDay(2);addEx('Back squat');selDay(3);addEx('Romanian deadlift');
  q('[data-gap="all"]').click();
  chip('Mid and lower chest')&&chip('Mid and lower chest').click();
- ok(!chip('Mid and lower chest')||cards().every(c=>+c.querySelector('[data-sday]').dataset.sday!==1),'with Days 1-4 trained, chest work is not offered for Day 2');
+ ok(!chip('Mid and lower chest')||cards().every(c=>+c.querySelector('[data-sday]').dataset.sday!==1),'with Mon-Thu trained, chest work is not offered for Tue');
  // empty state + balance check
  clearAll();selDay(0);
  q('#goalSel').value='custom';ev(q('#goalSel'),'change');q('#goalLo').value='1';ev(q('#goalLo'),'change');q('#goalHi').value='40';ev(q('#goalHi'),'change');
  let guard=0;while(q('#sug li.sg [data-sadd]')&&guard++<40) q('#sug li.sg [data-sadd]').click();
  ok(/Every muscle group is at or above its target\./.test(q('#sug').textContent)&&!q('#sug [data-gap]'),'no gaps: "Every muscle group is at or above its target", no chips');
  selDay(0);addEx('Barbell bench press');selDay(1);addEx('Barbell bench press');
- ok(/Balance check/.test(q('#sug').textContent)&&/still recovering on Day/.test(q('#sug').textContent),'with no gaps but a recovery conflict, a "Balance check" line explains it: '+(q('#sug .fine b')?q('#sug').textContent.slice(0,160):''));
+ ok(/Balance check/.test(q('#sug').textContent)&&/still recovering on Tue 13 Oct/.test(q('#sug').textContent),'with no gaps but a recovery conflict, a "Balance check" line explains it: '+(q('#sug .fine b')?q('#sug').textContent.slice(0,160):''));
  goal('hyp8');clearAll();selDay(0);
 }
+// ---- v2.0 calendar: migration of the 7-slot week and the log, weekly pattern (virtual sessions), edit / remove / move / skip, several sessions on a date, templates, the movable 7-day window ----
+async function calRun(){
+ const plan3={days:[{name:'Push',items:[{n:'Barbell bench press',sets:5,v:['']},{t:'e',a:'running',k:'easy',min:45}]},{name:'',items:[]},{name:'Legs',items:[{n:'Back squat',sets:3,v:['Wide','Deep']}]},{name:'Pull',items:[{n:'Pull-up',sets:4,v:['']}]}]};
+ const log3={
+  '2026-10-09':{d:3,name:'Pull',startedAt:4,ex:[{n:'Pull-up',v:[''],o:0,sets:[{done:false}]}],ses:[]},
+  '2026-10-10':{d:2,name:'Legs',startedAt:5,finishedAt:9,ex:[{n:'Back squat',v:['Wide','Deep'],o:0,sets:[{r:5,w:100,done:true},{r:5,w:100,done:true},{done:false}]}],ses:[]},
+  '2026-10-11':{d:0,name:'Morning run',startedAt:3,ex:[],ses:[{a:'running',k:'easy',min:30,o:0,done:true,act:28}]}};
+ const P3=JSON.stringify(plan3),L3=JSON.stringify(log3);
+ const w=boot({store:{'aom.plan.v3':P3,'aom.log.v1':L3}}),d=w.document,q=s=>d.querySelector(s),qa=s=>[...d.querySelectorAll(s)],ev=(el,t)=>el.dispatchEvent(new w.Event(t,{bubbles:true}));
+ await waitFor(()=>!d.getElementById('loading'),60000,'calendar instance');
+ const wk=()=>JSON.parse(w.localStorage.getItem('aom.cal.v1')||'null'),tpls=()=>JSON.parse(w.localStorage.getItem('aom.tpl.v1')||'[]'),sess=dk=>((wk()||{days:{}}).days[dk]||[]).filter(x=>x.id),raw=dk=>(wk().days[dk]||[]);
+ const card=dk=>q('#wstrip [data-date="'+dk+'"]'),dates=()=>qa('#wstrip [data-day]').map(b=>b.dataset.date),pickDate=dk=>card(dk).click();
+ const rowVal=n=>{const r=qa('#volsum tr').find(r=>r.cells[0].textContent.trim()===n);return r?parseFloat(r.cells[2].textContent):NaN;};
+ const sc=()=>qa('#sessList .scard'),scNames=()=>sc().map(c=>c.querySelector('.snm').textContent).join('|'),btn=(c,a)=>c.querySelector('[data-sact="'+a+'"]');
+ const addEx=n=>{q('#qa').value=n.toLowerCase();ev(q('#qa'),'input');const b=qa('#addres [data-add]').find(b=>b.firstChild.textContent.trim()==='+ '+n);if(!ok(b,'search offers "'+n+'"')) return;b.click();};
+ const bal=b=>q('#bal [data-b="'+b+'"]');
+ const confirms=[];let answer=true;w.confirm=m=>{confirms.push(m);return answer;};
+ q('[data-tab="wk"]').click();
+ // ---- migration ----
+ const T=tpls(),C=wk();
+ ok(T.map(t=>t.name).join()==='Push,Legs,Pull'&&T[0].items.length===1&&T[0].items[0].sets===5&&T[0].ses.length===1&&T[0].ses[0].a==='running'&&JSON.stringify(T[1].items[0].v)==='["Wide","Deep"]','migration: every non-empty day of aom.plan.v3 became a template with its name (the empty Day 2 did not): '+T.map(t=>t.name+' '+t.items.length+'+'+t.ses.length).join(', '));
+ ok(C.pattern.length===3&&C.pattern.map(p=>p.wd.join()).join('|')==='0|2|3'&&C.pattern.every(p=>p.from==='2026-10-12')&&C.pattern.map(p=>p.tid).join()===T.map(t=>t.id).join(),'... and a pattern maps Day 1/3/4 to Monday/Wednesday/Thursday, from the Monday of the current week (2026-10-12)');
+ ok(Object.keys(C.days).sort().join()==='2026-10-09,2026-10-10,2026-10-11'&&C.mig===1&&C.note===1,'... every log entry became a stored session on its date; note=1 (one-time notice pending)');
+ const lgS=C.days['2026-10-10'][0],runS=C.days['2026-10-11'][0],pullS=C.days['2026-10-09'][0];
+ ok(lgS.status==='done'&&lgS.finishedAt===9&&lgS.tid===T[1].id&&lgS.name==='Legs'&&lgS.lg.ex[0].sets.length===3&&lgS.items[0].sets===3&&JSON.stringify(lgS.items[0].v)==='["Wide","Deep"]','a finished log became a "done" session linked to the template of the same name (Legs)');
+ ok(runS.status==='done'&&!runS.finishedAt&&!runS.tid&&runS.lg.ses[0].act===28&&pullS.status==='planned'&&pullS.tid===T[2].id&&!pullS.finishedAt,'a log with something done is "done" (no template named "Morning run"); a started log with nothing done stays "planned"');
+ ok(w.localStorage.getItem('aom.plan.v3')===P3&&w.localStorage.getItem('aom.log.v1')===L3,'the old keys aom.plan.v3 and aom.log.v1 are untouched (rollback)');
+ ok(!q('#migNote').hidden&&/first day repeats every Monday/.test(q('#migNote').textContent),'the Workout tab shows the one-time notice about the Monday..Sunday mapping');
+ q('#migOk').click();
+ ok(q('#migNote').hidden&&wk().note===0,'"Got it" dismisses the notice for good');
+ // ---- default window: the 7 days ending today; past dates show only stored sessions, today and later the pattern ----
+ ok(dates().join()==='2026-10-06,2026-10-07,2026-10-08,2026-10-09,2026-10-10,2026-10-11,2026-10-12'&&q('#winDate').value==='2026-10-06'&&w.localStorage.getItem('aom.win.v1')===null&&/ending today/.test(q('#winLbl').textContent),'default window = the 7 days ending today (6..12 Oct); nothing stored in aom.win.v1');
+ ok(card('2026-10-12').classList.contains('today')&&qa('#wstrip [data-day="6"] .pl.se.s-planned').length===1&&/Push/.test(card('2026-10-12').textContent)&&q('#dayLbl').textContent.includes('Monday 12 October'),'today shows the pattern session "Push" (virtual) and is selected');
+ ok(card('2026-10-10').querySelector('.pl.se.s-done')&&card('2026-10-11').querySelector('.pl.se.s-doing')&&card('2026-10-09').querySelector('.pl.se.s-doing')&&['2026-10-06','2026-10-07','2026-10-08'].every(k=>card(k).classList.contains('rest')),'past dates show stored sessions only (one finished, two unfinished logs in progress); the rest are empty');
+ ok(JSON.stringify(Object.keys(wk().days).sort())==='["2026-10-09","2026-10-10","2026-10-11"]','a virtual session is not stored while untouched');
+ // volume of the window = done (past) + planned (today and later)
+ ok(rowVal('Mid and lower chest')===5&&rowVal('Quadriceps')===2&&rowVal('Lats')===0,'window volume: today\'s planned bench 5 sets, the finished squat counts the 2 sets done (not 3), the pull-up of Fri, started but with nothing done, adds nothing ('+rowVal('Mid and lower chest')+', '+rowVal('Quadriceps')+', '+rowVal('Lats')+')');
+ ok(bal('who').dataset.v==='73'&&bal('str').dataset.sets==='7','balance: done run 28 min (actual) + planned easy run 45 min = 73; strength 5 + 2 sets');
+ // opening a finished session of a past date in the Today view
+ pickDate('2026-10-10');
+ ok(scNames()==='Legs'&&/done/.test(sc()[0].querySelector('.schip').textContent)&&/View/.test(btn(sc()[0],'train').textContent),'selecting a past date lists its session: Legs, done, "View"');
+ btn(sc()[0],'train').click();
+ ok(!q('#td').hidden&&/^Saturday 10 October$/.test(q('#tdDate').textContent)&&q('#tdTitle').textContent==='Legs'&&q('#tdProg').textContent.replace(/\s+/g,' ').trim()==='2 / 3 sets'&&q('#tdFinish').textContent==='Close','Today view on a past session: its own date (no "Today"), 2 / 3 sets, Close');
+ q('#tdClose').click();
+ // ---- the window: +-1 / +-7 days, date input, Last / Next 7 days, persistence only when moved ----
+ q('[data-win="1"]').click();
+ ok(dates()[0]==='2026-10-07'&&dates()[6]==='2026-10-13'&&q('#winDate').value==='2026-10-07'&&JSON.parse(w.localStorage.getItem('aom.win.v1'))==='2026-10-07'&&!/ending today/.test(q('#winLbl').textContent),'forward 1 day: 7..13 Oct, stored in aom.win.v1');
+ q('[data-win="-7"]').click();
+ ok(dates()[0]==='2026-09-30'&&dates()[6]==='2026-10-06'&&JSON.parse(w.localStorage.getItem('aom.win.v1'))==='2026-09-30','back 7 days: 30 Sep..6 Oct');
+ ok(card('2026-10-05').classList.contains('rest')&&scNames()==='','a past Monday has no pattern session (past dates show stored sessions only); the selection stays inside the window ('+q('#dayLbl').textContent+')');
+ q('#winDate').value='2026-10-01';ev(q('#winDate'),'change');
+ ok(dates()[0]==='2026-10-01'&&JSON.parse(w.localStorage.getItem('aom.win.v1'))==='2026-10-01','the date input sets the first day of the window');
+ q('#winDate').value='';ev(q('#winDate'),'change');
+ ok(dates()[0]==='2026-10-01','an empty date is ignored');
+ q('#winNext').click();
+ ok(dates().join()===[0,1,2,3,4,5,6].map(k=>D(k)).join()&&JSON.parse(w.localStorage.getItem('aom.win.v1'))===TODAY&&q('#dayLbl').textContent.includes('Monday 12 October'),'"Next 7 days": the window starts today (stored), today selected');
+ q('#winLast').click();
+ ok(dates()[6]===TODAY&&w.localStorage.getItem('aom.win.v1')===null&&/ending today/.test(q('#winLbl').textContent),'"Last 7 days": back to the default window; the stored start is removed');
+ // ---- pattern sessions on future dates are virtual until touched ----
+ q('#winNext').click();
+ ok(['2026-10-12','2026-10-14','2026-10-15'].every(k=>card(k).querySelector('.pl.se.s-planned'))&&/Push/.test(card('2026-10-12').textContent)&&/Legs/.test(card('2026-10-14').textContent)&&/Pull/.test(card('2026-10-15').textContent)&&!card('2026-10-13').querySelector('.pl.se'),'Next 7 days: Push on Mon, Legs on Wed, Pull on Thu (from the pattern)');
+ ok(JSON.stringify(Object.keys(wk().days).sort())==='["2026-10-09","2026-10-10","2026-10-11"]','... and still nothing is stored for them');
+ const patBefore=JSON.stringify(wk().pattern),tplBefore=JSON.stringify(tpls());
+ pickDate('2026-10-14');
+ ok(scNames()==='Legs'&&/weekly pattern/.test(sc()[0].textContent)&&qa('#plan .prow').length===1&&q('#plan .step span').textContent==='3 sets','Wed: the session "Legs" from the pattern, 3 sets');
+ q('#plan [data-inc="0"]').click();
+ {const S=raw('2026-10-14');
+  ok(S.length===1&&S[0].id&&S[0].pid===wk().pattern[1].id&&S[0].tid===tpls()[1].id&&S[0].items[0].sets===4&&S[0].name==='Legs','editing the generated session stores it (with its pattern id): 4 sets');
+  ok(JSON.stringify(wk().pattern)===patBefore&&JSON.stringify(tpls())===tplBefore&&tpls()[1].items[0].sets===3,'... and changes neither the template nor the pattern');}
+ q('[data-win="7"]').click();pickDate('2026-10-21');
+ ok(scNames()==='Legs'&&q('#plan .step span').textContent==='3 sets'&&raw('2026-10-21').length===0,'a week later the pattern still generates Legs with the template\'s 3 sets (virtual, not stored)');
+ q('[data-win="-7"]').click();
+ // removing a virtual session leaves a tombstone
+ pickDate('2026-10-15');
+ ok(scNames()==='Pull','Thu: Pull (virtual)');
+ btn(sc()[0],'rm').click();
+ {const S=raw('2026-10-15');
+  ok(S.length===1&&S[0].status==='removed'&&S[0].pid===wk().pattern[2].id&&!S[0].id&&scNames()===''&&card('2026-10-15').classList.contains('rest'),'removing a pattern session stores a tombstone {pid, status:"removed"}; the date is empty');}
+ q('[data-win="7"]').click();q('[data-win="-7"]').click();
+ ok(scNames()===''&&raw('2026-10-15').length===1,'it does not come back when the window moves away and back');
+ // moving a pattern session to another date
+ pickDate('2026-10-14');
+ {const I=sc()[0].querySelector('[data-sdate]');I.value='2026-10-16';ev(I,'change');}
+ ok(sess('2026-10-16').length===1&&sess('2026-10-16')[0].pid===wk().pattern[1].id&&sess('2026-10-16')[0].items[0].sets===4&&raw('2026-10-14').length===1&&raw('2026-10-14')[0].status==='removed'&&/Moved Legs to Fri 16 Oct/.test(q('#dayMsg').textContent),'moving a session to another date keeps its edits and leaves a tombstone on the old date ('+q('#dayMsg').textContent+')');
+ ok(card('2026-10-14').classList.contains('rest')&&/Legs/.test(card('2026-10-16').textContent),'the strip follows: Wed empty, Fri has Legs');
+ // skipping a session removes it from the volume; unskip brings it back
+ pickDate('2026-10-12');
+ ok(rowVal('Mid and lower chest')===5,'Mon: Push (virtual) counts: bench 5 sets');
+ btn(sc()[0],'skip').click();
+ {const S=sess('2026-10-12');
+  ok(S.length===1&&S[0].status==='skipped'&&S[0].pid&&rowVal('Mid and lower chest')===0&&card('2026-10-12').querySelector('.pl.se.s-skipped')&&card('2026-10-12').classList.contains('rest')&&/Unskip/.test(sc()[0].textContent),'Skip stores the session as skipped: it adds nothing to the 7 days, the chip is struck through, the button says Unskip');}
+ btn(sc()[0],'skip').click();
+ ok(sess('2026-10-12')[0].status==='planned'&&rowVal('Mid and lower chest')===5,'Unskip brings it back');
+ // several sessions on one date
+ q('#addTpl').value=tpls()[2].id;ev(q('#addTpl'),'change');q('#addSess').click();
+ ok(sc().length===2&&scNames()==='Push|Pull'&&sess('2026-10-12').length===2&&sess('2026-10-12')[1].tid===tpls()[2].id&&sess('2026-10-12')[1].items[0].n==='Pull-up'&&!sess('2026-10-12')[1].pid,'"+ Add session" with a template adds a second session to the date (a copy of the template, no pattern id)');
+ ok(rowVal('Mid and lower chest')===5&&rowVal('Lats')===4&&qa('#wstrip [data-day="0"] .pl.se').length===2,'both sessions of the date count in the 7 days (bench 5 + pull-up 4 sets) and show as two chips');
+ ok(sc()[1].classList.contains('sel')&&q('#edLbl').textContent.includes('Pull'),'the new session is the one being edited');
+ btn(sc()[0],'edit').click();
+ ok(sc()[0].classList.contains('sel')&&q('#edLbl').textContent.includes('Push')&&q('#plan .exlink').textContent==='Barbell bench press','"Edit" switches the editor between the sessions of a date');
+ addEx('Overhead press');
+ ok(sess('2026-10-12')[0].items.some(p=>p.n==='Overhead press')&&!sess('2026-10-12')[1].items.some(p=>p.n==='Overhead press'),'adding an exercise goes to the session being edited');
+ // ---- carry-over from the three dates before the window ----
+ q('#winDate').value='2026-10-13';ev(q('#winDate'),'change');
+ ok(dates()[0]==='2026-10-13'&&!card('2026-10-13').classList.contains('warn'),'window starts Tue 13 Oct: no conflict yet');
+ addEx('Barbell bench press');
+ ok(card('2026-10-13').classList.contains('warn')&&/Mid and lower chest/.test(q('#plan .prow small.warn').textContent)&&/still recovering from Mon 12 Oct/.test(q('#plan .prow small.warn').textContent),'bench on Tue is flagged because of the bench on Mon, the day BEFORE the window: "'+q('#plan .prow small.warn').textContent+'"');
+ q('#ovOpen').click();
+ ok(+q('#ovGrid tr.g[data-g="1"] .cb[data-d="0"]').dataset.f>0&&q('#ovGrid tr.g[data-g="1"] .cb[data-d="0"]').dataset.c==='1'&&/Mon 12 Oct/.test(q('#ovGrid tr.g[data-g="1"] .cb[data-d="0"]').title),'the overview carries the fatigue of Mon into the first column ('+q('#ovGrid tr.g[data-g="1"] .cb[data-d="0"]').title+')');
+ q('#ovClose').click();
+ // ---- save changes to template / as new template ----
+ pickDate('2026-10-16');
+ ok(!q('#saveTpl').disabled&&scNames()==='Legs','Fri: the moved Legs session is linked to its template, "Save changes to template" is enabled');
+ q('#winNext').click();pickDate('2026-10-16');
+ addEx('Leg press');
+ ok(tpls()[1].items.length===1&&sess('2026-10-16')[0].items.length===2,'a session edit does not touch the template');
+ q('#saveTpl').click();
+ ok(tpls()[1].items.length===2&&tpls()[1].items[1].n==='Leg press'&&/Template “Legs” updated/.test(q('#dayMsg').textContent),'"Save changes to template" copies the session into the template');
+ q('[data-win="7"]').click();pickDate('2026-10-21');
+ ok(qa('#plan .prow').length===2&&/Leg press/.test(q('#plan').textContent)&&raw('2026-10-21').length===0,'later pattern sessions use the new template (Wed 21 Oct has Leg press), still virtual');
+ q('#winNext').click();pickDate('2026-10-16');
+ q('#saveNewTpl').click();
+ ok(tpls().length===4&&tpls()[3].name==='Legs 2'&&tpls()[3].items.length===2&&sess('2026-10-16')[0].tid===tpls()[3].id,'"Save as new template" creates "Legs 2" and links the session to it');
+ // ---- templates section ----
+ ok(qa('#tplList .trow').length===4&&/Legs 2/.test(q('#tplList').textContent)&&/2 exercises, 6 sets|2 exercises/.test(q('#tplList .trow:nth-child(2) small').textContent),'template list: name and contents summary ('+q('#tplList .trow:nth-child(2) small').textContent+')');
+ q('#tplNew').click();
+ ok(tpls().length===5&&tpls()[4].name==='New template'&&/Editing template/.test(q('#edLbl').textContent)&&!q('#edBack').hidden&&q('#edSave').hidden&&/template/.test(q('#qa').placeholder),'"+ New template" creates one and opens it in the editor');
+ addEx('Hip thrust');
+ ok(tpls()[4].items.length===1&&tpls()[4].items[0].n==='Hip thrust'&&sess('2026-10-16')[0].items.length===2,'exercises added while editing a template go into the template only');
+ q('#tplList .trow:nth-child(5) [data-tact="ren"]').click();q('#tplIn').value='Glutes';q('#tplIn').dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));
+ ok(tpls()[4].name==='Glutes'&&/Glutes/.test(q('#edLbl').textContent),'a template can be renamed');
+ q('#edBack').click();
+ ok(!/Editing template/.test(q('#edLbl').textContent),'"Done editing" returns to the session');
+ q('#tplList .trow:nth-child(5) [data-tact="dup"]').click();
+ ok(tpls().length===6&&tpls()[5].name==='Glutes 2'&&tpls()[5].items[0].n==='Hip thrust','duplicate: "Glutes 2"');
+ q('#tplList .trow:nth-child(6) [data-tact="del"]').click();
+ ok(tpls().length===5&&confirms.length===0,'deleting an unused template asks nothing');
+ q('#tplList .trow:nth-child(5) [data-tact="use"]').click();
+ ok(sess('2026-10-16').length===2&&sess('2026-10-16')[1].name==='Glutes'&&sess('2026-10-16')[1].tid===tpls()[4].id,'"Add to <date>" puts a copy of the template on the selected date');
+ answer=false;q('#tplList .trow:nth-child(2) [data-tact="del"]').click();
+ ok(tpls().length===5&&wk().pattern.length===3&&confirms.length===1&&/pattern/.test(confirms[0]),'deleting a template used by the pattern asks first ('+confirms[0]+'); "cancel" keeps everything');
+ answer=true;q('#tplList .trow:nth-child(2) [data-tact="del"]').click();
+ ok(tpls().length===4&&wk().pattern.length===2&&wk().pattern.every(p=>tpls().some(t=>t.id===p.tid))&&sess('2026-10-16').length===2,'after confirming, the template and its pattern rows are gone; sessions already on the calendar stay');
+ // ---- weekly pattern editor ----
+ ok(qa('#patList .prw').length===2&&qa('#patPrev li').length===14,'pattern editor: one row per entry, preview of 14 days');
+ q('#patAdd').click();
+ {const rows=qa('#patList .prw'),r=rows[rows.length-1];
+  ok(rows.length===3&&r.querySelectorAll('[data-pwd]').length===7&&[...r.querySelectorAll('[data-pwd]')].every(b=>b.getAttribute('aria-pressed')==='false')&&wk().pattern[2].from===TODAY&&wk().pattern[2].wd.length===0,'"+ Add to pattern": a row with seven weekday chips, no weekday, from today');
+  qa('#patList .prw')[2].querySelector('[data-pwd="1"]').click();qa('#patList .prw')[2].querySelector('[data-pwd="4"]').click();
+  const p=wk().pattern[2];
+  ok(p.wd.join()==='1,4'&&qa('#patList .prw')[2].querySelector('[data-pwd="1"]').getAttribute('aria-pressed')==='true','weekday chips toggle ('+p.wd.join()+')');
+  const sel=qa('#patList .prw')[2].querySelector('[data-pf="tid"]');sel.value=tpls()[2].id;ev(sel,'change');
+  ok(wk().pattern[2].tid===tpls()[2].id,'the template of a row can be changed');}
+ {const pv=qa('#patPrev li');
+  ok(pv[1].textContent.includes('Tue 13 Oct')&&/Glutes|Pull|Legs|Push/.test(pv[1].textContent)&&pv[0].classList.contains('today'),'the preview lists the pattern sessions of the next 14 days ('+pv[1].textContent+')');}
+ {const r=qa('#patList .prw')[2],f=r.querySelector('[data-pf="until"]');f.value='2026-10-20';ev(f,'change');
+  ok(wk().pattern[2].until==='2026-10-20','"until" is stored');
+  f.value='2026-10-01';ev(f,'change');
+  ok(wk().pattern[2].until==='2026-10-20','an "until" before "from" is refused');}
+ // the new row (template "Legs 2", Tue + Fri, from today until Tue 20 Oct) generates virtual sessions until its end date
+ q('#winNext').click();q('[data-win="7"]').click();
+ {const pid=wk().pattern[2].id,nm=tpls()[2].name;
+  ok(nm==='Legs 2'&&raw('2026-10-20').length===0&&card('2026-10-20').querySelector('.pl.se.s-planned')&&card('2026-10-20').textContent.includes(nm),'the new row puts its template on Tue 20 Oct (virtual, nothing stored)');
+  ok(!card('2026-10-23').querySelector('.pl.se'),'... and not on Fri 23 Oct: after its "until" date it stops');
+  qa('#patList .prw')[2].querySelector('[data-pact="rm"]').click();
+  ok(wk().pattern.length===2&&!wk().pattern.some(p=>p.id===pid)&&!card('2026-10-20').querySelector('.pl.se'),'removing the row removes its sessions from the calendar');}
+ // ---- gap filler: only dates from today on ----
+ q('#winLast').click();
+ {const goal=g=>{q('#goalSel').value=g;ev(q('#goalSel'),'change');};goal('maintain');
+  const sd=qa('#sug li.sg [data-sadd]').map(b=>b.dataset.sday);
+  ok(sd.length>=1&&sd.every(x=>x==='6'),'window ending today: suggestions can only go to today (slot 6): '+sd.join());
+  q('[data-win="-7"]').click();q('[data-win="-7"]').click();
+  ok(qa('#sug li.sg [data-sadd]').length>=1&&qa('#sug li.sg [data-sadd]').every(b=>b.disabled&&b.dataset.sday==='-1')&&/Move the window forward to plan ahead/.test(q('#sug').textContent),'a window in the past: "Move the window forward to plan ahead", no add button works');
+  goal('hyp8');q('#winLast').click();}
+ // ---- import of a backup from before the calendar drops the calendar keys so that the migration runs again ----
+ {const fin=q('#importFile');let fileTxt='';Object.defineProperty(fin,'files',{configurable:true,get:()=>[{text:async()=>fileTxt}]});
+  const imp=async t=>{fileTxt=t;fin.dispatchEvent(new w.Event('change',{bubbles:true}));await sleep(50);};
+  await imp(JSON.stringify({app:'atlas-of-motion',format:1,data:{'aom.plan.v3':P3}}));
+  ok(w.localStorage.getItem('aom.cal.v1')===null&&w.localStorage.getItem('aom.tpl.v1')===null&&w.localStorage.getItem('aom.win.v1')===null&&w.localStorage.getItem('aom.plan.v3')===P3,'importing a backup without aom.cal.v1 removes the calendar keys, so the next start migrates the old plan');
+  await sleep(600);delete fin.files;}
+ w.close();
+}
 async function migrateRun(){
- const m=boot({store:{'aom.plan.v2':JSON.stringify([{n:'Back squat',sets:4,v:['Wide','']},{n:'Hip thrust',sets:2},{n:'Removed exercise',sets:3}])}}),md=m.document;
+ const m=boot({win:TODAY,store:{'aom.plan.v2':JSON.stringify([{n:'Back squat',sets:4,v:['Wide','']},{n:'Hip thrust',sets:2},{n:'Removed exercise',sets:3}])}}),md=m.document;
  await waitFor(()=>!md.getElementById('loading'),60000,'migration instance');
- const ls=k=>m.localStorage.getItem(k),v3=JSON.parse(ls('aom.plan.v3')||'null');
- ok(v3&&v3.days.length===7&&v3.days[0].items.length===2&&v3.days[0].items[0].n==='Back squat'&&v3.days[0].items[0].sets===4&&JSON.stringify(v3.days[0].items[0].v)==='["Wide",""]'&&v3.days.slice(1).every(x=>x.items.length===0),'aom.plan.v2 entries land in Day 1 of aom.plan.v3 (unknown exercise dropped)');
- ok(ls('aom.plan.v2')===null,'aom.plan.v2 removed after migration');
- ok(md.querySelectorAll('#plan .prow').length===2&&md.querySelector('#plan').textContent.includes('Wide')&&md.querySelector('#wstrip [data-day="0"]').textContent.includes('6')&&md.querySelectorAll('#wstrip .rest').length===6,'migrated plan shows in Day 1 (6 sets), six rest days');
- // reload with the v3 data: names and several days survive
- const w2=boot({store:{'aom.plan.v3':JSON.stringify({days:[{name:'Push',items:[{n:'Barbell bench press',sets:5,v:['']}]},{name:'',items:[]},{name:'Legs',items:[{n:'Back squat',sets:3,v:['Wide','Deep']}]}]})}}),d2=w2.document;
- await waitFor(()=>!d2.getElementById('loading'),60000,'v3 reload instance');
- ok(d2.querySelector('#wstrip [data-day="0"]').textContent.startsWith('Push')&&d2.querySelector('#wstrip [data-day="1"]').textContent.startsWith('Day 2')&&d2.querySelector('#wstrip [data-day="2"]').textContent.startsWith('Legs')&&d2.querySelectorAll('#wstrip [data-day]').length===7,'stored names restored (empty -> "Day 2"), missing days padded to seven');
+ const ls=k=>m.localStorage.getItem(k),T=JSON.parse(ls('aom.tpl.v1')||'[]'),C=JSON.parse(ls('aom.cal.v1')||'null');
+ ok(T.length===1&&T[0].name==='Day 1'&&T[0].items.length===2&&T[0].items[0].n==='Back squat'&&T[0].items[0].sets===4&&JSON.stringify(T[0].items[0].v)==='["Wide",""]'&&T[0].items[1].n==='Hip thrust','aom.plan.v2 entries become the template "Day 1" (unknown exercise dropped)');
+ ok(C&&C.pattern.length===1&&C.pattern[0].wd.join()==='0'&&C.pattern[0].from===TODAY&&Object.keys(C.days).length===0,'... played on Mondays from the Monday of this week');
+ ok(ls('aom.plan.v2')!==null&&ls('aom.plan.v3')===null,'aom.plan.v2 stays where it was (only read), no aom.plan.v3 is written any more');
+ ok(md.querySelectorAll('#plan .prow').length===2&&md.querySelector('#plan').textContent.includes('Wide')&&md.querySelector('#wstrip [data-day="0"]').textContent.includes('6 sets')&&md.querySelectorAll('#wstrip .rest').length===6,'migrated plan shows on Monday (6 sets), six rest days');
+ // reload with calendar data: several templates and weekdays survive
+ const w2=boot({win:TODAY,store:{'aom.tpl.v1':JSON.stringify([{id:'t1',name:'Push',items:[{n:'Barbell bench press',sets:5,v:[''],o:0}],ses:[]},{id:'t2',name:'Legs',items:[{n:'Back squat',sets:3,v:['Wide','Deep'],o:0}],ses:[]}]),'aom.cal.v1':JSON.stringify({v:1,mig:1,seq:2,pattern:[{id:'p1',tid:'t1',wd:[0],from:TODAY},{id:'p2',tid:'t2',wd:[2],from:TODAY}],days:{}})}}),d2=w2.document;
+ await waitFor(()=>!d2.getElementById('loading'),60000,'calendar reload instance');
+ ok(d2.querySelector('#wstrip [data-day="0"]').textContent.includes('Push')&&d2.querySelector('#wstrip [data-day="2"]').textContent.includes('Legs')&&d2.querySelectorAll('#wstrip [data-day]').length===7&&d2.querySelector('#migNote').hidden,'stored templates and pattern restored: Push on Monday, Legs on Wednesday, no notice');
  d2.querySelector('#wstrip [data-day="2"]').click();
- ok(d2.querySelector('#plan').textContent.includes('Back squat')&&d2.querySelector('#plan').textContent.includes('Wide, Deep'),'Day 3 holds Back squat (Wide, Deep)');
+ ok(d2.querySelector('#plan').textContent.includes('Back squat')&&d2.querySelector('#plan').textContent.includes('Wide, Deep'),'Wednesday holds Back squat (Wide, Deep)');
+ // the migration only runs when aom.cal.v1 is absent
+ w2.close();m.close();
 }
 // ---- quality levels (main desktop instance) ----
 // ---- licence groundwork (Pro): offline ECDSA P-256 keys, tools/license.js CLI, the Pro & licence panel. Nothing is gated yet. Uses a TEST key pair only. ----
@@ -1118,52 +1316,62 @@ async function phoneRun(){
  await waitFor(()=>lodOn(pd)==='high',30000,'phone High');
  lodBtn(pd,'low').click();await waitFor(()=>lodOn(pd)==='low',30000,'phone back to Low');
  ok(pq('#lodNote').textContent==='','phone: note cleared again on Low');
- // training days + week overview on the phone: the overlay covers the viewport and the sheet; the gap block starts collapsed
- pq('[data-tab="wk"]').click();pq('#qa').value='barbell bench';pq('#qa').dispatchEvent(new p.Event('input',{bubbles:true}));
+ // calendar + week overview on the phone: the overlay covers the viewport and the sheet; the gap block starts collapsed
+ const psw=n=>pq('#wstrip [data-day="'+n+'"]'),pdk=n=>addDays(TODAY,n),psess=dk=>((JSON.parse(p.localStorage.getItem('aom.cal.v1')||'null')||{days:{}}).days[dk]||[]).filter(x=>x.id);
+ pq('[data-tab="wk"]').click();
+ ok(pqa('#wstrip [data-day]').length===7&&pq('#winbar')&&pqa('#winbar button').length===4&&pq('#winNext')&&pq('#winLast')&&pq('#addSess')&&pq('#wstrip').scrollWidth>=0,'phone: the Workout tab has the window bar (4 arrows, date input, Last/Next 7 days), the date strip and "+ Add session"');
+ pq('#winNext').click();
+ ok(pqa('#wstrip [data-day]').map(b=>b.dataset.date).join()===[0,1,2,3,4,5,6].map(pdk).join()&&pq('#dayLbl').textContent.includes('Monday 12 October'),'phone: "Next 7 days" starts the window today');
+ pq('#qa').value='barbell bench';pq('#qa').dispatchEvent(new p.Event('input',{bubbles:true}));
  pqa('#addres [data-add]').find(b=>b.firstChild.textContent.trim()==='+ Barbell bench press').click();
- pq('#wstrip [data-day="1"]').click();pq('#qa').value='barbell bench';pq('#qa').dispatchEvent(new p.Event('input',{bubbles:true}));
+ ok(pqa('#sessList .scard').length===1&&psess(pdk(0)).length===1&&pq('#sessList .strain')&&/Start/.test(pq('#sessList .strain').textContent),'phone: adding an exercise creates a session on the selected date; its card has "▶ Start"');
+ psw(1).click();pq('#qa').value='barbell bench';pq('#qa').dispatchEvent(new p.Event('input',{bubbles:true}));
  pqa('#addres [data-add]').find(b=>b.firstChild.textContent.trim()==='+ Barbell bench press').click();
- ok(pqa('#wstrip [data-day]').length===7&&pq('#wstrip [data-day="1"]').classList.contains('warn'),'phone: week strip with a conflict marker on Day 2');
+ ok(pqa('#wstrip [data-day]').length===7&&psw(1).classList.contains('warn'),'phone: date strip with a conflict marker on Tue');
  ok(pq('#sugMore')&&!pq('#sugMore').open,'phone: "More options" starts collapsed');
  pq('#ovOpen').click();
  ok(!pq('#ov').hidden&&pq('#vp').contains(pq('#ov'))&&pqa('#ovGrid tr.g').length===27&&pqa('#ovGrid tr.g').every(r=>r.querySelectorAll('.cb').length===7),'phone: the overview opens (full-screen overlay in the viewport) with the 27 x 7 grid');
  ok(pq('#ovGrid tr.g[data-g="1"] .cb[data-d="1"]').dataset.c==='1'&&/Recovery conflicts <b>1<\/b>/.test(pq('#ovSum').innerHTML),'phone: the conflict cell is flagged');
  // phone: the Schedule board is the default view; columns render (swipeable), the add slot and the "Move to…" fallback work
  const pcols=()=>pqa('#ovBoard .bcol'),pcards=dd=>pqa('#ovBoard .bcol[data-d="'+dd+'"] .bcard[data-d]');
- ok(!pq('#ovSch').hidden&&pq('#ovMus').hidden&&pcols().length===7&&pcards(0).length===1&&pcards(1).length===1&&pq('#ovBoard .bcol[data-d="1"] .bw'),'phone: the overview opens on the Schedule board with 7 day columns, cards and the Day 2 conflict marker');
+ ok(!pq('#ovSch').hidden&&pq('#ovMus').hidden&&pcols().length===7&&pcards(0).length===1&&pcards(1).length===1&&pq('#ovBoard .bcol[data-d="1"] .bw'),'phone: the overview opens on the Schedule board with 7 date columns, cards and the Tue conflict marker');
  pq('#ovBoard .bslot.end[data-d="3"]').click();
  ok(!!pq('#bpq')&&pq('#ovBoard .bcol[data-d="3"] .bpick'),'phone: the add slot opens the inline picker');
  pq('#bpq').value='back squat';pq('#bpq').dispatchEvent(new p.Event('input',{bubbles:true}));
  pqa('#bpr [data-bact="pick"]').find(b=>/Back squat/.test(b.textContent)).click();
- ok(pcards(3).length===1&&pcards(3)[0].querySelector('.bnm').textContent==='Back squat'&&!pq('.bpick'),'phone: picking an exercise adds it to that day');
+ ok(pcards(3).length===1&&pcards(3)[0].querySelector('.bnm').textContent==='Back squat'&&!pq('.bpick')&&psess(pdk(3)).length===1,'phone: picking an exercise adds it to that date (a new session)');
  const pmv=pcards(1)[0].querySelector('select.bmv');pmv.value='4';pmv.dispatchEvent(new p.Event('change',{bubbles:true}));
- ok(pcards(4).length===1&&pcards(1).length===0&&!pq('#wstrip [data-day="2"]').classList.contains('warn')&&!pq('#wstrip [data-day="1"]').classList.contains('warn'),'phone: the "Move to…" select moves a card and clears the conflict');
+ ok(pcards(4).length===1&&pcards(1).length===0&&!psw(2).classList.contains('warn')&&!psw(1).classList.contains('warn'),'phone: the "Move to…" select moves a card and clears the conflict');
  pcards(4)[0].querySelector('[data-bact="rm"]').click();pcards(3)[0].querySelector('[data-bact="rm"]').click();
  pq('#ovBoard .bslot.end[data-d="1"]').click();pq('#bpq').value='bench';pq('#bpq').dispatchEvent(new p.Event('input',{bubbles:true}));
  pqa('#bpr [data-bact="pick"]').find(b=>/Barbell bench press/.test(b.textContent)).click();
- ok(pcards(1).length===1&&pq('#wstrip [data-day="1"]').classList.contains('warn'),'phone: bench back on Day 2, conflict flagged again');
+ ok(pcards(1).length===1&&psw(1).classList.contains('warn'),'phone: bench back on Tue, conflict flagged again');
  // endurance on the phone: add form in the sheet, pill on the card, endurance row + balance cards in the full-screen overview
  pq('#ovClose').click();
  pq('#endOpen').click();const ps=(id,v)=>{pq(id).value=v;pq(id).dispatchEvent(new p.Event('change',{bubbles:true}));};
  ps('#endAct','muaythai');pq('#endAdd').click();
- ok(pqa('#ses .srow').length===1&&pq('#wstrip [data-day="1"]').textContent.includes('Thai 8×3′')&&pq('#endForm').hidden,'phone: Muay Thai session added through the form, pill on the Day 2 card');
+ ok(pqa('#ses .srow').length===1&&psw(1).textContent.includes('Thai 8×3′')&&pq('#endForm').hidden,'phone: Muay Thai session added through the form, pill on the Tue card');
  pq('#ovOpen').click();
- ok(pqa('#ovGrid tr.er .eb').length===7&&pq('#ovGrid tr.er .eb[data-d="1"]').dataset.m==='90'&&pq('#ovBal [data-b="vo2"]').dataset.v==='1'&&pqa('#ovBal .bc').length===4&&pq('#ovBal').closest('.ovscroll'),'phone: overview shows the endurance row (90 min on Day 2) and the four balance cards');
+ ok(pqa('#ovGrid tr.er .eb').length===7&&pq('#ovGrid tr.er .eb[data-d="1"]').dataset.m==='90'&&pq('#ovBal [data-b="vo2"]').dataset.v==='1'&&pqa('#ovBal .bc').length===4&&pq('#ovBal').closest('.ovscroll'),'phone: overview shows the endurance row (90 min on Tue) and the four balance cards');
  pq('#ovClose').click();
  pq('#ses [data-srm="0"]').click();
  ok(pqa('#ses .srow').length===0,'phone: session removed again');
  ok(pq('#ov').hidden&&sheet()!==undefined&&!!pq('#side'),'phone: "Show body" closes the overview, the sheet is untouched');
  pq('#ovOpen').click();pd.dispatchEvent(new p.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
  ok(pq('#ov').hidden,'phone: Escape closes the overview');
- // training log on the phone: the Today view opens over everything, inputs are numeric, typing marks a set done and saves it
- pq('[data-tab="wk"]').click();pq('#wstrip [data-day="1"]').click();pq('#trainBtn').click();
- const ptd=pq('#td'),tkey=(()=>{const t=new p.Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');})();
- ok(!ptd.hidden&&pq('#vp').contains(ptd)&&ptd.classList.contains('ov')&&pqa('#tdBody .tx').length>=1&&pqa('#tdBody .tset input[data-f="r"]').every(i=>i.getAttribute('inputmode')==='numeric')&&pqa('#tdBody .tset input[data-f="w"]').every(i=>i.getAttribute('inputmode')==='decimal'),'phone: Start training opens the Today view with numeric reps/weight inputs');
+ // a second session on the Tue date from the bottom sheet
+ pq('[data-tab="wk"]').click();psw(1).click();pq('#addSess').click();
+ ok(pqa('#sessList .scard').length===2&&pqa('#wstrip [data-day="1"] .pl.se').length===2,'phone: "+ Add session" adds a second session to the date, both show as chips on the card');
+ pq('#sessList .scard.sel [data-sact="rm"]').click();
+ // training on the phone: the Today view opens over everything, inputs are numeric, typing marks a set done and saves it
+ pq('[data-tab="wk"]').click();psw(1).click();pq('#sessList .strain').click();
+ const ptd=pq('#td'),tkey=pdk(1);
+ ok(!ptd.hidden&&pq('#vp').contains(ptd)&&ptd.classList.contains('ov')&&pqa('#tdBody .tx').length>=1&&pqa('#tdBody .tset input[data-f="r"]').every(i=>i.getAttribute('inputmode')==='numeric')&&pqa('#tdBody .tset input[data-f="w"]').every(i=>i.getAttribute('inputmode')==='decimal'),'phone: Start opens the Today view with numeric reps/weight inputs');
  const pr=pq('#tdBody .tset input[data-f="r"]');pr.value='9';pr.dispatchEvent(new p.Event('input',{bubbles:true}));
- const plg=JSON.parse(p.localStorage.getItem('aom.log.v1'));
- ok(/^1 \/ \d+ sets/.test(pq('#tdProg').textContent.trim())&&plg[tkey]&&plg[tkey].d===1&&plg[tkey].ex[0].sets[0].r===9&&plg[tkey].ex[0].sets[0].done===true,'phone: typing reps marks the set done and saves it under today\'s date');
+ const plg=psess(tkey);
+ ok(/^1 \/ \d+ sets/.test(pq('#tdProg').textContent.trim())&&plg.length===1&&plg[0].lg.ex[0].sets[0].r===9&&plg[0].lg.ex[0].sets[0].done===true,'phone: typing reps marks the set done and saves it in the session of that date');
  pd.dispatchEvent(new p.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
- ok(ptd.hidden&&/\d+\/\d+/.test(pq('#wstrip [data-day="1"] .pl.pd').textContent),'phone: Escape closes the Today view, the Day 2 card shows the progress mark');
+ ok(ptd.hidden&&/Bench|Session/.test(psw(1).textContent)&&psw(1).querySelector('.pl.se.s-doing'),'phone: Escape closes the Today view, the Tue card shows the session in progress');
  p.__setPhone(false);
  ok(card.parentNode===pq('#vp')&&!side.classList.contains('has-card')&&!card.classList.contains('mini'),'phone->desktop: card moves back over the viewport');
  ok(pq('#hint').textContent.includes('right-drag')&&p.__dpr===2,'phone->desktop: mouse hint text restored, pixel ratio cap back to 2');
@@ -1200,7 +1408,7 @@ async function endRun(){
  // ---- UI ----
  const sel=(id,v)=>{q(id).value=v;ev(q(id),'change');};
  const addSes=(a,k,m)=>{ if(q('#endForm').hidden) q('#endOpen').click(); sel('#endAct',a); if(k) sel('#endKind',k); if(m){ sel('#endMin',m); } q('#endAdd').click(); };
- const sesOf=i=>days()[i].items.filter(p=>p.t==='e');
+ const sesOf=i=>[].concat(...sess(D(i)).map(x=>x.ses));
  const bal=b=>q('#bal [data-b="'+b+'"]'),zoneMin=z=>+q('#bal .zleg [data-z="'+z+'"]').dataset.m;
  const rowVal=n=>{const r=qa('#volsum tr').find(r=>r.cells[0].textContent.trim()===n);return r?parseFloat(r.cells[2].textContent):NaN;};
  w.localStorage.removeItem('aom.hr.v1');
@@ -1209,24 +1417,24 @@ async function endRun(){
  ok(bal('who').dataset.v==='0'&&bal('vo2').dataset.v==='0'&&/Add an endurance session/.test(bal('who').textContent)&&zoneMin(2)===0,'balance panel starts empty');
  // easy run, 45 min, on Day 2
  selDay(1);q('#endOpen').click();
- ok(!q('#endForm').hidden&&q('#endAct').value==='running'&&q('#endKind').value==='easy'&&q('#endMin').value==='45'&&q('#endAdd').textContent==='Add to Day 2','form defaults: Running, Easy, 45 min, "Add to Day 2"');
+ ok(!q('#endForm').hidden&&q('#endAct').value==='running'&&q('#endKind').value==='easy'&&q('#endMin').value==='45'&&q('#endAdd').textContent==='Add to Tue 13 Oct','form defaults: Running, Easy, 45 min, "Add to Tue 13 Oct"');
  ok([...q('#endKind').options].map(o=>o.value).join()==='easy,long,tempo,vo2,hiit','kinds for a normal activity: easy, long, tempo, vo2, hiit');
  sel('#endAct','muaythai');
  ok([...q('#endKind').options].map(o=>o.value).join()==='rounds,easy'&&q('#endKind').value==='rounds'&&q('#endMin').value==='90','Muay Thai offers rounds/easy and defaults to 90 min of rounds');
  sel('#endAct','running');
  q('#endAdd').click();
- ok(JSON.stringify(sesOf(1))==='[{"t":"e","a":"running","k":"easy","min":45}]'&&days()[1].items.length===1,'session stored in aom.plan.v3 items as {t:"e",a,k,min}: '+JSON.stringify(sesOf(1)));
+ ok(JSON.stringify(sesOf(1))==='[{"a":"running","k":"easy","min":45,"o":0}]'&&itemsOf(1).length===0&&sess(D(1)).length===1,'session stored in the date session as {a,k,min,o}: '+JSON.stringify(sesOf(1)));
  ok(q('#endForm').hidden&&/Added Running/.test(q('#dayMsg').textContent),'form closes after adding, message names the activity');
  const pill=i=>dayBtn(i).querySelector('.pl.pe,.pl.pt,.pl.ph');
  ok(pill(1)&&pill(1).textContent==='Run 45′ Z2'&&pill(1).classList.contains('pe')&&!dayBtn(1).classList.contains('rest')&&dayBtn(0).classList.contains('rest'),'Day 2 card shows a teal "Run 45′ Z2" pill; other days stay rest days');
  ok(qa('#ses .srow').length===1&&q('#ses').textContent.includes('Easy')&&/Z2 · 60–70 % HRmax/.test(q('#ses').textContent),'session row shows the zone as % HRmax while no heart rate is set: '+q('#ses .sz').textContent);
- ok(/45 min endurance on Day 2/.test(q('#ses').textContent)&&q('#plan').textContent.includes('rest day so far')===false,'row footer states the day total');
+ ok(/45 min endurance in this session/.test(q('#ses').textContent)&&q('#plan').textContent.includes('rest day so far')===false,'row footer states the day total');
  ok(bal('who').dataset.v==='45'&&bal('split').dataset.easy==='100'&&bal('vo2').dataset.v==='0'&&zoneMin(2)===45&&bal('str').dataset.sets==='0','balance: 45 min Zone 2 = 45 WHO-equivalent minutes (Z2 counts as moderate), 100 % easy, no VO2max-like session');
  ok(/Below the WHO minimum/.test(bal('who').textContent)&&/Add exercises/.test(bal('str').textContent),'balance statuses: below 150, no strength yet');
  ok(/Add exercises to see your weekly volume/.test(q('#volsum').textContent)&&q('#ovBadge').textContent==='45 min','not counted as strength: the weekly table stays empty; badge "'+q('#ovBadge').textContent+'"');
  // strength unaffected by endurance
  selDay(0);addEx('Back squat');
- ok(rowVal('Quadriceps')===3&&bal('str').dataset.sets==='3'&&bal('who').dataset.v==='45'&&/^3 sets on Day 1/.test(q('#plan .fine').textContent.replace(/^1 exercise, /,'')),'strength table and gap filler inputs ignore endurance (Quadriceps 3 sets); WHO stays 45');
+ ok(rowVal('Quadriceps')===3&&bal('str').dataset.sets==='3'&&bal('who').dataset.v==='45'&&/^3 sets in this session/.test(q('#plan .fine').textContent.replace(/^1 exercise, /,'')),'strength table and gap filler inputs ignore endurance (Quadriceps 3 sets); WHO stays 45');
  // VO2max run on Day 3
  selDay(2);addSes('running','vo2');
  const v=sesOf(2)[0];
@@ -1280,7 +1488,7 @@ async function endRun(){
  selDay(3);addEx('Back squat');
  selDay(4);addSes('running','vo2');
  const m1=dayBtn(4);
- ok(m1.classList.contains('warn')&&m1.textContent.includes('⚠')&&/⚠ VO2max intervals: .*Quadriceps.* still recovering from Day 4/.test(q('#ses').textContent),'heavy legs on Day 4 + VO2max run on Day 5: warning on Day 5: '+q('#ses small.warn').textContent);
+ ok(m1.classList.contains('warn')&&m1.textContent.includes('⚠')&&/⚠ VO2max intervals: .*Quadriceps.* still recovering from Thu 15 Oct/.test(q('#ses').textContent),'heavy legs on Thu + VO2max run on Fri: warning on Fri: '+q('#ses small.warn').textContent);
  ok(!dayBtn(3).classList.contains('warn')&&/⚠ \d/.test(q('#ovBadge').textContent),'only Day 5 is flagged; the overview badge counts conflicts ('+q('#ovBadge').textContent+')');
  sel('#ses [data-sf="k"]','easy');
  ok(sesOf(4)[0].k==='easy'&&!dayBtn(4).classList.contains('warn')&&!q('#ses small.warn'),'the same run as a plain easy session: no warning');
@@ -1289,7 +1497,7 @@ async function endRun(){
  sel('#ses [data-sf="k"]','vo2');
  // a strength day after a hard endurance day is flagged on the strength row
  selDay(5);addEx('Back squat');
- ok(dayBtn(5).classList.contains('warn')&&/still recovering from Day 5/.test(q('#plan').textContent),'squats the day after the VO2max run: the strength row warns about Day 5');
+ ok(dayBtn(5).classList.contains('warn')&&/still recovering from Fri 16 Oct/.test(q('#plan').textContent),'squats the day after the VO2max run: the strength row warns about Fri 16 Oct');
  q('#plan [data-rm="0"]').click();
  // overview
  selDay(4);q('#ovOpen').click();
@@ -1301,9 +1509,9 @@ async function endRun(){
  ok(+q('#ovGrid tr.g[data-g="21"] .cb[data-d="5"]').dataset.f>0&&+q('#ovGrid tr.g[data-g="21"] .cb[data-d="5"]').dataset.n===0,'recovery trail on Day 6 includes the endurance carry-over (f '+q('#ovGrid tr.g[data-g="21"] .cb[data-d="5"]').dataset.f+')');
  ok(/Endurance load/.test(q('#ovLeg').textContent)&&/Carried-over fatigue/.test(q('#ovLeg').textContent),'legend names the endurance marker');
  q('#ovGrid tr.er .eb[data-d="4"]').click();
- ok(/Day 5 · endurance/.test(q('#ovDet').textContent)&&/Running, vo2max intervals, 40 min/.test(q('#ovDet').textContent)&&q('#ovGrid tr.er .eb[data-d="4"]').classList.contains('sel'),'clicking an endurance cell lists its sessions: '+q('#ovDet').textContent);
+ ok(/Fri 16 Oct · endurance/.test(q('#ovDet').textContent)&&/Running, vo2max intervals, 40 min/.test(q('#ovDet').textContent)&&q('#ovGrid tr.er .eb[data-d="4"]').classList.contains('sel'),'clicking an endurance cell lists its sessions: '+q('#ovDet').textContent);
  q('#ovGrid tr.g[data-g="21"] .cb[data-d="4"]').click();
- ok(/endurance: Running/.test(q('#ovDet').textContent)&&/⚠/.test(q('#ovDet').textContent)&&/Day 4/.test(q('#ovDet').textContent),'a muscle cell lists the endurance contribution and the conflict source: '+q('#ovDet').textContent.slice(0,200));
+ ok(/endurance: Running/.test(q('#ovDet').textContent)&&/⚠/.test(q('#ovDet').textContent)&&/Thu 15 Oct/.test(q('#ovDet').textContent),'a muscle cell lists the endurance contribution and the conflict source: '+q('#ovDet').textContent.slice(0,200));
  q('#ovClose').click();
  // 3D body: selected-day heatmap paints endurance-loaded muscles teal, strength colours win
  const tealRgb=new w.THREE.Color(d.documentElement.style.getPropertyValue('--m-end')).convertSRGBToLinear();
@@ -1314,12 +1522,11 @@ async function endRun(){
  ok(tealOf('vastus lateralis')===0&&tealOf('gastrocnemius')>0,'with squats on that day too, quadriceps use the strength colours instead of teal');
  q('#tVol').click();
  // persistence: reload with the stored week (old v1.1 plan, new sessions, bad data)
- const stored=JSON.parse(w.localStorage.getItem('aom.plan.v3'));
- ok(stored.days[4].items.some(p=>p.t==='e'&&p.a==='running'&&p.k==='vo2'&&p.n===4&&p.len===4&&p.rec===3)&&stored.days[4].items.some(p=>p.n==='Back squat'),'stored Day 5: strength entry plus {t:"e",a:"running",k:"vo2",min:40,n:4,len:4,rec:3}');
- const r2=boot({store:{'aom.plan.v3':JSON.stringify({days:[{name:'Push',items:[{n:'Barbell bench press',sets:5,v:['']}]},{name:'Run',items:[{t:'e',a:'running',k:'easy',min:45},{t:'e',a:'nonsense',k:'easy',min:30},{t:'e',a:'muaythai',k:'vo2',min:'x',n:99}]},{name:'',items:[{n:'Back squat',sets:3,v:['','']},{t:'e',a:'cycling',k:'tempo',min:60,len:90}]}]}),'aom.hr.v1':JSON.stringify({max:185,age:null,rest:55})}}),r2d=r2.document;
+ ok(sess(D(4))[0].ses.some(p=>p.a==='running'&&p.k==='vo2'&&p.min===40&&p.n===4&&p.len===4&&p.rec===3)&&sess(D(4))[0].items.some(p=>p.n==='Back squat'),'stored Fri session: strength entry plus {a:"running",k:"vo2",min:40,n:4,len:4,rec:3}');
+ const r2=boot({win:TODAY,store:{'aom.plan.v3':JSON.stringify({days:[{name:'Push',items:[{n:'Barbell bench press',sets:5,v:['']}]},{name:'Run',items:[{t:'e',a:'running',k:'easy',min:45},{t:'e',a:'nonsense',k:'easy',min:30},{t:'e',a:'muaythai',k:'vo2',min:'x',n:99}]},{name:'',items:[{n:'Back squat',sets:3,v:['','']},{t:'e',a:'cycling',k:'tempo',min:60,len:90}]}]}),'aom.hr.v1':JSON.stringify({max:185,age:null,rest:55})}}),r2d=r2.document;
  await waitFor(()=>!r2d.getElementById('loading'),60000,'endurance reload instance');
  const rq=x=>r2d.querySelector(x),rqa=x=>[...r2d.querySelectorAll(x)];
- ok(rq('#wstrip [data-day="0"]').textContent.startsWith('Push')&&rq('#wstrip [data-day="0"]').textContent.includes('5 sets')&&!rq('#wstrip [data-day="0"] .pl.pe'),'old-format day (strength only) loads unchanged');
+ ok(rq('#wstrip [data-day="0"]').textContent.includes('Push')&&rq('#wstrip [data-day="0"]').textContent.includes('5 sets')&&!rq('#wstrip [data-day="0"] .pl.pe'),'old-format day (strength only) migrates unchanged (Day "Push" is Monday)');
  rq('#wstrip [data-day="1"]').click();
  ok(rqa('#ses .srow').length===2&&rq('#wstrip [data-day="1"]').textContent.includes('Run 45′ Z2')&&rq('#wstrip [data-day="1"]').textContent.includes('Thai 8×3′'),'sessions restored, unknown activity dropped, invalid kind/minutes fall back to the activity default (Muay Thai rounds, 90 min): '+rq('#wstrip [data-day="1"]').textContent);
  ok(/Z2 · 136–149 bpm/.test(rq('#ses').textContent)||/Z2 · 13\d–1\d\d bpm/.test(rq('#ses').textContent),'stored heart-rate settings (max 185, resting 55) apply: '+rq('#ses .sz').textContent);
@@ -1334,7 +1541,7 @@ async function boardRun(){
  const ovOpen=()=>{if(q('#ov').hidden)q('#ovOpen').click();};
  const col=dd=>q('#ovBoard .bcol[data-d="'+dd+'"]'),cards=dd=>qa('#ovBoard .bcol[data-d="'+dd+'"] .bcard[data-d]');
  const label=c=>c.querySelector('.bnm')?c.querySelector('.bnm').textContent:'E:'+c.dataset.t;
- const cn=dd=>cards(dd).map(label),keys=dd=>days()[dd].items.map(p=>p.t==='e'?'E:'+p.a:p.n);
+ const cn=dd=>cards(dd).map(label),keys=dd=>[].concat(...sess(D(dd)).map(x=>x.items.map(p=>({o:p.o,k:p.n})).concat(x.ses.map(p=>({o:p.o,k:'E:'+p.a}))).sort((a,b)=>a.o-b.o).map(e=>e.k)));   // combined schedule order of a date's sessions
  const live=()=>q('#ovLive').textContent.replace(/ /g,'');
  const R=(l,t,wd,h)=>({left:l,top:t,width:wd,height:h,right:l+wd,bottom:t+h,x:l,y:t});
  // jsdom has no layout: columns are 100 px wide, cards 50 px high every 60 px from y=50, the board is 700 x 600
@@ -1361,8 +1568,8 @@ async function boardRun(){
  ok(qa('#ovBoard .bslot.end').length===7&&qa('#ovBoard .bslot:not(.end)').length===qa('#ovBoard .bcard[data-d]').length,'every column has an end slot, every card has a slot before it');
  const bc=cards(0)[0];
  ok(bc.querySelector('.bst span').textContent==='3 sets'&&/Chest/.test(bc.querySelector('.bgl').textContent)&&bc.getAttribute('tabindex')==='0','strength card: name, sets stepper, muscle-group summary ("'+bc.querySelector('.bgl').textContent+'"), focusable');
- ok(col(1).querySelector('.bw')&&!col(0).querySelector('.bw')&&/still recovering/.test(cards(1)[0].querySelector('small.warn').textContent)&&!cards(0)[0].querySelector('small.warn'),'Day 2 header and card show the recovery conflict, Day 1 does not ("'+cards(1)[0].querySelector('small.warn').textContent+'")');
- // pointer drag with a mouse: Day 1 bench -> end of Day 3
+ ok(col(1).querySelector('.bw')&&!col(0).querySelector('.bw')&&/still recovering/.test(cards(1)[0].querySelector('small.warn').textContent)&&!cards(0)[0].querySelector('small.warn'),'Tue header and card show the recovery conflict, Mon does not ("'+cards(1)[0].querySelector('small.warn').textContent+'")');
+ // pointer drag with a mouse: Mon bench -> end of Wed
  const d0=cards(0)[0];
  pev('pointerdown',cx(0),cy(0),d0);
  pev('pointermove',cx(0)+2,cy(0)+2,d0);
@@ -1370,20 +1577,20 @@ async function boardRun(){
  pev('pointermove',cx(0)+30,cy(0)+20,d0);
  ok(!!q('.bghost')&&d0.classList.contains('dragging')&&/Picked up Barbell bench press/.test(live()),'mouse: after 4 px the card lifts (ghost + dimmed original, announced)');
  pev('pointermove',cx(2),300,d0);
- ok(col(2).classList.contains('dover')&&q('#ovBoard .bcol[data-d="2"] .bslot.end').classList.contains('over'),'drop target: Day 3 is highlighted and its end slot shows the drop indicator');
+ ok(col(2).classList.contains('dover')&&q('#ovBoard .bcol[data-d="2"] .bslot.end').classList.contains('over'),'drop target: Wed is highlighted and its end slot shows the drop indicator');
  pev('pointermove',cx(1)+5,cy(0)-20,d0);
  ok(q('#ovBoard .bcol[data-d="1"] .bslot[data-i="0"]').classList.contains('over')&&!q('#ovBoard .bslot.end.over'),'dropping above a card highlights the slot before it');
  pev('pointermove',cx(2),300,d0);
  pev('pointerup',cx(2),300,d0);
- ok(!q('.bghost')&&names(2).join()==='Barbell bench press'&&names(0).join()==='Barbell row'&&names(1).join()==='Barbell bench press','drop: bench moved from Day 1 to Day 3 and persisted ('+[0,1,2].map(i=>names(i).join('+')).join(' | ')+')');
+ ok(!q('.bghost')&&names(2).join()==='Barbell bench press'&&names(0).join()==='Barbell row'&&names(1).join()==='Barbell bench press','drop: bench moved from Mon to Wed (into a new session there) and persisted ('+[0,1,2].map(i=>names(i).join('+')).join(' | ')+')');
  ok(cn(2).join()==='Barbell bench press'&&cn(0).join()==='Barbell row','board re-rendered with the new order');
- ok(dayBtn(2).classList.contains('warn')&&!dayBtn(1).classList.contains('warn')&&col(2).querySelector('.bw')&&!col(1).querySelector('.bw'),'conflicts follow the move: Day 2 is clear, Day 3 (bench the day after bench) is flagged on the day card and in the board');
- ok(/Recovery conflicts <b>1<\/b>/.test(q('#ovSum').innerHTML)&&dayBtn(2).getAttribute('aria-pressed')==='true'&&qa('#plan .prow').length===1&&/Moved Barbell bench press to Day 3, position 1 of 1/.test(live()),'summary, planner selection and live region updated ('+live()+')');
+ ok(dayBtn(2).classList.contains('warn')&&!dayBtn(1).classList.contains('warn')&&col(2).querySelector('.bw')&&!col(1).querySelector('.bw'),'conflicts follow the move: Tue is clear, Wed (bench the day after bench) is flagged on the date card and in the board');
+ ok(/Recovery conflicts <b>1<\/b>/.test(q('#ovSum').innerHTML)&&dayBtn(2).getAttribute('aria-pressed')==='true'&&qa('#plan .prow').length===1&&/Moved Barbell bench press to Wed 14 Oct, position 1 of 1/.test(live()),'summary, planner selection and live region updated ('+live()+')');
  // slot between cards 1 and 2: open the inline picker and insert at that index
  selDay(1);addEx('Back squat');addEx('Hip thrust');
  ok(cn(1).join()==='Barbell bench press,Back squat,Hip thrust','planner additions show up on the board');
  const sl=()=>q('#ovBoard .bslot[data-d="1"][data-i="1"]');
- ok(sl().getAttribute('aria-label')==='Add to Day 2 at position 2','slot between card 1 and 2 has a label ("'+sl().getAttribute('aria-label')+'")');
+ ok(sl().getAttribute('aria-label')==='Add to Tue 13 Oct at position 2','slot between card 1 and 2 has a label ("'+sl().getAttribute('aria-label')+'")');
  sl().click();
  ok(!!q('#ovBoard .bpick')&&d.activeElement===q('#bpq')&&sl().getAttribute('aria-expanded')==='true','clicking a slot opens the picker with the search focused');
  setv(q('#bpq'),'romanian');
@@ -1396,7 +1603,7 @@ async function boardRun(){
  setv(q('#bpq'),'romanian');
  qa('#bpr [data-bact="pick"]').find(b=>b.firstChild.textContent==='+ Romanian deadlift').click();
  ok(names(1).join()==='Barbell bench press,Romanian deadlift,Back squat,Hip thrust'&&!q('#ovBoard .bpick'),'picked exercise is inserted at exactly index 1 and the picker closes ('+names(1).join(' | ')+')');
- ok(days()[1].items[1].sets===3&&cards(1)[1].querySelector('.bst span').textContent==='3 sets'&&cards(1)[1]===d.activeElement,'inserted with 3 sets and the default variation; the new card has focus');
+ ok(itemsOf(1)[1].sets===3&&cards(1)[1].querySelector('.bst span').textContent==='3 sets'&&cards(1)[1]===d.activeElement,'inserted with 3 sets and the default variation; the new card has focus');
  // reorder within a day with the pointer: Hip thrust (index 3) above Romanian deadlift (index 1)
  const th=cards(1)[3];
  pev('pointerdown',cx(1),cy(3),th);pev('pointermove',cx(1),cy(3)-30,th);pev('pointermove',cx(1),130,th);
@@ -1422,15 +1629,15 @@ async function boardRun(){
  pev('pointerdown',cx(1),cy(0),e2,'touch');await sleep(380);
  ok(!!q('.bghost')&&e2.classList.contains('dragging'),'touch: pressing for ~300 ms lifts the card');
  pev('pointermove',cx(5),cy(0),e2,'touch');pev('pointerup',cx(5),300,e2,'touch');
- ok(names(5).join()==='Barbell bench press'&&names(1).join()==='Hip thrust,Romanian deadlift,Back squat'&&!q('.bghost'),'touch: long-press drag moved the card to Day 6');
+ ok(names(5).join()==='Barbell bench press'&&names(1).join()==='Hip thrust,Romanian deadlift,Back squat'&&!q('.bghost'),'touch: long-press drag moved the card to Sat');
  const inc=cards(5)[0].querySelector('[data-bact="inc"]');pev('pointerdown',cx(5),cy(0),inc);pev('pointermove',cx(5)+40,cy(0)+30,inc);
  ok(!q('.bghost'),'pressing the stepper button does not start a drag');pev('pointerup',cx(5)+40,cy(0)+30,inc);
  // sets stepper on a card -> plan and planner tab
  selDay(5);
  cards(5)[0].querySelector('[data-bact="inc"]').click();
- ok(days()[5].items[0].sets===4&&cards(5)[0].querySelector('.bst span').textContent==='4 sets'&&/4 sets/.test(q('#plan .prow .step span').textContent),'card stepper "+": 4 sets in storage, on the card and in the planner tab');
+ ok(itemsOf(5)[0].sets===4&&cards(5)[0].querySelector('.bst span').textContent==='4 sets'&&/4 sets/.test(q('#plan .prow .step span').textContent),'card stepper "+": 4 sets in storage, on the card and in the planner tab');
  for(let k=0;k<4;k++) cards(5)[0].querySelector('[data-bact="dec"]').click();
- ok(days()[5].items[0].sets===1&&cards(5)[0].querySelector('[data-bact="dec"]').getAttribute('aria-disabled')==='true'&&names(5).length===1,'"−" stops at 1 set (the × removes)');
+ ok(itemsOf(5)[0].sets===1&&cards(5)[0].querySelector('[data-bact="dec"]').getAttribute('aria-disabled')==='true'&&names(5).length===1,'"−" stops at 1 set (the × removes)');
  q('#plan [data-inc="0"]').click();
  ok(cards(5)[0].querySelector('.bst span').textContent==='2 sets','planner tab stepper updates the card');
  // endurance through a slot picker, interleaved with strength
@@ -1441,20 +1648,20 @@ async function boardRun(){
  ok(q('#bpk').value==='rounds'&&q('#bpm').value==='90','choosing Muay Thai fills the default session (rounds, 90 min)');
  setv(q('#bpm'),'75','change');
  q('#ovBoard [data-bact="padd"]').click();
- ok(keys(1).join()==='Hip thrust,E:muaythai,Romanian deadlift,Back squat'&&days()[1].items[1].min===75,'endurance session inserted at index 1 and persisted in schedule order ('+keys(1).join(',')+')');
+ ok(keys(1).join()==='Hip thrust,E:muaythai,Romanian deadlift,Back squat'&&sesOf(1)[0].min===75,'endurance session inserted at index 1 and persisted in schedule order ('+keys(1).join(',')+')');
  const ec=cards(1)[1];
  ok(ec.classList.contains('e')&&/Thai/.test(ec.querySelector('.pl').textContent)&&ec.querySelector('.pl').classList.contains('ph')&&ec.querySelector('[data-bact="min"]').value==='75','endurance card: activity pill coloured by intensity, kind, minutes');
  ok(/75 min/.test(col(1).querySelector('.bh2').textContent),'column header shows the endurance minutes ("'+col(1).querySelector('.bh2').textContent+'")');
  setv(ec.querySelector('[data-bact="min"]'),'60','change');
- ok(days()[1].items[1].min===60&&days()[1].items[1].t==='e'&&cards(1)[1].querySelector('[data-bact="min"]').value==='60','minutes edited inline, order kept ('+keys(1).join(',')+')');
+ ok(sesOf(1)[0].min===60&&cards(1)[1].dataset.t==='e'&&cards(1)[1].querySelector('[data-bact="min"]').value==='60','minutes edited inline, order kept ('+keys(1).join(',')+')');
  selDay(1);
  ok(qa('#ses .srow').length===1&&q('#ses [data-sf="a"]').value==='muaythai','planner tab lists the same session');
  setv(q('#ses [data-sf="min"]'),'45','change');
- ok(days()[1].items[1].min===45&&keys(1).join()==='Hip thrust,E:muaythai,Romanian deadlift,Back squat','editing the session in the planner keeps its place in the schedule');
+ ok(sesOf(1)[0].min===45&&keys(1).join()==='Hip thrust,E:muaythai,Romanian deadlift,Back squat','editing the session in the planner keeps its place in the schedule');
  // keyboard
  let fc=cards(1)[2];fc.focus();key(fc,'ArrowRight',{altKey:true});
  ok(keys(2).join()==='Barbell bench press,Romanian deadlift'&&keys(1).join()==='Hip thrust,E:muaythai,Back squat','Alt+ArrowRight moves the focused card to the next day (same position, clamped to the end)');
- ok(d.activeElement.classList.contains('bcard')&&label(d.activeElement)==='Romanian deadlift'&&/Moved Romanian deadlift to Day 3/.test(live()),'focus follows the moved card and the move is announced ("'+live()+'")');
+ ok(d.activeElement.classList.contains('bcard')&&label(d.activeElement)==='Romanian deadlift'&&/Moved Romanian deadlift to Wed 14 Oct/.test(live()),'focus follows the moved card and the move is announced ("'+live()+'")');
  fc=d.activeElement;key(fc,'ArrowUp',{altKey:true});
  ok(keys(2).join()==='Romanian deadlift,Barbell bench press'&&label(d.activeElement)==='Romanian deadlift'&&/position 1 of 2/.test(live()),'Alt+ArrowUp moves the card up within the day');
  fc=d.activeElement;key(fc,'ArrowDown',{altKey:true});
@@ -1462,7 +1669,7 @@ async function boardRun(){
  fc=d.activeElement;key(fc,'ArrowDown',{altKey:true});
  ok(/Already last/.test(live())&&keys(2)[1]==='Romanian deadlift','Alt+ArrowDown on the last card does nothing and says so');
  selDay(0);const f0=cards(0)[0];f0.focus();const b0=JSON.stringify(wk());key(f0,'ArrowLeft',{altKey:true});
- ok(JSON.stringify(wk())===b0&&/first day/.test(live()),'Alt+ArrowLeft on Day 1 stays put ("'+live()+'")');
+ ok(JSON.stringify(wk())===b0&&/first date/.test(live()),'Alt+ArrowLeft on the first date stays put ("'+live()+'")');
  key(cards(0)[0],'ArrowRight');
  ok(JSON.stringify(wk())===b0,'arrow keys without Alt do nothing');
  ok(qa('#ovBoard .bcard').every(c=>c.getAttribute('aria-label')&&c.getAttribute('tabindex')==='0')&&qa('#ovBoard button').every(b=>b.getAttribute('aria-label')||b.textContent.trim()),'cards are focusable and every board button has a label');
@@ -1472,15 +1679,6 @@ async function boardRun(){
  // remove
  const nb=cards(4).length;cards(4)[0].querySelector('[data-bact="rm"]').click();
  ok(cards(4).length===nb-1&&names(4).length===0&&/Removed Barbell bench press/.test(live()),'× removes a card');
- // rename inline
- col(0).querySelector('.bdn').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true}));
- ok(!!q('#bIn')&&d.activeElement===q('#bIn'),'double-clicking the day name opens the inline rename field');
- q('#bIn').value='Pull';key(q('#bIn'),'Enter');
- ok(nameOf(0)==='Pull'&&col(0).querySelector('.bdn').textContent==='Pull'&&dayBtn(0).textContent.includes('Pull'),'rename persisted and shown on the board and the day card');
- col(0).querySelector('[data-bact="ren"]').click();q('#bIn').value='Nope';key(q('#bIn'),'Escape');
- ok(nameOf(0)==='Pull'&&!q('#bIn')&&!q('#ov').hidden,'Escape cancels the rename without closing the overview');
- col(0).querySelector('[data-bact="ren"]').click();q('#bIn').value='';key(q('#bIn'),'Enter');
- ok(nameOf(0)==='Day 1','an empty name falls back to "Day 1"');
  // picker closes on Escape
  q('#ovBoard .bslot[data-d="3"][data-i="0"]').click();
  ok(!!q('#bpq'),'end slot of an empty day opens the picker');
@@ -1491,8 +1689,7 @@ async function boardRun(){
  ok(!q('#ovMus').hidden&&q('#ovSch').hidden&&JSON.parse(w.localStorage.getItem('aom.ovview.v1'))==='mus'&&q('#ovSw [data-ovv="mus"]').getAttribute('aria-pressed')==='true','switch to Muscles shows the grid and stores aom.ovview.v1');
  ok(qa('#ovGrid tr.g').length===27&&qa('#ovGrid tr.g').every(r=>r.querySelectorAll('.cb').length===7)&&q('#ovGrid tr.er .eb[data-d="1"]').dataset.m==='45','the muscle grid and its endurance row follow the board edits');
  // order survives a reload; stored view is respected
- const stored=w.localStorage.getItem('aom.plan.v3');
- const r=boot({store:{'aom.plan.v3':stored,'aom.ovview.v1':'"mus"'}}),rd=r.document,rq=s=>rd.querySelector(s);
+ const r=boot({win:TODAY,store:{'aom.cal.v1':w.localStorage.getItem('aom.cal.v1'),'aom.tpl.v1':w.localStorage.getItem('aom.tpl.v1'),'aom.ovview.v1':'"mus"'}}),rd=r.document,rq=s=>rd.querySelector(s);
  await waitFor(()=>!rd.getElementById('loading'),60000,'reload instance');
  rq('#ovOpen').click();
  ok(!rq('#ovMus').hidden&&rq('#ovSch').hidden,'reload: the overview opens on the stored Muscles view');
@@ -1520,10 +1717,12 @@ async function boardRun(){
  ok(qa('#list .item').length>100&&q('#foot').textContent.includes('muscles in'),'anatomy index and footer built');
  // storage migration (legacy keys seeded above)
  const ls=k=>w.localStorage.getItem(k);
- ok(ls('myology.plan.v1')===null&&ls('myology.eq.v1')===null,'legacy "myology.*" keys removed after migration');
- ok(plan()&&plan().length===2&&plan()[0].n==='Back squat'&&plan()[0].sets===4&&JSON.stringify(plan()[0].v)==='["Wide",""]','"aom.plan.v3" holds option names for Back squat (Wide), got '+ls('aom.plan.v3'));
- ok(wk().days.length===7&&wk().days[0].items.length===2&&wk().days.slice(1).every(d=>d.items.length===0)&&wk().days[0].name==='Day 1'&&ls('aom.plan.v2')===null,'legacy v1 plan migrated into Day 1 of "aom.plan.v3"; seven day slots, no v2 key');
- ok(plan()[1].n==='Hip thrust'&&plan()[1].sets===2&&!plan().some(p=>p.n==='Removed exercise'),'entry without v kept, unknown exercise dropped');
+ ok(ls('myology.eq.v1')===null&&ls('myology.plan.v1')!==null,'legacy equipment key migrated and removed; the legacy plan key is only read (kept for rollback)');
+ {const T0=tpls(),C0=wk();
+  ok(T0.length===1&&T0[0].name==='Day 1'&&T0[0].items.length===2&&T0[0].items[0].n==='Back squat'&&T0[0].items[0].sets===4&&JSON.stringify(T0[0].items[0].v)==='["Wide",""]','the legacy v1 plan became the template "Day 1" in aom.tpl.v1 with option names for Back squat (Wide): '+ls('aom.tpl.v1'));
+  ok(C0&&C0.v===1&&C0.mig===1&&C0.note===1&&C0.pattern.length===1&&C0.pattern[0].tid===T0[0].id&&C0.pattern[0].wd.join()==='0'&&C0.pattern[0].from===TODAY&&Object.keys(C0.days).length===0&&ls('aom.plan.v2')===null,'aom.cal.v1: one pattern row (Day 1 -> Monday, from the Monday of this week), nothing stored for dates yet (the pattern session is virtual)');
+  ok(T0[0].items[1].n==='Hip thrust'&&T0[0].items[1].sets===2&&!T0[0].items.some(p=>p.n==='Removed exercise'),'entry without v kept, unknown exercise dropped');
+  ok(!q('#migNote').hidden&&/weekly pattern/.test(q('#migNote').textContent),'one-time notice in the Workout tab explains the Monday..Sunday mapping');}
  ok(JSON.stringify(JSON.parse(ls('aom.eq.v1')))===JSON.stringify(OLD_EQ),'"aom.eq.v1" holds the migrated equipment list');
  ok(qa('#plan .prow').length===2&&qa('#plan .prow')[0].textContent.includes('Back squat')&&qa('#plan .prow')[0].textContent.includes('Wide'),'plan row shows the migrated variation (Wide)');
  ok(q('[data-eq="Band"]').getAttribute('aria-pressed')==='false'&&q('[data-eq="Barbell"]').getAttribute('aria-pressed')==='true','migrated equipment selection applied (Band off)');
@@ -1608,7 +1807,7 @@ async function boardRun(){
  ok(rows[0].querySelector('.step span').textContent.startsWith('4 '),'incrementing gives 4 sets on the first row');
  ok(rows[1].querySelector('.step span').textContent.startsWith('3 '),'second row stays at 3 sets');
  ok(/2 exercises, 7 sets/.test(q('#plan').textContent),'total reads "2 exercises, 7 sets"');
- ok(plan()&&plan().length===2&&plan()[0].n==='Hip thrust'&&plan()[0].sets===4,'localStorage "aom.plan.v3" holds 2 entries');
+ ok(plan()&&plan().length===2&&plan()[0].n==='Hip thrust'&&plan()[0].sets===4,'aom.cal.v1 holds the 2 entries of the (materialised) session');
  // weekly volume
  const vrows=qa('#volsum tr'),glutes=vrows.find(r=>r.cells[0].textContent.trim()==='Glutes');
  ok(vrows.length===27,'weekly volume table has 27 rows (got '+vrows.length+')');
@@ -1679,7 +1878,7 @@ async function boardRun(){
  const added=first.querySelector('.exlink').textContent;
  first.querySelector('[data-sadd]').click();
  const pl=plan();
- ok(pl.length===3&&pl.some(p=>p.n===added&&p.sets===3),'"+ Add to Day N" adds the suggestion with 3 sets ('+added+')');
+ ok(pl.length===3&&pl.some(p=>p.n===added&&p.sets===3),'"+ Add to <date>" adds the suggestion with 3 sets ('+added+')');
  ok(!sugNames().includes(added)&&sugNames().join()!==sn.join()&&fg.every((g,k)=>rowVal(g)>before[k]),'suggestions change after adding and the listed groups went up');
  const sx=q('#sug .exlink').textContent;q('#sug .exlink').click();
  ok(q('#card h2')&&q('#card h2').textContent===sx,'a suggestion name opens its exercise card ('+sx+')');
@@ -1721,7 +1920,7 @@ async function boardRun(){
  q('#exportData').click();
  ok(blob&&/^atlas-of-motion-backup-\d{4}-\d{2}-\d{2}\.json$/.test(dl),'export: downloads a JSON backup ('+dl+')');
  const bk=JSON.parse(await blob.text());
- ok(bk.app==='atlas-of-motion'&&bk.format===1&&bk.data&&typeof bk.data['aom.plan.v3']==='string','export: JSON has app, format and the stored plan (aom.plan.v3)');
+ ok(bk.app==='atlas-of-motion'&&bk.format===1&&bk.data&&typeof bk.data['aom.cal.v1']==='string'&&typeof bk.data['aom.tpl.v1']==='string','export: JSON has app, format and the calendar and templates (aom.cal.v1, aom.tpl.v1)');
  const fin=q('#importFile');let fileTxt='';Object.defineProperty(fin,'files',{configurable:true,get:()=>[{text:async()=>fileTxt}]});
  const imp=async t=>{fileTxt=t;fin.dispatchEvent(new w.Event('change',{bubbles:true}));await sleep(50);};
  w.confirm=()=>false; await imp(JSON.stringify({app:'atlas-of-motion',format:1,data:{'aom.test.v1':'123'}}));
@@ -1741,25 +1940,27 @@ async function boardRun(){
  q('#saveImg').click();
  ok(/^atlas-of-motion-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}\.png$/.test(dl),'save image: downloads a PNG with a timestamp ('+dl+')');
  w.URL.createObjectURL=oKO;w.URL.revokeObjectURL=oRO;w.HTMLAnchorElement.prototype.click=oClick;w.confirm=oConfirm;w.HTMLCanvasElement.prototype.toBlob=oTB;delete fin.files;q('#dataMsg').textContent='';
- await weekRun();
- await endRun();
- await boardRun();
- await logRun();
- await sugRun();
- await migrateRun();
- await searchRun();
- await movementRun();
- await eyeRun();
- await variationRun();
- await linkRun();
+ const ONLY=process.env.SMOKE_ONLY?process.env.SMOKE_ONLY.split(','):null,run=async(n,f)=>{if(!ONLY||ONLY.includes(n))await f();};   // SMOKE_ONLY=weekRun,boardRun runs just those sections (dev aid)
+ await run('weekRun',weekRun);
+ await run('endRun',endRun);
+ await run('boardRun',boardRun);
+ await run('logRun',logRun);
+ await run('sugRun',sugRun);
+ await run('migrateRun',migrateRun);
+ await run('calRun',calRun);
+ await run('searchRun',searchRun);
+ await run('movementRun',movementRun);
+ await run('eyeRun',eyeRun);
+ await run('variationRun',variationRun);
+ await run('linkRun',linkRun);
  ok(/^v\d+\.\d+ · [0-9a-f]{7}$/.test(q('#ver').textContent)&&q('#vp').contains(q('#ver')),'version display in the viewport corner: '+q('#ver').textContent);
- await paletteRun();
- await camRun();
- await lodRun();
- await nerveRun();
- await licenseRun();
- await otherRuns();
- await phoneRun();
+ await run('paletteRun',paletteRun);
+ await run('camRun',camRun);
+ await run('lodRun',lodRun);
+ await run('nerveRun',nerveRun);
+ await run('licenseRun',licenseRun);
+ await run('otherRuns',otherRuns);
+ await run('phoneRun',phoneRun);
  // no errors anywhere
  ok(errs.length===0,'no console errors or uncaught exceptions'+(errs.length?':\n  '+errs.slice(0,10).join('\n  '):''));
  finish();
