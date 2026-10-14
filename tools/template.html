@@ -842,6 +842,147 @@ input.mvdate[hidden]{display:none;}
   .st .goal .cust input.search{width:84px;}
   .stbody{gap:22px;}
 }
+/* statistics overlay (v2.2): atlas look, charts are inline SVG styled here (colours from tokens, so light / dark follow) */
+.ovrow{display:flex;gap:8px;align-items:stretch;}
+.ovrow .prim{flex:1 1 auto;width:auto;min-width:0;}
+.ovrow #sxOpen{flex:none;}
+.ov.sx{z-index:42;}
+.sxw{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;width:100%;max-width:1000px;margin:0 auto;}
+.sxbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 14px;}
+.sxrng{grid-template-columns:repeat(6,auto);margin:0;}
+.sxrng button{padding:6px 14px;}
+.sxsub{font-size:14.5px;}
+.sxbody{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;counter-reset:sec;padding:6px 4px calc(30px + env(safe-area-inset-bottom,0px));}
+.sxmain{display:flex;flex-direction:column;gap:28px;}
+.sxmain[hidden]{display:none;}
+.sxempty{margin:14px 0;padding:18px 16px;border:1px dashed var(--line);border-radius:3px;background:var(--card);font:italic 400 16px/1.45 var(--f-read);color:var(--muted);}
+.sxempty[hidden]{display:none;}
+.sxcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+.sxcard{background:var(--card);border:1px solid var(--line);border-radius:3px;padding:9px 12px 10px;min-width:0;border-top:3px solid var(--line);}
+.sxcard h4{margin:0 0 3px;font:600 12.5px var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.1em;color:var(--muted);}
+.sxcard .sv{font:600 30px/1.1 var(--f-disp);letter-spacing:-.01em;font-variant-numeric:lining-nums;overflow-wrap:anywhere;}
+.sxcard .sv small{font:italic 400 14px var(--f-read);letter-spacing:0;color:var(--muted);}
+.sxcard .ss{font:italic 400 13.5px/1.35 var(--f-read);color:var(--muted);margin-top:3px;}
+.sxcard.ok{border-top-color:var(--sage);}.sxcard.mid{border-top-color:var(--ochre);}.sxcard.low{border-top-color:var(--accent);}
+.sxcard.pl{border-top-color:var(--plum);}
+.sxcalw{overflow-x:auto;padding:2px 2px 6px;border:1px solid var(--line);border-radius:3px;background:var(--card);}
+.sxcal{display:grid;grid-template-columns:auto auto;gap:0 6px;width:max-content;padding:6px 8px 4px;}
+.sxwd{display:grid;grid-template-rows:repeat(7,15px);gap:3px;font:11px/15px var(--f-ui);color:var(--muted);margin-top:16px;}
+.sxcols{position:relative;--cw:18px;}
+.sxmon{position:relative;height:14px;font:11px/14px var(--f-ui);color:var(--muted);}
+.sxmon span{position:absolute;top:0;white-space:nowrap;}
+.sxdays{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,15px);grid-auto-columns:15px;gap:3px;margin-top:2px;}
+.sxd{position:relative;width:15px;height:15px;padding:0;border:0;border-radius:2px;background:var(--chip);cursor:pointer;overflow:hidden;}
+.sxd::before{content:"";position:absolute;inset:0;background:var(--accent);opacity:var(--o,0);}
+.sxd.l1{--o:.28;}.sxd.l2{--o:.5;}.sxd.l3{--o:.75;}.sxd.l4{--o:1;}
+.sxd.miss{box-shadow:inset 0 0 0 1.5px var(--ochre);}
+.sxd.skip{box-shadow:inset 0 0 0 1.5px var(--plum);}
+.sxd.tod{outline:2px solid var(--ink);outline-offset:1px;overflow:visible;}
+.sxd.sel{outline:2px solid var(--ochre);outline-offset:1px;overflow:visible;}
+.sxd.fut{opacity:.35;cursor:default;background:none;border:1px dashed var(--line);}
+.sxd:disabled{cursor:default;}
+.sxleg{display:flex;flex-wrap:wrap;gap:3px 14px;margin-top:8px;font:italic 400 13px var(--f-read);color:var(--muted);align-items:center;}
+.sxleg span{display:inline-flex;align-items:center;gap:5px;}
+.sxleg i{display:inline-block;width:13px;height:13px;border-radius:2px;background:var(--chip);position:relative;overflow:hidden;}
+.sxleg i::before{content:"";position:absolute;inset:0;background:var(--accent);opacity:var(--o,0);}
+.sxleg i.miss{box-shadow:inset 0 0 0 1.5px var(--ochre);}.sxleg i.skip{box-shadow:inset 0 0 0 1.5px var(--plum);}
+.sxdetail{margin-top:8px;padding:8px 12px;background:var(--card);border:1px solid var(--line);border-radius:3px;font:400 15px/1.4 var(--f-read);min-height:40px;}
+.sxdetail .sxsl{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:4px 0;border-top:1px solid var(--line);}
+.sxdetail .sxsl:first-of-type{border-top:0;}
+.sxdetail .sxsl b{font-weight:600;}
+.sxdetail .sxsl small{color:var(--muted);font:italic 400 13.5px var(--f-read);}
+.sxdetail .linkbtn{padding:0 4px;}
+.sxst{display:inline-block;padding:0 6px;border-radius:2px;font:600 11px/1.6 var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.08em;background:var(--chip);color:var(--ink);}
+.sxst.done{background:var(--pe-bg);color:var(--pe-fg);}.sxst.partial,.sxst.doing{background:var(--pt-bg);color:var(--pt-fg);}.sxst.missed{background:var(--ph-bg);color:var(--ph-fg);}.sxst.skipped{background:var(--accent-soft);color:var(--plum);}
+.sxscroll{overflow-x:auto;border:1px solid var(--line);border-radius:3px;background:var(--card);}
+.sxg{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%;}
+.sxg th,.sxg td{padding:0;border-bottom:1px solid var(--line);text-align:center;}
+.sxg thead th{position:sticky;top:0;z-index:2;background:var(--card);border-bottom:1px solid var(--ink);font:600 11.5px/1.15 var(--f-ui);color:var(--muted);padding:3px 0;min-width:30px;}
+.sxg thead th small{display:block;font-weight:400;font-size:10.5px;}
+.sxg thead th.part{font-style:italic;}
+.sxg th.rl{position:sticky;left:0;z-index:1;background:var(--card);text-align:left;font:400 14px/1.15 var(--f-read);padding:0 8px;border-right:1px solid var(--line);min-width:128px;white-space:nowrap;}
+.sxg thead th.rl{z-index:3;font:600 12.5px var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.1em;}
+.sxg tr.sec th{background:var(--panel);font:600 12.5px var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.12em;color:var(--accent);padding:3px 8px;}
+.sxg tr.sec td{background:var(--panel);padding:0;}
+.sxg td.c{height:28px;font:600 12.5px var(--f-disp);}
+.sxg td.c.v0,.sxg td.c.v1,.sxg td.c.v2{color:#1d1610;}.sxg td.c.v3{color:#fff;}
+.sxg td.c.z{color:var(--muted);font-weight:400;}
+.sxg td.c.pt{outline:1px dashed var(--ink);outline-offset:-3px;}
+.sxg td.av{border-left:1px solid var(--ink);min-width:54px;}
+.sxg th.avh{min-width:58px;border-left:1px solid var(--ink);}
+.sxg button.rb{background:none;border:0;padding:6px 0;margin:0;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%;}
+.sxg button.rb:hover,.sxg button.rb[aria-pressed="true"]{color:var(--accent);}
+.sxg tr.on th.rl{box-shadow:inset 3px 0 0 var(--ochre);}
+.sxg thead button.sb{background:none;border:0;padding:3px 4px;cursor:pointer;font:inherit;color:inherit;letter-spacing:inherit;font-variant-caps:inherit;}
+.sxg thead button.sb:hover,.sxg thead button.sb[aria-pressed="true"]{color:var(--accent);}
+.sxchart{margin-top:10px;background:var(--card);border:1px solid var(--line);border-radius:3px;padding:8px 10px 6px;}
+.sxchart h3{margin:0 0 2px;font:600 15px var(--f-disp);}
+.sxchart p.fine{margin:2px 0 4px!important;}
+.sxsvg{width:100%;height:auto;display:block;overflow:visible;}
+.sxsvg text{font:11px var(--f-ui);fill:var(--muted);}
+.sxsvg text.vl{fill:var(--ink);font-weight:600;font-size:10.5px;}
+.sxsvg .ax{stroke:var(--muted);stroke-width:1;}
+.sxsvg .gl{stroke:var(--line);stroke-width:1;stroke-dasharray:2 3;}
+.sxsvg .sxb{fill:var(--accent);}
+.sxsvg .sxb.pt{fill:var(--accent);opacity:.5;}
+.sxsvg .band{fill:var(--sage);opacity:.3;}
+.sxsvg .bandl{stroke:var(--sage);stroke-width:1;stroke-dasharray:4 3;}
+.sxsvg .z1{fill:var(--z1);}.sxsvg .z2{fill:var(--z2);}.sxsvg .z3{fill:var(--z3);}.sxsvg .z4{fill:var(--z4);}.sxsvg .z5{fill:var(--z5);}
+.sxsvg .pt.z1,.sxsvg .pt.z2,.sxsvg .pt.z3,.sxsvg .pt.z4,.sxsvg .pt.z5{opacity:.55;}
+.sxsvg .ln{fill:none;stroke:var(--inkblue);stroke-width:2;stroke-linejoin:round;}
+.sxsvg .ln2{fill:none;stroke:var(--ochre);stroke-width:1.5;stroke-dasharray:4 3;}
+.sxsvg .dot{fill:var(--inkblue);stroke:var(--card);stroke-width:1.5;}
+.sxsvg .dot2{fill:var(--card);stroke:var(--ochre);stroke-width:2;}
+.sxsvg .dot.pt{fill:var(--card);stroke:var(--inkblue);stroke-width:2;}
+.sxlegend{display:flex;flex-wrap:wrap;gap:3px 14px;font:italic 400 13px var(--f-read);color:var(--muted);margin:4px 0 2px;}
+.sxlegend span{display:inline-flex;align-items:center;gap:5px;}
+.sxlegend i{display:inline-block;width:12px;height:12px;border-radius:2px;}
+.sxlegend i.ln{height:0;border-top:2px solid var(--inkblue);width:16px;border-radius:0;}
+.sxlegend i.ln2{height:0;border-top:2px dashed var(--ochre);width:16px;border-radius:0;}
+.sxlegend i.bandi{background:var(--sage);opacity:.35;}
+.sxdet{margin-top:6px;}
+.sxdet>summary{cursor:pointer;font:600 12.5px var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.1em;color:var(--accent);padding:2px 0;}
+.sxdet table{border-collapse:collapse;width:100%;font-size:12.5px;margin-top:4px;}
+.sxdet th,.sxdet td{padding:3px 8px 3px 0;border-bottom:1px solid var(--line);text-align:right;font-weight:400;white-space:nowrap;}
+.sxdet th:first-child,.sxdet td:first-child{text-align:left;}
+.sxdet thead th{font-weight:600;color:var(--muted);}
+.sxdet .tw{overflow-x:auto;}
+.sxctl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-bottom:8px;}
+.sxctl label{font:600 12.5px var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.1em;color:var(--muted);}
+.sxctl select.search{width:auto;max-width:100%;min-width:200px;margin:0;}
+.sxpr{list-style:none;margin:0;padding:0;}
+.sxpr li{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;padding:6px 0;border-bottom:1px solid var(--line);font:400 15px/1.35 var(--f-read);}
+.sxpr li b{font-weight:600;}
+.sxpr li .dt{font:600 12.5px var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.1em;color:var(--accent);min-width:78px;}
+.sxpr li small{color:var(--muted);font:italic 400 13.5px var(--f-read);}
+.sxshare{display:flex;flex-wrap:wrap;gap:8px;}
+.sxshare .bc{flex:1 1 220px;}
+.sxban{position:absolute;z-index:3;left:24px;bottom:56px;width:min(420px,calc(100% - 48px));background:var(--card);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);padding:10px 14px 10px;display:flex;flex-direction:column;gap:6px;}
+.sxban[hidden]{display:none;}
+.sxban .sxbt b{display:block;font:600 16px var(--f-disp);}
+.sxban .sxbt small{display:block;font:italic 400 13.5px var(--f-read);color:var(--muted);}
+.sxban .legend{margin-top:0;}
+.sxban .sxbb{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;}
+.sxban .sxbb .btn{padding:5px 12px;}
+.sxban .sxbb .linkbtn{padding:0;}
+@media (max-width:760px){
+  .sxcards{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .sxcard .sv{font-size:26px;}
+  .sxrng{flex:1 0 100%;grid-template-columns:repeat(6,1fr);}
+  .sxrng button{padding:6px 0;}
+  .sxbar #sxShow{flex:1 0 100%;}
+  .sxg th.rl{min-width:96px;font-size:13px;padding:0 5px;}
+  .sxctl select.search{min-width:0;flex:1 1 100%;}
+  .sxban{left:12px;right:12px;width:auto;bottom:auto;top:calc(env(safe-area-inset-top,0px) + 58px);}
+}
+@media (pointer:coarse){
+  .sxcols{--cw:20px;}
+  .sxd{width:17px;height:17px;}
+  .sxdays{grid-template-rows:repeat(7,17px);grid-auto-columns:17px;}
+  .sxwd{grid-template-rows:repeat(7,17px);line-height:17px;}
+  .sxg button.rb,.sxdet>summary,.sxdetail .linkbtn{min-height:44px;}
+  .sxg button.rb{display:flex;align-items:center;}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
 </style>
 </head>
@@ -894,7 +1035,7 @@ input.mvdate[hidden]{display:none;}
     <div class="sec" id="calSec">
       <h2>Training calendar</h2>
       <p class="banner" id="migNote" hidden><span>Your old 7-day week is now a weekly pattern: its first day repeats every Monday, its second day every Tuesday, and so on, starting this week. You can change the mapping under "Weekly pattern" below.</span><button class="linkbtn" id="migOk" type="button">Got it</button></p>
-      <button class="btn prim" id="ovOpen" type="button" aria-haspopup="dialog"><span>Week overview</span><small id="ovBadge"></small></button>
+      <div class="ovrow"><button class="btn prim" id="ovOpen" type="button" aria-haspopup="dialog"><span>Week overview</span><small id="ovBadge"></small></button><button class="btn" id="sxOpen" type="button" aria-haspopup="dialog">Statistics</button></div>
       <div class="winbar" id="winbar" role="group" aria-label="7-day window">
         <button class="wnav" type="button" data-win="-7" aria-label="Back 7 days" title="Back 7 days">«</button><button class="wnav" type="button" data-win="-1" aria-label="Back 1 day" title="Back 1 day">‹</button>
         <input class="search" type="date" id="winDate" aria-label="First day of the 7-day window">
@@ -1027,6 +1168,25 @@ input.mvdate[hidden]{display:none;}
         <div class="tdfoot"><button class="linkbtn" id="tdSync" type="button">Sync with plan</button><span class="tdmsg" id="tdMsg" role="status"></span><span class="sp"></span><button class="btn prim tdfin" id="tdFinish" type="button">Finish day</button></div>
       </div>
     </section>
+    <section class="ov sx" id="sx" role="dialog" aria-label="Statistics" hidden>
+      <div class="sxw">
+        <div class="ovhead"><h2>Statistics</h2><button class="btn" id="sxClose" type="button">Show body</button></div>
+        <div class="sxbar"><div class="seg sxrng" id="sxRange" role="group" aria-label="Range in weeks"><button type="button" data-sxr="4" aria-pressed="false">4 wk</button><button type="button" data-sxr="8" aria-pressed="true">8 wk</button><button type="button" data-sxr="12" aria-pressed="false">12 wk</button><button type="button" data-sxr="26" aria-pressed="false">26 wk</button><button type="button" data-sxr="52" aria-pressed="false">52 wk</button><button type="button" data-sxr="all" aria-pressed="false">All</button></div><button class="btn" id="sxShow" type="button">Show on body</button></div>
+        <p class="ovsum sxsub" id="sxSub"></p>
+        <div class="sxbody" id="sxBody">
+          <p class="sxempty" id="sxEmpty" hidden></p>
+          <div class="sxmain" id="sxMain">
+            <div class="sec" id="sxS1"><h2>Summary</h2><div class="sxcards" id="sxSum"></div></div>
+            <div class="sec" id="sxS2"><h2>Consistency</h2><div id="sxCal"></div><div class="sxdetail" id="sxDay" role="status" aria-live="polite"></div></div>
+            <div class="sec" id="sxS3"><h2>Sets per muscle group</h2><div id="sxGrid"></div><div id="sxGrp"></div></div>
+            <div class="sec" id="sxS4"><h2>Volume load</h2><div class="sxctl"><label for="sxVolEx">Exercise</label><select class="search" id="sxVolEx" aria-label="Exercise for the volume load chart"></select></div><div id="sxVol"></div></div>
+            <div class="sec" id="sxS5"><h2>Strength progress</h2><div class="sxctl"><label for="sxStrEx">Exercise</label><select class="search" id="sxStrEx" aria-label="Exercise for the progress chart"></select></div><div id="sxStr"></div><h3 class="subh">Personal records</h3><div id="sxPR"></div></div>
+            <div class="sec" id="sxS6"><h2>Endurance</h2><div id="sxEnd"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <div class="sxban" id="sxBan" role="status" hidden><div class="sxbt"><b id="sxBanT">Average weekly sets</b><small id="sxBanS"></small></div><div class="legend" id="sxBanLeg"></div><div class="sxbb"><button class="btn" id="sxBack" type="button">Back to the normal view</button><button class="linkbtn" id="sxBackSt" type="button">Statistics</button></div></div>
     <section class="ov st" id="st" role="dialog" aria-label="Settings" hidden>
       <div class="stw">
         <div class="ovhead"><h2>Settings</h2><button class="btn" id="stClose" type="button">Show body</button></div>
@@ -1616,9 +1776,9 @@ function findInst(id){
 }
 function mat(I){ if(I&&I.virtual){ delete I.virtual; (CAL.days[I.dt]=CAL.days[I.dt]||[]).push(I); } return I; }   // the first change stores a pattern session
 function addInst(dk,name,items,ses,tid){ const I={id:nid("i"),dt:dk,name:cleanName(name,"Session"),items:items||[],ses:ses||[],status:"planned"}; if(tid) I.tid=tid; (CAL.days[dk]=CAL.days[dk]||[]).push(I); return I; }
-function dropInst(I){ // remove from its date; a pattern session leaves a tombstone so that it does not come back
+function dropInst(I){ // remove from its date; a pattern session leaves a tombstone so that it does not come back (future) and is not counted as missed (past, statistics)
   const L=CAL.days[I.dt]||[], ix=L.indexOf(I); if(ix>=0) L.splice(ix,1);
-  if(I.pid&&I.dt>=todayKey()) L.push({pid:I.pid,status:"removed"});
+  if(I.pid) L.push({pid:I.pid,status:"removed"});
   if(L.length) CAL.days[I.dt]=L; else delete CAL.days[I.dt];
 }
 function removeInst(I){ if(I.virtual){ (CAL.days[I.dt]=CAL.days[I.dt]||[]).push({pid:I.pid,status:"removed"}); } else dropInst(I); }
@@ -2140,6 +2300,8 @@ function renderCard0(clicked){
       h+='<p class="role"><span>'+(r?ROLE[r.l]+' in '+EX[selEx].n:'Not involved in '+EX[selEx].n)+'</span><button class="linkbtn" data-act="back">Back</button></p>';}
     else if(mode==="cmp"&&cmp){const ra=perOf(effTargets(cmp[0].i,cmp[0].v)).per[sel.key], rb=perOf(effTargets(cmp[1].i,cmp[1].v)).per[sel.key];
       h+='<p class="role"><span>A: '+(ra?ROLE[ra.l].toLowerCase():'not involved')+'. B: '+(rb?ROLE[rb.l].toLowerCase():'not involved')+'.</span><button class="linkbtn" data-act="back">Back</button></p>';}
+    else if(mode==="vol"&&volStats){let v=0; (byKey[sel.key]||[]).forEach(m=>{v=Math.max(v,volStats.map.get(m)||0);});
+      h+='<p class="role"><span>Average: '+fmt(v)+' sets a week ('+volStatus(v).toLowerCase()+')</span></p>';}
     else if(mode==="vol"){const v=volOfKey(sel.key,"");
       h+='<p class="role"><span>Your week: '+fmt(v)+' sets ('+volStatus(v).toLowerCase()+')</span></p>';}
     if(d.g===TISSUE){ h+='<h3>What it is</h3><p>'+d.a.join("; ")+'</p>'; }
@@ -2225,7 +2387,7 @@ function select(kind,k,focus,clicked){
 
 function meshLevels(tg){const mp=new Map(); tg.forEach(r=>(byKey[r[0]]||[]).forEach(m=>{if(!r[1]||m.userData.part===r[1]) mp.set(m,Math.max(mp.get(m)||0,r[2]));})); return mp;}
 function volumeByMesh(items){const mp=new Map(); (items||plan).forEach(p=>{meshLevels(effTargets(EXI[p.n],p.v)).forEach((l,m)=>mp.set(m,(mp.get(m)||0)+p.sets*VOLF[l]));}); return mp;}
-let volCache=null, volDay=false; // volDay: body heatmap shows the selected day (trained groups + groups still recovering) instead of the whole week
+let volCache=null, volDay=false, volStats=null, sxOn=false; // volStats: the body heatmap shows the average weekly sets of the Statistics range ({map,label}); sxOn: Statistics overlay open; volDay: body heatmap shows the selected day (trained groups + groups still recovering) instead of the whole week
 function volOfKey(k,part){ if(!volCache) volCache=volumeByMesh(); let v=0; (byKey[k]||[]).forEach(m=>{if(!part||m.userData.part===part) v=Math.max(v,volCache.get(m)||0);}); return v; }
 /* weekly-volume goal: target range [lo,hi] sets per muscle group; bands relative to it: 0 low (<lo/2), 1 below target, 2 in target, 3 more than needed */
 const GOALS={maintain:["Maintain",4,6],strength:["Strength",6,10],hyp8:["Muscle, close to failure",8,12],hyp10:["Muscle, moderate intensity",10,20]}, GOAL_KEY="aom.goal.v1", VST=["Low","Below target","In target","More than needed"];
@@ -2243,7 +2405,7 @@ function renderLegend(){const a=tg.lo/2, t=[["v0","Under "+fmt(a)],["v1",rng(fmt
 function syncGoalUI(){ $("#goalSel").value=tg.g; $("#goalCust").hidden=tg.g!=="custom"; $("#goalLo").value=tg.lo; $("#goalHi").value=tg.hi; renderLegend();
   $("#goalSum").innerHTML='Goal: <b>'+rng(tg.lo,tg.hi)+' sets</b> per muscle group / week · <button class="linkbtn" type="button" data-stopen="goals">Change</button>'; }
 function setGoal(g,lo,hi){
-  tg={g:g,lo:lo,hi:hi}; store.set(GOAL_KEY,tg); syncGoalUI(); renderVolSum(); renderSuggest(); renderBal();
+  tg={g:g,lo:lo,hi:hi}; store.set(GOAL_KEY,tg); syncGoalUI(); renderVolSum(); renderSuggest(); renderBal(); if(sxOn) sxRender();
   if(mode==="vol"){ setMode("vol"); if(sel&&view==="sel") renderCard(); }
 }
 $("#goalSel").innerHTML=Object.keys(GOALS).map(k=>'<option value="'+k+'">'+GOALS[k][0]+' · '+rng(GOALS[k][1],GOALS[k][2])+'</option>').join("")+'<option value="custom">Custom range</option>';
@@ -2256,7 +2418,7 @@ function goalInput(hiEdited){
 $("#goalLo").onchange=()=>goalInput(false); $("#goalHi").onchange=()=>goalInput(true);
 let curMovement=null;  // currently selected movement
 function setMode(m){
-  mode=m; heat=null; heatTip=null;
+  mode=m; heat=null; heatTip=null; if(m!=="vol") volStats=null;
   if(m==="ex"){ const lv=meshLevels(effTargets(selEx,exVars[selEx])); heat=new Map(); heatTip=new Map(); lv.forEach((l,ms)=>{heat.set(ms,HM[l]); heatTip.set(ms,ROLE[l].toLowerCase());}); }
   else if(m==="cmp"){ const a=meshLevels(effTargets(cmp[0].i,cmp[0].v)), b=meshLevels(effTargets(cmp[1].i,cmp[1].v)); heat=new Map(); heatTip=new Map();
     new Set([...a.keys(),...b.keys()]).forEach(ms=>{const d=(W[a.get(ms)]||0)-(W[b.get(ms)]||0); let mt,tp;
@@ -2264,6 +2426,7 @@ function setMode(m){
       heat.set(ms,mt); heatTip.set(ms,tp);}); }
   else if(m==="mv"){ heat=new Map(); heatTip=new Map();  // movement highlighting
     if(curMovement) meshLevels(MOVEMENTS[curMovement].t).forEach((l,ms)=>{heat.set(ms,HM[l]); heatTip.set(ms,l===3?"prime mover":"assists this movement");}); }
+  else if(m==="vol"&&volStats){ heat=new Map(); heatTip=new Map(); volStats.map.forEach((s,ms)=>{if(s>0){heat.set(ms,VM[volBand(s)]); heatTip.set(ms,fmt(s)+" sets a week on average");}}); }
   else if(m==="vol"){ volCache=volumeByMesh(); heat=new Map(); heatTip=new Map();
     if(!volDay) volCache.forEach((s,ms)=>{if(s>0){heat.set(ms,VM[volBand(s)]); heatTip.set(ms,fmt(s)+" weekly sets");}});
     else { // selected day: its trained muscles in the weekly-status colours, plus muscles still recovering from the previous days
@@ -2272,8 +2435,8 @@ function setMode(m){
       sumMeshes().forEach((g,gi)=>{ const f=M.F[day][gi]; if(f>=F_REC-EPS) g[1].forEach(ms=>{ if(!heat.has(ms)){heat.set(ms,M_FAT); heatTip.set(ms,"still recovering (carry-over "+fmt(f)+")");} }); }); } }
   applyVisuals(); syncModeUI();
 }
-function syncModeUI(){ $("#exClear").disabled=selEx===null&&!cmp; $("#tVol").checked=volOn; $("#volScope").hidden=!volOn; $("#btnVol").setAttribute("aria-pressed",String(volOn)); $("#volToolScope").hidden=!volOn; document.querySelectorAll("[data-vs]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.vs==="day")===volDay)); document.querySelectorAll("[data-vs2]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.vs2==="day")===volDay)); renderLegend(); syncBanner(); }
-document.querySelectorAll("[data-vs]").forEach(b=>b.onclick=()=>{ volDay=b.dataset.vs==="day"; if(mode==="vol") setMode("vol"); else syncModeUI(); });
+function syncModeUI(){ $("#exClear").disabled=selEx===null&&!cmp; $("#tVol").checked=volOn; $("#volScope").hidden=!volOn||!!volStats; $("#btnVol").setAttribute("aria-pressed",String(volOn)); $("#volToolScope").hidden=!volOn||!!volStats; document.querySelectorAll("[data-vs]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.vs==="day")===volDay)); document.querySelectorAll("[data-vs2]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.vs2==="day")===volDay)); renderLegend(); syncBanner(); syncSxBan(); }
+document.querySelectorAll("[data-vs]").forEach(b=>b.onclick=()=>{ volStats=null; volDay=b.dataset.vs==="day"; if(mode==="vol") setMode("vol"); else syncModeUI(); });
 document.querySelectorAll("[data-vs2]").forEach(b=>b.onclick=()=>{ const btn=document.querySelector('[data-vs="'+(b.dataset.vs2==="day"?"day":"week")+'"]'); if(btn) btn.click(); });
 function syncBanner(){ const b=$("#cmpBanner"); b.hidden=!cmpPick; if(cmpPick&&selEx!==null) $("#cmpText").textContent="Pick a second exercise to compare with "+EX[selEx].n+"."; }
 $("#cmpCancel").onclick=()=>{cmpPick=false; syncBanner(); if(view==="ex") renderCard();};
@@ -2441,7 +2604,7 @@ function addToPlan(i,v,d,sets){
   if(d===undefined) d=day;
   const dk=week[d].date, I=targetInst(dk,true); I.items.push(item); edTpl=null; if(dk!==selDate) edOpen=false; selDate=dk; curBy[dk]=I.id; planChanged();
 }
-function refreshAll(){ syncPlan(); clampSel(); volCache=null; dayCache=null; renderPlan(); renderVolSum(); renderSuggest(); renderOv(); planRefresh(); if(mode==="vol") setMode("vol"); }
+function refreshAll(){ syncPlan(); clampSel(); volCache=null; dayCache=null; renderPlan(); renderVolSum(); renderSuggest(); renderOv(); planRefresh(); if(mode==="vol") setMode("vol"); if(sxOn) sxRender(true); }
 function planChanged(){ saveCal(); refreshAll(); }
 function tplChanged(){ saveTpl(); vgen++; planChanged(); }
 function patChanged(){ vgen++; planChanged(); }
@@ -2781,7 +2944,7 @@ function renderOvDet(){
   if(M.C[d][gi]){ h+='<br>⚠ '+esc(conflictText(M,d,gi)); el.classList.add("cf"); }
   el.innerHTML=h;
 }
-function openOv(){ ovOn=true; ovFrom=$("#ovOpen"); ovEl.hidden=false; closePops(); syncOvView(); renderOv(); $("#ovClose").focus(); }
+function openOv(){ if(sxOn) closeStats(false); ovOn=true; ovFrom=$("#ovOpen"); ovEl.hidden=false; closePops(); syncOvView(); renderOv(); $("#ovClose").focus(); }
 function closeOv(){ if(!ovOn) return; if(drag) dragStop(true); bPick=null; ovOn=false; ovEl.hidden=true; if(ovFrom&&ovFrom.focus&&ovFrom.isConnected) ovFrom.focus(); ovFrom=null; }
 $("#ovOpen").onclick=openOv; $("#ovClose").onclick=closeOv;
 /* ---------- schedule board: 7 day columns, cards in schedule order (entriesOf) ----------
@@ -3313,7 +3476,7 @@ $("#sug").addEventListener("click",e=>{
 });
 $("#sug").addEventListener("change",e=>{ const t=e.target.closest("select[data-sv]"); if(!t) return; const a=t.dataset.sv.split(":"), o=sugO(+a[0]); o.v=(EX[+a[0]].v||[]).map((g,gi)=>o.v[gi]||0); o.v[+a[1]]=+t.value; if(sugPrev===+a[0]){ sugPrev=null; } renderSuggest(); });
 $("#volsum").addEventListener("click",e=>{const t=e.target.closest("[data-key]"); if(t) select("muscle",t.dataset.key,true);});
-$("#tVol").onchange=e=>{ volOn=e.target.checked; if(volOn){selEx=null;cmp=null;cmpPick=false; if(view!=="sel") view="sel"; setMode("vol"); renderCard(); syncExList();} else if(mode==="vol") setMode(null); };
+$("#tVol").onchange=e=>{ volOn=e.target.checked; volStats=null; if(volOn){selEx=null;cmp=null;cmpPick=false; if(view!=="sel") view="sel"; setMode("vol"); renderCard(); syncExList();} else if(mode==="vol") setMode(null); };
 $("#btnVol").onclick=()=>{ const t=$("#tVol"); t.checked=!t.checked; t.dispatchEvent(new Event("change")); };
 
 /* plate numbers and group numerals: fixed positions in the full, unfiltered Index (muscles by region, nerves, bones by region), so a structure keeps its number whatever the search shows */
@@ -3484,6 +3647,7 @@ function hashNow(){
   else if(selEx!==null){ p.push("ex="+enc(EX[selEx].n)); const vl=vList(selEx,exVars[selEx]); if(vl) p.push("v="+vl); }
   if(curTab!=="anat") p.push("tab="+curTab);
   if(stOn) p.push("settings");
+  if(sxOn) p.push("stats");
   return p.join("&");
 }
 function syncHash(){
@@ -3498,7 +3662,7 @@ function varFromNames(i,names){
 }
 const decList=s=>s.split(",").map(x=>dec(x)||"");
 function applyHash(raw){
-  const o=Object.create(null); String(raw||"").replace(/^#/,"").split("&").forEach(s=>{const j=s.indexOf("="); if(j>0&&!own(o,s.slice(0,j))) o[s.slice(0,j)]=s.slice(j+1); else if(s==="settings") o.settings="";});
+  const o=Object.create(null); String(raw||"").replace(/^#/,"").split("&").forEach(s=>{const j=s.indexOf("="); if(j>0&&!own(o,s.slice(0,j))) o[s.slice(0,j)]=s.slice(j+1); else if(s==="settings") o.settings=""; else if(s==="stats") o.stats="";});
   const exI=n=>{const d=dec(n); return d!==null&&own(EXI,d)?EXI[d]:-1;};
   const side=x=>{const j=x.indexOf(":"), i=exI(j<0?x:x.slice(0,j)); return i<0?null:{i:i,v:varFromNames(i,j<0?[]:decList(x.slice(j+1)))};};
   let any=false, exTab=false;
@@ -3519,6 +3683,7 @@ function applyHash(raw){
   else if(vk!==null&&own(MOVEMENTS,vk)){ select("movement",vk,true); any=true; }
   if(own(o,"tab")&&(o.tab==="anat"||o.tab==="ex"||o.tab==="wk")){ openTab(o.tab); any=true; }
   else if(exTab) openTab("ex");
+  if(own(o,"stats")){ if(!sxOn) openStats(null); any=true; }
   if(own(o,"settings")){ if(!stOn) openSettings(own(STSEC,o.settings)?o.settings:""); any=true; }
   return any;
 }
@@ -3628,6 +3793,7 @@ function setChanged(what){   // a setting changed: persist and refresh whatever 
   else if(what==="units"){ if(tdOn) tdRender(); }
   else if(what==="week"){ renderPat(); }
   else if(what==="endurance"){ renderBal(); renderOv(); }
+  if(sxOn) sxRender();
 }
 document.querySelectorAll("#segUnit [data-unit]").forEach(b=>b.onclick=()=>{ if(SET.units!==b.dataset.unit){ SET.units=b.dataset.unit; setChanged("units"); } });
 document.querySelectorAll("#segWeek [data-ws]").forEach(b=>b.onclick=()=>{ if(SET.weekStart!==b.dataset.ws){ SET.weekStart=b.dataset.ws; setChanged("week"); } });
@@ -3665,6 +3831,320 @@ $("#delAll").onclick=()=>{
   const m=$("#dataMsg"); m.textContent="All data deleted. Reloading…"; m.style.color="var(--ok)"; setTimeout(()=>location.reload(),300);
 };
 
+/* ---------- statistics (v2.2): what was actually trained ----------
+   Done work = the log of the stored sessions (done sets with reps / weight, done endurance sessions with their actual minutes); a finished session without a log counts as planned.
+   Planned (for adherence) = stored sessions of past dates + the pattern sessions of past dates that were never stored (plannedOn); tombstones and dates on which the pattern
+   row was stored remove one. Weeks follow Settings > week start; the current week is partial. Charts are hand-made inline SVG, every one with a table alternative. */
+const sxEl=$("#sx"); let sxFrom=null, sxRange=8, sxSort="nat", sxGrp=null, sxVolEx="", sxStrEx="", sxDay=null, sxRecs=null, sxEx=null, sxPRs=null, sxS=null, sxRT=0;
+const sxLv={}, dMon=k=>{ const t=keyDate(k); return t.getDate()+" "+MONS[t.getMonth()]; }, sxR1=x=>Math.round(x*10)/10, sxNum=v=>String(Math.round(v*100)/100);
+const sxLevels=(n,vn)=>{ const k=n+"|"+vn.join("|"); return sxLv[k]||(sxLv[k]=meshLevels(effTargets(EXI[n],varIdx(EXI[n],vn,false)))); };
+function sxMeshVol(items,scale){ const mp=new Map(); items.forEach(p=>sxLevels(p.n,p.v).forEach((l,m)=>mp.set(m,(mp.get(m)||0)+p.sets*VOLF[l]*(scale||1)))); return mp; }
+function sxGroupsOf(mp){ return sumMeshes().map(g=>{ let v=0; g[1].forEach(m=>{ const x=mp.get(m)||0; if(x>v) v=x; }); return v; }); }
+// weight shown in the chosen unit; volume load text ("48.2 t", "850 kg", "106k lb")
+function vfmt(kg){ if(SET.units==="lb"){ const lb=kg*LB_PER_KG; return lb>=10000?Math.round(lb/1000)+"k lb":Math.round(lb)+" lb"; } return kg>=1000?(Math.round(kg/100)/10).toFixed(1)+" t":Math.round(kg)+" kg"; }
+const sxVolScale=maxKg=>SET.units==="lb"?(maxKg*LB_PER_KG>=20000?{f:LB_PER_KG/1000,u:"k lb"}:{f:LB_PER_KG,u:"lb"}):(maxKg>=2000?{f:.001,u:"t"}:{f:1,u:"kg"});
+/* the sessions planned on a date before today: stored sessions (any state) + pattern sessions that were never stored (a pattern row plays on its weekdays from `from` to `until`;
+   nothing is stored for an untouched one, and a stored copy or a tombstone of the same pattern row on that date means it was kept, moved, done or removed on purpose) */
+function plannedOn(dk){
+  const out=stored(dk).filter(x=>x.id).map(I=>({I:I,name:I.name,pid:I.pid||null})), wd=wdOf(dk);
+  CAL.pattern.forEach(p=>{
+    if(p.from>dk||(p.until&&p.until<dk)||p.wd.indexOf(wd)<0||stored(dk).some(x=>x.pid===p.id)) return;
+    const T=tplOf(p.tid); if(T&&(T.items.length||T.ses.length)) out.push({I:null,name:T.name,pid:p.id});
+  });
+  return out;
+}
+// what a session really has done: sets with reps / weight (done ones), endurance sessions with their actual minutes
+function sxDoneOf(I){
+  const out={ex:[],ses:[]}; if(I.status==="skipped") return out;
+  if(I.lg){
+    I.lg.ex.forEach(x=>{ if(x.skip||!hasOwn(EXI,x.n)) return; const sets=x.sets.filter(t=>t.done).map(t=>({r:t.r,w:t.w})); if(sets.length) out.ex.push({n:x.n,v:x.v,sets:sets}); });
+    I.lg.ses.forEach(x=>{ if(x.skip||!x.done||!hasOwn(ACTI,x.a)) return; out.ses.push({s:mkSes(ACT[ACTI[x.a]],x.k,x.act||x.min,x),hr:x.hr||0}); });
+  } else if(I.status==="done"){
+    I.items.forEach(p=>out.ex.push({n:p.n,v:varNames(EXI[p.n],p.v),sets:Array.from({length:p.sets},()=>({}))}));
+    I.ses.forEach(s=>out.ses.push({s:s,hr:0}));
+  }
+  return out;
+}
+/* state: done | partial (done sets on a past date, never finished) | doing (today, not finished) | skipped | missed (past, nothing done) | open (today, nothing yet).
+   Only done, partial, skipped and missed count as planned; today's unfinished sessions are not judged yet. */
+function sxRec(I,dk,t){
+  const work=sxDoneOf(I), has=work.ex.length>0||work.ses.length>0, fin=I.status==="done"; let state, inDen=true, isDone=false;
+  if(I.status==="skipped") state="skipped";
+  else if(has||(fin&&!I.lg)){ if(fin||dk<t){ state=fin?"done":"partial"; isDone=true; } else { state="doing"; inDen=false; } }
+  else if(dk<t) state="missed"; else { state="open"; inDen=false; }
+  return {dk:dk,I:I,name:I.name,state:state,inDen:inDen,isDone:isDone,work:work,has:has||(fin&&!I.lg)};
+}
+function sxRecords(){
+  const t=todayKey(), ks=Object.keys(CAL.days).filter(k=>k<=t).sort(), recs=[]; let first=ks.length?ks[0]:t;
+  CAL.pattern.forEach(p=>{ if(p.from<first) first=p.from; }); const lim=addD(t,-3650); if(first<lim) first=lim;
+  for(let dk=first;dk<=t;dk=addD(dk,1)){
+    const L=dk<t?plannedOn(dk):stored(dk).filter(x=>x.id).map(I=>({I:I,name:I.name,pid:I.pid||null}));
+    L.forEach(e=>recs.push(e.I?sxRec(e.I,dk,t):{dk:dk,I:null,virt:true,name:e.name,pid:e.pid,state:"missed",inDen:true,isDone:false,work:{ex:[],ses:[]},has:false}));
+  }
+  return recs;
+}
+const e1rm=(r,w)=>w*(1+r/30);
+// per exercise, per session: best estimated 1RM (Epley, 1-12 reps) and heaviest weight; personal records over the whole history (the first session of an exercise is the baseline, not a record)
+function sxStrength(recs){
+  const m=new Map();
+  recs.forEach(rc=>rc.work.ex.forEach(x=>{
+    let e1=null, es=null, hw=null, hs=null;
+    x.sets.forEach(s=>{ if(!(s.r>=1&&s.w>0)) return; if(s.r<=12){ const v=e1rm(s.r,s.w); if(e1===null||v>e1){ e1=v; es=s; } } if(hw===null||s.w>hw){ hw=s.w; hs=s; } });
+    if(hw===null) return; const L=m.get(x.n)||[], last=L[L.length-1];
+    if(last&&last.rc===rc){ if(e1!==null&&(last.e1===null||e1>last.e1)){ last.e1=e1; last.es=es; } if(hw>last.hw){ last.hw=hw; last.hs=hs; } }
+    else L.push({dk:rc.dk,rc:rc,e1:e1,es:es,hw:hw,hs:hs});
+    m.set(x.n,L);
+  }));
+  const prs=[];
+  m.forEach((L,n)=>{ let be=0, bw=0; L.forEach((p,ix)=>{ const ne=p.e1!==null&&p.e1>be+1e-9, nw=p.hw>bw+1e-9; if(ix>0&&(ne||nw)) prs.push({dk:p.dk,n:n,ne:ne,nw:nw,e1:p.e1,es:p.es,hw:p.hw,hs:p.hs,pe:be,pw:bw}); if(ne) be=p.e1; if(nw) bw=p.hw; }); });
+  prs.sort((a,b)=>a.dk<b.dk?1:(a.dk>b.dk?-1:(a.n<b.n?-1:1)));
+  return {byEx:m,prs:prs};
+}
+function sxBuild(){ sxRecs=sxRecords(); const st=sxStrength(sxRecs); sxEx=st.byEx; sxPRs=st.prs; }
+function sxRangeOf(r){
+  const t=todayKey(), w0=weekStartOf(t); let n;
+  if(r==="all"){ let first=t; sxRecs.forEach(x=>{ if(x.dk<first) first=x.dk; }); n=Math.max(4,Math.min(520,Math.floor((dnum(w0)-dnum(weekStartOf(first)))/7)+1)); } else n=+r;
+  const weeks=[]; for(let i=n-1;i>=0;i--) weeks.push(addD(w0,-7*i)); const el=dnum(t)-dnum(w0)+1;
+  return {n:n,weeks:weeks,from:weeks[0],to:t,days:dnum(t)-dnum(weeks[0])+1,partial:el<7,elapsed:el};
+}
+function sxAgg(R){
+  const wi=dk=>Math.floor((dnum(dk)-dnum(R.from))/7), key=(n,v)=>n+"|"+v.join("|");
+  const W=R.weeks.map(s=>({start:s,sess:0,plan:0,skipped:0,missed:0,days:new Set(),sets:0,wsets:0,vol:0,volEx:{},end:0,z:[0,0,0,0,0],vo:0,items:new Map(),g:null,who:0}));
+  const D={}, EXN={}, items=new Map(), HR=[], T={sess:0,plan:0,skipped:0,missed:0,days:0,sets:0,wsets:0,vol:0,end:0,z:[0,0,0,0,0],vo:0,who:0};
+  const add=(mp,n,v,c)=>{ const k=key(n,v), o=mp.get(k)||{n:n,v:v,sets:0}; o.sets+=c; mp.set(k,o); };
+  sxRecs.forEach(rc=>{
+    if(rc.dk<R.from) return; const w=W[wi(rc.dk)]; if(!w) return; const d=D[rc.dk]||(D[rc.dk]={sets:0,end:0,recs:[]}); d.recs.push(rc);
+    if(rc.inDen){ w.plan++; if(rc.isDone) w.sess++; if(rc.state==="skipped") w.skipped++; if(rc.state==="missed") w.missed++; }
+    rc.work.ex.forEach(x=>{
+      const c=x.sets.length, ex=EXN[x.n]||(EXN[x.n]={n:x.n,sets:0,vol:0}); w.sets+=c; d.sets+=c; ex.sets+=c; add(w.items,x.n,x.v,c); add(items,x.n,x.v,c);
+      x.sets.forEach(s=>{ if(s.r>0&&s.w>0){ const v=s.r*s.w; w.vol+=v; w.wsets++; ex.vol+=v; w.volEx[x.n]=(w.volEx[x.n]||0)+v; } });
+    });
+    rc.work.ses.forEach(x=>{ const z=sesZ(x.s), m=sum5(z); w.end+=m; d.end+=m; z.forEach((q,i)=>{ w.z[i]+=q; }); if(vo2like(x.s,z)) w.vo++; if(x.hr) HR.push([x.hr,m]); });
+    if(rc.has) w.days.add(rc.dk);
+  });
+  W.forEach(w=>{ w.who=w.z[1]+w.z[2]+2*(w.z[3]+w.z[4]); w.g=sxGroupsOf(sxMeshVol([...w.items.values()]));
+    T.sess+=w.sess; T.plan+=w.plan; T.skipped+=w.skipped; T.missed+=w.missed; T.days+=w.days.size; T.sets+=w.sets; T.wsets+=w.wsets; T.vol+=w.vol; T.end+=w.end; T.vo+=w.vo; T.who+=w.who; w.z.forEach((q,i)=>{ T.z[i]+=q; }); });
+  const wk=R.days/7, hm=HR.reduce((a,x)=>a+x[1],0);
+  return {R:R,W:W,D:D,EXN:EXN,items:[...items.values()],T:T,wk:wk,gAvg:sxGroupsOf(sxMeshVol([...items.values()],1/wk)),hr:hm>0?Math.round(HR.reduce((a,x)=>a+x[0]*x[1],0)/hm):0,hrN:HR.length,has:T.sets>0||T.end>0};
+}
+/* ---- inline SVG charts ---- */
+function sxScale(max){ if(!(max>0)) return {top:4,step:1,n:4}; const raw=max/4, p=Math.pow(10,Math.floor(Math.log10(raw))), f=raw/p, step=(f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10)*p, n=Math.max(1,Math.ceil(max/step-1e-9)); return {top:step*n,step:step,n:n}; }
+const sxSvgHead=(o)=>'<svg class="sxsvg" viewBox="0 0 '+o.w+' '+o.h+'" role="img" aria-label="'+esc(o.title)+'"><title>'+esc(o.title)+'</title>';
+function sxBars(o){ // o: w, h, labels[], series[[..]] (stacked), cls[], part[] (bool per bar), band [lo,hi], line[], vf(i), yfmt(v), title, unit
+  const n=o.labels.length, W=o.w, H=o.h||180, L=o.l||38, Rt=10, T=22, B=24, pw=W-L-Rt, ph=H-T-B, tot=i=>o.series.reduce((a,s)=>a+(s[i]||0),0);
+  let max=0; for(let i=0;i<n;i++) max=Math.max(max,tot(i)); if(o.line) o.line.forEach(v=>{ if(v!==null&&v>max) max=v; }); if(o.band) max=Math.max(max,o.band[1]*1.1);
+  const sc=sxScale(max), Y=v=>T+ph-ph*v/sc.top, X=i=>L+pw*(i+.5)/n, bw=Math.min(46,pw/n*.68);
+  let s=sxSvgHead({w:W,h:H,title:o.title});
+  for(let k=0;k<=sc.n;k++){ const v=sc.step*k, y=Y(v); s+='<line class="'+(k?'gl':'ax')+'" x1="'+L+'" x2="'+(W-Rt)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'"/><text x="'+(L-5)+'" y="'+(y+3.5).toFixed(1)+'" text-anchor="end">'+sxNum(v)+'</text>'; }
+  if(o.unit) s+='<text x="'+(L-5)+'" y="10" text-anchor="end">'+esc(o.unit)+'</text>';
+  if(o.band){ const y1=Y(o.band[1]), y0=Y(o.band[0]); s+='<rect class="band" x="'+L+'" y="'+y1.toFixed(1)+'" width="'+pw+'" height="'+Math.max(1,y0-y1).toFixed(1)+'"/><line class="bandl" x1="'+L+'" x2="'+(W-Rt)+'" y1="'+y1.toFixed(1)+'" y2="'+y1.toFixed(1)+'"/><line class="bandl" x1="'+L+'" x2="'+(W-Rt)+'" y1="'+y0.toFixed(1)+'" y2="'+y0.toFixed(1)+'"/>'; }
+  const stepL=Math.ceil(n/Math.max(1,Math.floor(pw/46)));
+  for(let i=0;i<n;i++){
+    let cum=0; const pt=o.part&&o.part[i];
+    o.series.forEach((sr,si)=>{ const v=sr[i]||0; if(v<=0) return; const y=Y(cum+v), h=Y(cum)-y; s+='<rect class="'+(o.cls[si])+(pt?' pt':'')+'" x="'+(X(i)-bw/2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(.5,h).toFixed(1)+'"><title>'+esc(o.labels[i]+': '+(o.vf?o.vf(i):sxNum(tot(i))))+'</title></rect>'; cum+=v; });
+    if(n<=14&&tot(i)>0) s+='<text class="vl" x="'+X(i).toFixed(1)+'" y="'+(Y(Math.max(tot(i),o.line&&o.line[i]!==null?o.line[i]:0))-(o.line?8:3)).toFixed(1)+'" text-anchor="middle">'+esc(o.vf?o.vf(i):sxNum(tot(i)))+'</text>';
+    if((n-1-i)%stepL===0) s+='<text x="'+X(i).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle">'+esc(o.labels[i])+'</text>';
+  }
+  if(o.line){ let d=""; o.line.forEach((v,i)=>{ if(v===null) return; d+=(d?"L":"M")+X(i).toFixed(1)+" "+Y(v).toFixed(1); }); s+='<path class="ln" d="'+d+'"/>';
+    o.line.forEach((v,i)=>{ if(v!==null) s+='<circle class="dot'+(o.part&&o.part[i]?' pt':'')+'" cx="'+X(i).toFixed(1)+'" cy="'+Y(v).toFixed(1)+'" r="3.5"><title>'+esc(o.labels[i]+': '+sxNum(v)+(o.lineUnit||''))+'</title></circle>'; }); }
+  return s+'</svg>';
+}
+function sxLines(o){ // o: w, h, pts[{x,y,y2,t}], x0, x1, title, yfmt
+  const W=o.w, H=o.h||210, L=44, Rt=12, T=22, B=26, pw=W-L-Rt, ph=H-T-B;
+  const ys=[]; o.pts.forEach(p=>{ if(p.y!==null) ys.push(p.y); if(p.y2!==null) ys.push(p.y2); });
+  const lo0=Math.min(...ys), hi0=Math.max(...ys), span=Math.max(hi0-lo0,hi0*.1,1), sc=sxScale(span*1.1), ymin=Math.max(0,Math.floor((lo0-span*.05)/sc.step)*sc.step), top=ymin+sc.top;
+  const Y=v=>T+ph-ph*(v-ymin)/(top-ymin), span2=Math.max(1,o.x1-o.x0), X=x=>L+pw*(o.pts.length===1?.5:(x-o.x0)/span2);
+  let s=sxSvgHead({w:W,h:H,title:o.title});
+  for(let k=0;k<=sc.n;k++){ const v=ymin+sc.step*k, y=Y(v); s+='<line class="'+(k?'gl':'ax')+'" x1="'+L+'" x2="'+(W-Rt)+'" y1="'+y.toFixed(1)+'" y2="'+y.toFixed(1)+'"/><text x="'+(L-5)+'" y="'+(y+3.5).toFixed(1)+'" text-anchor="end">'+sxNum(v)+'</text>'; }
+  s+='<text x="'+(L-5)+'" y="10" text-anchor="end">'+esc(wU())+'</text>';
+  const tx=[0,1/3,2/3,1].map(f=>Math.round(o.x0+f*span2)); [...new Set(tx)].forEach((x,i,a)=>{ const dk=addD(o.k0,x-o.x0); s+='<text x="'+X(x).toFixed(1)+'" y="'+(H-8)+'" text-anchor="'+(i===0&&a.length>1?'start':(i===a.length-1&&a.length>1?'end':'middle'))+'">'+esc(dMon(dk))+'</text>'; });
+  const line=(k,cls)=>{ let d=""; o.pts.forEach(p=>{ const v=p[k]; if(v===null) return; d+=(d?"L":"M")+X(p.x).toFixed(1)+" "+Y(v).toFixed(1); }); return d?'<path class="'+cls+'" d="'+d+'"/>':""; };
+  s+=line("y2","ln2")+line("y","ln");
+  o.pts.forEach(p=>{ if(p.y2!==null) s+='<circle class="dot2" cx="'+X(p.x).toFixed(1)+'" cy="'+Y(p.y2).toFixed(1)+'" r="3"><title>'+esc(p.t)+'</title></circle>'; });
+  o.pts.forEach(p=>{ if(p.y!==null) s+='<circle class="dot" cx="'+X(p.x).toFixed(1)+'" cy="'+Y(p.y).toFixed(1)+'" r="4"><title>'+esc(p.t)+'</title></circle>'; });
+  return s+'</svg>';
+}
+const sxTable=(head,rows)=>'<details class="sxdet"><summary>Show as table</summary><div class="tw"><table><thead><tr>'+head.map(h=>'<th scope="col">'+esc(h)+'</th>').join("")+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map((c,i)=>(i?'<td>':'<th scope="row">')+esc(c)+(i?'</td>':'</th>')).join("")+'</tr>').join("")+'</tbody></table></div></details>';
+const sxCW=()=>Math.max(280,Math.min(900,($("#sxBody").clientWidth||720)-24));
+const sxWL=(S,i)=>dMon(S.W[i].start)+(S.R.partial&&i===S.W.length-1?"*":""), sxWT=(S,i)=>"Week of "+dMon(S.W[i].start)+(S.R.partial&&i===S.W.length-1?" (so far)":"");
+const sxPart=S=>S.W.map((w,i)=>S.R.partial&&i===S.W.length-1);
+/* ---- sections ---- */
+function sxSub(S){
+  const R=S.R, wsn=SET.weekStart==="sun"?"Sunday":"Monday";
+  $("#sxSub").innerHTML='<span>'+(sxRange==="all"?'All logged weeks':'Last '+R.n+' weeks')+' <b>'+esc(dMon(R.from))+' – '+esc(dMon(R.to))+'</b></span>'+(R.partial?'<span>* the current week is partial ('+R.elapsed+' of 7 days)</span>':'')+'<span>weeks start on '+wsn+'</span>';
+}
+function sxSummary(S){
+  const T=S.T, wk=S.wk, adh=T.plan?Math.round(T.sess/T.plan*100):null, ew=T.who/wk, lo=SET.endMin[0], hi=SET.endMin[1];
+  const card=(k,h,v,val,sub,cls)=>'<div class="sxcard'+(cls?' '+cls:'')+'" data-k="'+k+'" data-v="'+v+'"><h4>'+h+'</h4><div class="sv">'+val+'</div><div class="ss">'+sub+'</div></div>';
+  $("#sxSum").innerHTML=
+    card("sessions","Sessions done",T.sess,T.sess+(T.plan?'<small> of '+T.plan+' planned</small>':''),(T.skipped||T.missed?[T.skipped?T.skipped+" skipped":"",T.missed?T.missed+" missed":""].filter(Boolean).join(", "):"None skipped or missed"),"")+
+    card("days","Training days",T.days,T.days+'<small> of '+S.R.days+' days</small>',sxR1(T.days/wk)+" a week on average","")+
+    card("adh","Adherence",adh===null?"":adh,adh===null?"–":adh+'<small> %</small>',adh===null?"No session was planned yet in this range":"Done ÷ planned sessions; skipped and missed count as not done",adh===null?"":(adh>=80?"ok":(adh>=50?"mid":"low")))+
+    card("sets","Strength sets",T.sets,String(T.sets),sxR1(T.sets/wk)+" a week on average","")+
+    card("vol","Volume load",sxR1(T.vol),T.wsets?vfmt(T.vol):"–",T.wsets?"Reps × weight over "+T.wsets+" sets with both logged":"Log reps and weight to see the volume load","")+
+    card("end","Endurance",Math.round(T.end),Math.round(T.end)+'<small> min</small>',T.end>0?"WHO-equivalent "+Math.round(ew)+" min a week on average · goal "+lo+"–"+hi:"No endurance session logged",T.end>0?(ew>=lo?"ok":(ew>=lo/2?"mid":"low")):"");
+}
+const sxLvOf=u=>u<=0?0:(u<8?1:(u<16?2:(u<24?3:4)));
+function sxDayLabel(dk,d,t){
+  const bits=[]; if(d){ if(d.sets) bits.push(d.sets+" set"+(d.sets===1?"":"s")); if(d.end) bits.push(Math.round(d.end)+" min endurance"); }
+  if(!bits.length&&d){ const sk=d.recs.some(r=>r.state==="skipped"), ms=d.recs.some(r=>r.state==="missed"); bits.push(ms?"planned session missed":(sk?"session skipped":"nothing logged")); } else if(!bits.length) bits.push("nothing logged");
+  return dShort(dk)+": "+bits.join(", ")+(dk===t?" (today)":"");
+}
+function sxCalendar(S){
+  const R=S.R, t=R.to, rows=wdOrder(), n=R.weeks.length; let cells="", mon="", pm=-1;
+  R.weeks.forEach((ws,wi)=>{
+    const m=keyDate(ws).getMonth(); if(m!==pm){ mon+='<span style="left:calc(var(--cw)*'+wi+')">'+MONS[m]+'</span>'; pm=m; }
+    for(let r=0;r<7;r++){
+      const dk=addD(ws,r), fut=dk>t, d=S.D[dk], u=d?d.sets+d.end/15:0, lv=sxLvOf(u), lab=fut?dShort(dk):sxDayLabel(dk,d,t);
+      const miss=!lv&&d&&d.recs.some(x=>x.state==="missed"), skip=!lv&&!miss&&d&&d.recs.some(x=>x.state==="skipped");
+      cells+='<button type="button" class="sxd l'+lv+(miss?' miss':'')+(skip?' skip':'')+(dk===t?' tod':'')+(fut?' fut':'')+(dk===sxDay?' sel':'')+'" data-d="'+dk+'" data-u="'+sxR1(u)+'" data-l="'+lv+'" title="'+esc(lab)+'" aria-label="'+esc(lab)+'" aria-pressed="'+(dk===sxDay)+'"'+(fut?' disabled':'')+'></button>';
+    }
+  });
+  const wr=S.W.map((w,i)=>[sxWT(S,i),String(w.days.size),String(w.sets),String(Math.round(w.end)),w.plan?w.sess+" of "+w.plan:"–"]);
+  $("#sxCal").innerHTML='<div class="sxcalw" id="sxCalW"><div class="sxcal"><div class="sxwd" aria-hidden="true">'+rows.map((wd,i)=>'<span>'+(i%2===0?WDS[wd]:'')+'</span>').join("")+'</div><div class="sxcols"><div class="sxmon" aria-hidden="true">'+mon+'</div><div class="sxdays" id="sxDays" role="group" aria-label="Training days, one square per day">'+cells+'</div></div></div></div>'+
+    '<div class="sxleg" aria-hidden="true"><span>Less<i></i><i style="--o:.28"></i><i style="--o:.5"></i><i style="--o:.75"></i><i style="--o:1"></i>More (sets + endurance minutes ÷ 15)</span><span><i class="miss"></i>Planned session missed</span><span><i class="skip"></i>Skipped</span></div>'+
+    sxTable(["Week","Training days","Sets","Endurance min","Sessions done"],wr);
+  const cw=$("#sxCalW"); cw.scrollLeft=cw.scrollWidth;
+  sxDayRender(S);
+}
+function sxSessSum(rc){ const w=rc.work, sets=w.ex.reduce((a,x)=>a+x.sets.length,0), mn=Math.round(w.ses.reduce((a,x)=>a+sesTot(x.s),0)); return [sets?sets+" set"+(sets===1?"":"s"):"",mn?mn+" min":""].filter(Boolean).join(" · "); }
+function sxDayRender(S){
+  const el=$("#sxDay"); if(!sxDay){ el.innerHTML='<span class="fine" style="margin:0!important">Select a day to see its sessions.</span>'; return; }
+  const d=S.D[sxDay], L=d?d.recs:[];
+  el.innerHTML='<b>'+esc(dLong(sxDay))+'</b>'+(L.length?L.map(rc=>'<div class="sxsl"><b>'+esc(rc.name)+'</b><span class="sxst '+rc.state+'">'+({done:"done",partial:"partly done",doing:"in progress",skipped:"skipped",missed:"missed",open:"planned"})[rc.state]+'</span><small>'+esc(sxSessSum(rc)||(rc.virt?"planned in the weekly pattern":""))+'</small>'+(rc.I&&rc.I.lg?'<button class="linkbtn" type="button" data-sxlog="'+esc(rc.I.id)+'">Open log</button>':'')+'</div>').join(""):'<div class="sxsl"><small>Nothing planned or logged on this date.</small></div>')+
+    '<div class="sxsl"><button class="linkbtn" type="button" data-sxcal="'+sxDay+'">Show in the calendar</button></div>';
+}
+function sxPickDay(dk){
+  sxDay=dk; document.querySelectorAll("#sxDays .sxd").forEach(b=>{ const on=b.dataset.d===dk; b.classList.toggle("sel",on); b.setAttribute("aria-pressed",String(on)); }); if(sxS) sxDayRender(sxS);
+}
+function sxToCalendar(dk){
+  closeStats(false); openTab("wk"); if(isPhone()){ cardAway=true; peekToHalf(); syncCardUI(); }
+  if(slotOf(dk)<0) setWin(addD(dk,-3),true,dk); else setDate(dk);
+}
+$("#sxCal").addEventListener("click",e=>{ const b=e.target.closest(".sxd"); if(b&&!b.disabled) sxPickDay(b.dataset.d); });
+$("#sxDay").addEventListener("click",e=>{
+  const l=e.target.closest("[data-sxlog]"); if(l){ openToday(l.dataset.sxlog,l); return; }
+  const c=e.target.closest("[data-sxcal]"); if(c) sxToCalendar(c.dataset.sxcal);
+});
+function sxGrid(S){
+  const R=S.R, n=S.W.length, order=SUMMARY.map((r,i)=>i); let h='<div class="sxscroll"><table class="sxg" id="sxGridT"><thead><tr><th class="rl" scope="col"><button class="sb" type="button" data-sxs="nat" aria-pressed="'+(sxSort==="nat")+'">Muscle group</button></th>'+
+    S.W.map((w,i)=>'<th scope="col"'+(S.R.partial&&i===n-1?' class="part"':'')+' title="'+esc(sxWT(S,i))+'">'+keyDate(w.start).getDate()+'<small>'+MONS[keyDate(w.start).getMonth()]+(S.R.partial&&i===n-1?"*":"")+'</small></th>').join("")+
+    '<th class="avh" scope="col"><button class="sb" type="button" data-sxs="avg" aria-pressed="'+(sxSort==="avg")+'" title="Sort by the average, highest first">Avg / wk</button></th></tr></thead><tbody>';
+  const row=gi=>{
+    const nm=SUMMARY[gi][0], av=S.gAvg[gi];
+    return '<tr data-g="'+gi+'"'+(sxGrp===gi?' class="on"':'')+'><th class="rl" scope="row"><button class="rb" type="button" data-g="'+gi+'" aria-pressed="'+(sxGrp===gi)+'">'+esc(nm)+'</button></th>'+
+      S.W.map((w,i)=>{ const v=w.g[gi]; return '<td class="c '+(v>0?'v'+volBand(v):'z')+(S.R.partial&&i===n-1?' pt':'')+'" data-g="'+gi+'" data-w="'+i+'" data-v="'+sxR1(v)+'" title="'+esc(nm+' · '+sxWT(S,i)+': '+fmt(v)+' sets ('+volStatus(v)+')')+'">'+(v>0?fmt(v):'–')+'</td>'; }).join("")+
+      '<td class="c av '+(av>0?'v'+volBand(av):'z')+'" data-g="'+gi+'" data-avg="'+sxR1(av)+'" title="'+esc(nm+' · average per week: '+fmt(av)+' sets ('+volStatus(av)+')')+'">'+(av>0?fmt(av):'–')+'</td></tr>';
+  };
+  if(sxSort==="avg") order.slice().sort((a,b)=>S.gAvg[b]-S.gAvg[a]||a-b).forEach(gi=>{ h+=row(gi); });
+  else OVG.forEach(sec=>{ h+='<tr class="sec"><th scope="rowgroup">'+sec[0]+'</th><td colspan="'+(n+1)+'"></td></tr>'; sec[1].forEach(gi=>{ h+=row(gi); }); });
+  $("#sxGrid").innerHTML=h+'</tbody></table></div><p class="fine" style="margin-top:6px!important">Hard sets per week and muscle group, coloured by your goal of '+rng(tg.lo,tg.hi)+' sets (the same bands as the volume heatmap). The average counts the current week by its days so far. Select a muscle group for its weekly chart.</p>';
+  sxGroupChart(S);
+}
+function sxGroupChart(S){
+  const el=$("#sxGrp"); if(sxGrp===null){ el.innerHTML=''; return; }
+  const gi=sxGrp, vals=S.W.map(w=>w.g[gi]);
+  el.innerHTML='<div class="sxchart"><h3>'+esc(SUMMARY[gi][0])+'</h3><p class="fine">Hard sets per week. The green band is your goal ('+rng(tg.lo,tg.hi)+'); the average is '+fmt(S.gAvg[gi])+' a week.</p>'+
+    sxBars({w:sxCW(),labels:S.W.map((w,i)=>sxWL(S,i)),series:[vals.map(sxR1)],cls:["sxb"],part:sxPart(S),band:[tg.lo,tg.hi],title:SUMMARY[gi][0]+": sets per week",vf:i=>fmt(vals[i])})+
+    '<div class="sxlegend"><span><i class="bandi"></i>Goal '+rng(tg.lo,tg.hi)+' sets</span></div>'+sxTable(["Week of","Sets","Status"],S.W.map((w,i)=>[sxWT(S,i),fmt(vals[i]),volStatus(vals[i])]))+'</div>';
+}
+$("#sxGrid").addEventListener("click",e=>{
+  const s=e.target.closest("[data-sxs]"); if(s){ sxSort=s.dataset.sxs; sxGrid(sxS); const b=$('#sxGrid [data-sxs="'+sxSort+'"]'); if(b) b.focus(); return; }
+  const r=e.target.closest("button.rb"); if(!r) return; const gi=+r.dataset.g; sxGrp=sxGrp===gi?null:gi;
+  document.querySelectorAll("#sxGridT tr[data-g]").forEach(tr=>{ const on=+tr.dataset.g===sxGrp; tr.classList.toggle("on",on); tr.querySelector("button.rb").setAttribute("aria-pressed",String(on)); });
+  sxGroupChart(sxS);
+});
+function sxFillSel(sel,opts,cur,all){
+  sel.innerHTML=(all?'<option value="">'+all+'</option>':'')+opts.map(o=>'<option value="'+esc(o[0])+'">'+esc(o[1])+'</option>').join(""); sel.value=opts.some(o=>o[0]===cur)||(all&&cur==="")?cur:(all?"":(opts[0]?opts[0][0]:""));
+  return sel.value;
+}
+function sxVolume(S){
+  const exs=Object.keys(S.EXN).filter(n=>S.EXN[n].vol>0).sort((a,b)=>S.EXN[b].vol-S.EXN[a].vol||(a<b?-1:1));
+  sxVolEx=sxFillSel($("#sxVolEx"),exs.map(n=>[n,n+" · "+vfmt(S.EXN[n].vol)]),sxVolEx,"All exercises");
+  const vals=S.W.map(w=>sxVolEx?(w.volEx[sxVolEx]||0):w.vol), mx=Math.max(0,...vals), el=$("#sxVol");
+  if(mx<=0){ el.innerHTML='<p class="empty">'+(S.T.wsets?'No volume logged for this exercise in the range.':'No sets with both reps and weight logged in this range. Enter reps and weight in the training log to see the volume load.')+'</p>'; return; }
+  const sc=sxVolScale(mx), tt=sxVolEx?sxVolEx+": volume load per week":"Volume load per week";
+  el.innerHTML='<div class="sxchart"><h3>'+esc(sxVolEx||"All exercises")+'</h3><p class="fine">Volume load = repetitions × weight of every done set, summed per week. Total '+esc(vfmt(vals.reduce((a,x)=>a+x,0)))+'.</p>'+
+    sxBars({w:sxCW(),labels:S.W.map((w,i)=>sxWL(S,i)),series:[vals.map(v=>v*sc.f)],cls:["sxb"],part:sxPart(S),title:tt,unit:sc.u,vf:i=>vals[i]>0?vfmt(vals[i]):"",l:44})+
+    sxTable(sxVolEx?["Week of","Volume load"]:["Week of","Volume load","Sets with weight"],S.W.map((w,i)=>sxVolEx?[sxWT(S,i),vals[i]>0?vfmt(vals[i]):"–"]:[sxWT(S,i),vals[i]>0?vfmt(vals[i]):"–",String(w.wsets)]))+'</div>';
+}
+$("#sxVolEx").onchange=e=>{ sxVolEx=e.target.value; if(sxS) sxVolume(sxS); };
+const sxSet=s=>s?s.r+" × "+wFmt(s.w)+" "+wU():"";
+function sxStrengthSec(S){
+  const R=S.R, exs=Object.keys(S.EXN).sort((a,b)=>S.EXN[b].sets-S.EXN[a].sets||(a<b?-1:1));
+  const opts=exs.map(n=>[n,n+" · "+S.EXN[n].sets+" set"+(S.EXN[n].sets===1?"":"s")]);
+  const el=$("#sxStr"), pr=$("#sxPR");
+  if(!opts.length){ $("#sxStrEx").innerHTML=""; el.innerHTML='<p class="empty">No strength sets logged in this range.</p>'; }
+  else {
+    sxStrEx=sxFillSel($("#sxStrEx"),opts,sxStrEx,""); const L=(sxEx.get(sxStrEx)||[]).filter(p=>p.dk>=R.from), cv=kg=>SET.units==="lb"?kg*LB_PER_KG:kg;
+    if(!L.length) el.innerHTML='<p class="empty">No set with both reps and weight logged for '+esc(sxStrEx)+' in this range. The estimate needs 1 to 12 repetitions and a weight.</p>';
+    else {
+      const pts=L.map(p=>({x:dnum(p.dk),y:p.e1===null?null:cv(p.e1),y2:cv(p.hw),t:dLong(p.dk)+(p.e1!==null?": estimated 1RM "+wFmt(p.e1)+" "+wU()+" (best set "+sxSet(p.es)+")":"")+"; heaviest "+sxSet(p.hs)}));
+      const bestE=L.reduce((b,p)=>p.e1!==null&&(!b||p.e1>b.e1)?p:b,null), bestW=L.reduce((b,p)=>!b||p.hw>b.hw?p:b,null);
+      el.innerHTML='<div class="sxchart"><h3>'+esc(sxStrEx)+'</h3><p class="fine">'+L.length+' session'+(L.length===1?'':'s')+' in the range'+(bestE?' · best estimated 1RM '+esc(wFmt(bestE.e1)+' '+wU())+' ('+esc(sxSet(bestE.es))+', '+esc(dMon(bestE.dk))+')':'')+' · heaviest set '+esc(sxSet(bestW.hs))+' ('+esc(dMon(bestW.dk))+')</p>'+
+        sxLines({w:sxCW(),pts:pts,x0:dnum(R.from),x1:dnum(R.to),k0:R.from,title:sxStrEx+": estimated one-repetition maximum per session"})+
+        '<div class="sxlegend"><span><i class="ln"></i>Estimated 1RM per session (Epley: weight × (1 + reps ÷ 30))</span><span><i class="ln2"></i>Heaviest weight</span></div>'+
+        sxTable(["Date","Estimated 1RM ("+wU()+")","Best set","Heaviest set"],L.map(p=>[dShort(p.dk),p.e1===null?"–":wFmt(p.e1),sxSet(p.es)||"–",sxSet(p.hs)]))+'</div>';
+    }
+  }
+  const P=sxPRs.slice(0,10);
+  pr.innerHTML=P.length?'<ul class="sxpr">'+P.map(p=>'<li data-pr="'+esc(p.n)+'"><span class="dt">'+esc(dMon(p.dk))+'</span><b>'+esc(p.n)+'</b><span>'+[p.ne?'new best estimated 1RM '+esc(wFmt(p.e1)+' '+wU()):'',p.nw?'new heaviest weight '+esc(wFmt(p.hw)+' '+wU()):''].filter(Boolean).join(' and ')+'</span><small>'+esc(p.nw?sxSet(p.hs):sxSet(p.es))+(p.ne&&!p.nw?' · before '+esc(wFmt(p.pe)+' '+wU()):' · before '+esc(wFmt(p.pw)+' '+wU()))+'</small></li>').join("")+'</ul><p class="fine" style="margin-top:6px!important">Over everything logged, newest first. The first session of an exercise is the starting point, not a record.</p>':'<p class="empty">A record appears when you beat your earlier best estimated 1RM or heaviest weight for an exercise.</p>';
+}
+$("#sxStrEx").onchange=e=>{ sxStrEx=e.target.value; if(sxS) sxStrengthSec(sxS); };
+function sxEndurance(S){
+  const T=S.T, el=$("#sxEnd"), W=S.W; if(!(T.end>0)){ el.innerHTML='<p class="empty">No endurance session logged in this range.</p>'; return; }
+  const lo=SET.endMin[0], hi=SET.endMin[1], tot=T.z[0]+T.z[1]+T.z[2]+T.z[3]+T.z[4], easy=T.z[0]+T.z[1], mod=T.z[2], hard=T.z[3]+T.z[4];
+  const pe=Math.round(easy/tot*100), pm=Math.round(mod/tot*100), ph=Math.max(0,100-pe-pm), eok=pe>=SET.easyMin, vlo=SET.vo2[0], vhi=SET.vo2[1], vavg=T.vo/S.wk;
+  const lab=W.map((w,i)=>sxWL(S,i)), part=sxPart(S), zs=[0,1,2,3,4].map(z=>W.map(w=>sxR1(w.z[z])));
+  const seg=(m,c,l)=>m>0?'<u style="flex:'+m+' 0 0;background:'+c+'" title="'+l+'"></u>':"";
+  el.innerHTML='<div class="sxchart"><h3>Minutes per heart-rate zone and week</h3><p class="fine">The line is the WHO-equivalent minutes per week (Zone 2 and 3 once, Zone 4 and 5 twice); the green band is your goal of '+lo+'–'+hi+' minutes.</p>'+
+    sxBars({w:sxCW(),h:200,labels:lab,series:zs,cls:["z1","z2","z3","z4","z5"],part:part,band:[lo,hi],line:W.map(w=>Math.round(w.who)),title:"Endurance minutes per zone and week, with WHO-equivalent minutes",vf:i=>Math.round(W[i].end)+"′",lineUnit:" WHO-equivalent min",l:42})+
+    '<div class="sxlegend">'+[1,2,3,4,5].map(z=>'<span><i style="background:var(--z'+z+')"></i>Z'+z+'</span>').join("")+'<span><i class="ln"></i>WHO-equivalent minutes</span><span><i class="bandi"></i>Goal '+lo+'–'+hi+'</span></div>'+
+    sxTable(["Week of","Z1","Z2","Z3","Z4","Z5","Total","WHO-equivalent","VO2max-like"],W.map((w,i)=>[sxWT(S,i)].concat(w.z.map(m=>String(Math.round(m))),[String(Math.round(w.end)),String(Math.round(w.who)),String(w.vo)])))+'</div>'+
+    '<div class="sxshare"><div class="bc" data-b="split" data-easy="'+pe+'" data-mod="'+pm+'" data-hard="'+ph+'"><h4>Intensity split</h4><div class="bv">'+pe+' %<small> easy</small></div><div class="sbar" role="img" aria-label="Easy '+pe+' %, moderate '+pm+' %, hard '+ph+' %">'+seg(easy,"var(--z2)","Easy (Z1–Z2): "+pe+" %")+seg(mod,"var(--z3)","Moderate (Z3): "+pm+" %")+seg(hard,"var(--z5)","Hard (Z4–Z5): "+ph+" %")+'</div><div class="bs '+(eok?'ok':'wr')+'">'+pe+' / '+pm+' / '+ph+' % easy / moderate / hard. '+(eok?'On target: at least '+SET.easyMin+' % easy.':'Your goal is at least '+SET.easyMin+' % easy.')+'</div></div>'+
+    '<div class="bc" data-b="vo2" data-v="'+T.vo+'"><h4>VO2max-like sessions</h4><div class="bv">'+T.vo+'<small> in total · '+sxR1(vavg)+' a week</small></div><div class="bs '+(vavg>=vlo&&vavg<=vhi?'ok':'wr')+'">'+(vavg>=vlo&&vavg<=vhi?'In target ('+rng(vlo,vhi)+' a week).':'Target: '+rng(vlo,vhi)+' a week.')+'</div></div>'+
+    '<div class="bc" data-b="hr"><h4>Heart rate</h4><div class="bv">'+(S.hr?S.hr+'<small> bpm average</small>':'–')+'</div><div class="bs nl">'+(S.hrN?'From '+S.hrN+' session'+(S.hrN===1?'':'s')+' with an average heart rate logged (weighted by minutes).':'No average heart rate logged yet. You can enter it in the training log.')+'</div></div></div>'+
+    '<div class="sxchart"><h3>VO2max-like sessions per week</h3>'+sxBars({w:sxCW(),h:150,labels:lab,series:[W.map(w=>w.vo)],cls:["sxb"],part:part,band:[vlo,Math.max(vhi,vlo)],title:"VO2max-like sessions per week",vf:i=>String(W[i].vo),l:30})+sxTable(["Week of","VO2max-like sessions"],W.map((w,i)=>[sxWT(S,i),String(w.vo)]))+'</div>';
+}
+function sxRender(rebuild){
+  if(!sxOn) return; if(rebuild||!sxRecs) sxBuild();
+  document.querySelectorAll("#sxRange [data-sxr]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.sxr===String(sxRange))));
+  const S=sxS=sxAgg(sxRangeOf(sxRange)); sxSub(S);
+  const any=sxRecs.some(r=>r.has&&(r.work.ex.length||r.work.ses.length)), em=$("#sxEmpty");
+  $("#sxShow").disabled=!S.has; $("#sxMain").hidden=!S.has; em.hidden=S.has;
+  if(!S.has){ em.textContent=any?"Nothing logged in "+(sxRange==="all"?"the logged weeks":"the last "+S.R.n+" weeks")+". Choose a longer range, or log a session with ▶ Start.":"Log a session with ▶ Start to see statistics here."; return; }
+  if(sxDay&&(sxDay<S.R.from||sxDay>S.R.to)) sxDay=null;
+  if(sxGrp!==null&&(sxGrp<0||sxGrp>=SUMMARY.length)) sxGrp=null;
+  sxSummary(S); sxCalendar(S); sxGrid(S); sxVolume(S); sxStrengthSec(S); sxEndurance(S);
+}
+function openStats(from){
+  if(ovOn) closeOv(); closePops(); if(!sxOn){ sxFrom=from||document.activeElement; sxOn=true; sxEl.hidden=false; sxBuild(); sxRender(); syncHash(); }
+  $("#sxClose").focus();
+}
+function closeStats(back){
+  if(!sxOn) return; sxOn=false; sxEl.hidden=true; syncHash();
+  if(back!==false){ const f=sxFrom&&sxFrom.isConnected&&!sxFrom.closest("[hidden]")?sxFrom:$("#sxOpen"); if(f&&f.focus) f.focus(); }
+  sxFrom=null;
+}
+$("#sxOpen").onclick=function(){ openStats(this); };
+$("#sxClose").onclick=()=>closeStats();
+document.querySelectorAll("#sxRange [data-sxr]").forEach(b=>b.onclick=()=>{ sxRange=b.dataset.sxr==="all"?"all":+b.dataset.sxr; sxRender(); });
+window.addEventListener("keydown",e=>{ if(e.key==="Escape"&&sxOn&&!stOn&&!tdOn){ e.preventDefault(); e.stopImmediatePropagation(); closeStats(); } },true);
+window.addEventListener("resize",()=>{ if(!sxOn) return; clearTimeout(sxRT); sxRT=setTimeout(()=>sxRender(),150); });
+// show the average weekly sets of the range on the body (the volume heatmap with the range's average instead of the 7-day plan)
+function syncSxBan(){
+  const on=mode==="vol"&&!!volStats; $("#sxBan").hidden=!on; if(!on) return;
+  $("#sxBanT").textContent="Average weekly sets"; $("#sxBanS").textContent=volStats.label+" · goal "+rng(tg.lo,tg.hi)+" sets per week"; $("#sxBanLeg").innerHTML=$("#volLegend").innerHTML;
+}
+function sxShowBody(){
+  if(!sxS||!sxS.has) return; const S=sxS;
+  volStats={map:sxMeshVol(S.items,1/S.wk),label:(sxRange==="all"?"All logged weeks":"Last "+S.R.n+" weeks")+", "+dMon(S.R.from)+" – "+dMon(S.R.to)};
+  closeStats(false); selEx=null; cmp=null; cmpPick=false; view="sel"; volOn=true; volDay=false; if(!state.muscles){ state.muscles=true; $("#tMuscles").checked=true; }
+  setMode("vol"); renderCard(); syncExList();
+}
+$("#sxShow").onclick=sxShowBody;
+$("#sxBack").onclick=()=>{ volStats=null; volOn=false; setMode(null); renderCard(); syncExList(); };
+$("#sxBackSt").onclick=function(){ openStats(this); };
 const nMus=Object.keys(DB).filter(k=>DB[k].g!==TISSUE).length;
 $("#foot").innerHTML=nMus+" muscles in "+muscleMeshes.length+" meshes, "+Object.keys(BDB).length+" bone types in "+boneMeshes.length+" meshes. "+
  "Meshes from <a href='https://lifesciencedb.jp/bp3d/' target='_blank' rel='noopener'>BodyParts3D</a> (© The Database Center for Life Science, CC BY-SA 2.1 JP) and "+

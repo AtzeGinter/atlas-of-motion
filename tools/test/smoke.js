@@ -40,9 +40,10 @@ function boot(opts){
   let phone=true;const mqs=[];
   w.matchMedia=q=>{const m={media:q,get matches(){return phone&&/max-width:\s*760px|pointer:\s*coarse/.test(q);},ls:[],addEventListener(t,f){this.ls.push(f);},removeEventListener(){},addListener(f){this.ls.push(f);},removeListener(){}};mqs.push(m);return m;};
   w.__setPhone=v=>{phone=v;mqs.forEach(m=>m.ls.forEach(f=>f({matches:m.matches,media:m.media})));};
- } else if(opts.store){
+ }
+ if(opts.store){
   Object.keys(opts.store).forEach(k=>w.localStorage.setItem(k,opts.store[k]));
- } else {
+ } else if(!opts.phone){
   // seed legacy (pre-rename) storage to exercise the migration: variation INDEX arrays (Back squat Stance=Wide), an entry without v, an exercise that no longer exists, equipment minus Band
   w.localStorage.setItem('myology.plan.v1',JSON.stringify([{n:'Back squat',sets:4,v:[1,0]},{n:'Hip thrust',sets:2},{n:'Removed exercise',sets:3,v:[]}]));
   w.localStorage.setItem('myology.eq.v1',JSON.stringify(OLD_EQ));
@@ -1460,6 +1461,204 @@ async function settingsRun(){
   ok(pq('#st').hidden,'phone: Show body closes Settings');}
 }
 // ---- phone instance: matchMedia reports max-width:760px and a coarse pointer ----
+// ---- statistics (v2.2): what was actually trained. Fixed "today" Monday 2026-10-12, weeks start on Monday. ----
+// ---- moving a stored PAST pattern session leaves a tombstone, so the statistics do not count its old date as missed ----
+async function pastMoveRun(){
+ const tpl=[{id:'t1',name:'Push',items:[{n:'Barbell bench press',sets:3,v:[]}],ses:[]}];
+ const cal={v:1,pattern:[{id:'p1',tid:'t1',wd:[0],from:'2026-09-28'}],days:{'2026-10-05':[{id:'i9',tid:'t1',pid:'p1',name:'Push',items:[{n:'Barbell bench press',sets:3,v:[]}],ses:[],status:'planned'}]}};
+ const x=boot({store:{'aom.tpl.v1':JSON.stringify(tpl),'aom.cal.v1':JSON.stringify(cal)},win:'2026-10-03'}),xd=x.document,xq=s=>xd.querySelector(s);
+ await waitFor(()=>!xd.getElementById('loading'),60000,'past-move instance');
+ xq('[data-tab="wk"]').click();
+ xq('#wstrip [data-date="2026-10-05"]').click();
+ const I=xd.querySelector('#sessList .scard [data-sdate]');
+ ok(!!I,'past pattern session on Mon 5 Oct has a date input');
+ I.value='2026-10-07';I.dispatchEvent(new x.Event('change',{bubbles:true}));
+ const d=JSON.parse(x.localStorage.getItem('aom.cal.v1')).days;
+ ok((d['2026-10-05']||[]).some(t=>t.pid==='p1'&&t.status==='removed'&&!t.id)&&(d['2026-10-07']||[]).some(t=>t.id==='i9'),'moving a past pattern session leaves a tombstone on its old date (so statistics do not count it as missed)');
+ x.close();
+}
+async function statsRun(){
+ const lg=(ex,ses)=>({ex:ex.map((e,i)=>({n:e[0],v:[],o:i,sets:e[1].map(s=>({r:s[0],w:s[1],done:s[2]!==false}))})),ses:ses||[]});
+ const S=(id,o)=>Object.assign({id:id,name:'Push',items:[],ses:[],status:'done'},o);
+ const run45=[{t:'e',a:'running',k:'easy',min:45,o:0}];
+ const mkDays=extra=>Object.assign({
+  '2026-07-01':[S('i1',{lg:lg([['Barbell bench press',[[5,70]]]])})],                                                                   // outside 8 weeks
+  '2026-08-26':[S('i2',{name:'Legs',lg:lg([['Back squat',[[5,90]]]])})],                                                               // week of 24 Aug (inside 8 weeks)
+  '2026-09-21':[S('i3',{tid:'t1',pid:'p1',lg:lg([['Barbell bench press',[[5,80],[5,80],[5,85]]],['Barbell row',[[8,60],[8,60]]]])})],     // Mon: done (pattern session stored)
+  '2026-09-28':[S('i4',{tid:'t1',pid:'p1',lg:lg([['Barbell bench press',[[5,85],[5,85],[5,90]]]])})],                                    // Mon: done, heavier (a record)
+  '2026-10-01':[{pid:'p1',status:'removed'}],                                                                                           // Thu: tombstone, not planned
+  '2026-10-03':[S('i5',{name:'Run',tid:'t2',pid:'p2',ses:run45,lg:{ex:[],ses:[{a:'running',k:'easy',min:45,o:0,done:true,act:40,hr:140}]}})], // Sat: easy run, 40 of 45 min
+  '2026-10-05':[S('i6',{tid:'t1',pid:'p1',status:'skipped'})],                                                                          // Mon: skipped
+  '2026-10-07':[S('i7',{name:'Legs',lg:lg([['Back squat',[[5,100],[5,100],[3,110],[5,100,false]]]])})],                                  // Wed: manual, 3 done sets + 1 not done
+  '2026-10-09':[S('i8',{name:'Intervals',lg:{ex:[],ses:[{a:'running',k:'vo2',min:40,o:0,done:true,act:40,n:4,len:4,rec:3}]}})],          // Fri: VO2max intervals
+  '2026-10-10':[S('i9',{name:'Run',tid:'t2',pid:'p2',status:'planned',ses:run45})],                                                    // Sat: planned, never started = missed
+  '2026-10-12':[S('i10',{tid:'t1',pid:'p1',status:'planned',startedAt:1,lg:lg([['Barbell bench press',[[5,90],[5,90],[5,90,false]]]])})] // today: in progress, 2 done sets
+ },extra||{});
+ // Thu 24 Sep, Sat 26 Sep and Thu 8 Oct are pattern sessions that were never stored: missed
+ const tpl=[{id:'t1',name:'Push',items:[{n:'Barbell bench press',sets:3,v:[''],o:0}],ses:[]},{id:'t2',name:'Run',items:[],ses:run45}];
+ const store=extra=>({'aom.tpl.v1':JSON.stringify(tpl),'aom.goal.v1':JSON.stringify({g:'custom',lo:2,hi:2}),
+  'aom.cal.v1':JSON.stringify({v:1,mig:1,seq:30,note:0,pattern:[{id:'p1',tid:'t1',wd:[0,3],from:'2026-09-21'},{id:'p2',tid:'t2',wd:[5],from:'2026-09-21'}],days:mkDays(extra)})});
+ const x=boot({store:store()}),xd=x.document,xq=s=>xd.querySelector(s),xqa=s=>[...xd.querySelectorAll(s)];
+ await waitFor(()=>!xd.getElementById('loading'),60000,'statistics instance');
+ const key=k=>{xd.dispatchEvent(new x.KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true}));},ev=(el,t)=>el.dispatchEvent(new x.Event(t,{bubbles:true}));
+ const card=k=>xq('#sxSum [data-k="'+k+'"]'),cv=k=>card(k).dataset.v,ctext=k=>card(k).textContent.replace(/\s+/g,' ');
+ const rowOf=nm=>xqa('#sxGridT tbody tr[data-g]').find(r=>r.querySelector('th.rl button').textContent===nm);
+ const cells=nm=>[...rowOf(nm).querySelectorAll('td.c')];
+ const buckets=()=>xqa('#sxGridT thead th').length-2;
+ const range=r=>xq('#sxRange [data-sxr="'+r+'"]').click();
+ const cell=dk=>xq('#sxDays [data-d="'+dk+'"]');
+ const rowsOf=sel=>xqa(sel+' tbody tr').map(r=>[...r.children].map(c=>c.textContent.trim()));
+ ok(xq('#sxOpen')&&xq('#sxOpen').parentNode===xq('#ovOpen').parentNode&&xq('#paneWk').contains(xq('#sxOpen'))&&xq('#sx').hidden&&xq('#vp').contains(xq('#sx')),'Statistics: a button next to "Week overview" in the Workout tab; the overlay #sx lives in #vp and starts hidden');
+ // open / close
+ xq('#sxOpen').click();
+ ok(!xq('#sx').hidden&&xd.activeElement===xq('#sxClose')&&x.location.hash==='#stats'&&xq('#sxRange [aria-pressed="true"]').dataset.sxr==='8','Statistics: opens with focus on "Show body", #stats in the address, default range 8 weeks');
+ xq('#sxClose').click();
+ ok(xq('#sx').hidden&&x.location.hash===''&&xd.activeElement===xq('#sxOpen'),'Statistics: "Show body" closes it, removes #stats and returns focus to the button');
+ xq('#sxOpen').click();key('Escape');
+ ok(xq('#sx').hidden&&xd.activeElement===xq('#sxOpen'),'Statistics: Escape closes it');
+ xq('#sxOpen').click();
+ // ranges and buckets
+ ok(buckets()===8&&xqa('#sxDays .sxd').length===56&&/Last 8 weeks/.test(xq('#sxSub').textContent)&&/24 Aug – 12 Oct/.test(xq('#sxSub').textContent)&&/partial \(1 of 7 days\)/.test(xq('#sxSub').textContent),'Range 8 weeks: 8 weekly buckets (24 Aug – 12 Oct), 56 calendar squares, the current week is labelled partial ('+xq('#sxSub').textContent.replace(/\s+/g,' ')+')');
+ range(4);
+ ok(buckets()===4&&xqa('#sxDays .sxd').length===28&&xq('#sxRange [aria-pressed="true"]').dataset.sxr==='4'&&/21 Sep – 12 Oct/.test(xq('#sxSub').textContent),'Range 4 weeks: 4 buckets, 28 squares');
+ // summary numbers (4 weeks): 5 of 10 planned sessions, 6 training days, 13 sets, 5715 kg, 80 endurance minutes
+ ok(cv('sessions')==='5'&&/of 10 planned/.test(ctext('sessions'))&&/1 skipped, 4 missed/.test(ctext('sessions')),'Summary: 5 sessions done of 10 planned, 1 skipped, 4 missed ('+ctext('sessions')+')');
+ ok(cv('adh')==='50'&&card('adh').classList.contains('mid')&&/50 %/.test(ctext('adh')),'Adherence 50 %: 2 of the 4 missed sessions are pattern sessions that were never stored (Thu 24 Sep, Sat 26 Sep, Thu 8 Oct = 3 virtual; Sat 10 Oct stored but never started) and the Thu 1 Oct tombstone is not counted');
+ ok(cv('days')==='6'&&cv('sets')==='13'&&cv('vol')==='5715'&&/5\.7 t/.test(ctext('vol')),'Summary: 6 training days (today\'s unfinished session counts its done sets), 13 strength sets, volume load 5715 kg shown as 5.7 t ('+ctext('vol')+')');
+ ok(cv('end')==='80'&&/WHO-equivalent 31 min a week/.test(ctext('end'))&&/goal 150–300/.test(ctext('end'))&&card('end').classList.contains('low'),'Summary: 80 endurance minutes (actual 40 + VO2max 40), WHO-equivalent 31 min a week against the goal 150–300 ('+ctext('end')+')');
+ // consistency grid
+ const tod=xq('#sxDays .tod');
+ ok(tod&&tod.dataset.d==='2026-10-12'&&xqa('#sxDays .fut').length===6&&xqa('#sxDays .fut').every(b=>b.disabled),'Consistency: today is marked, the 6 later days of the week are inert');
+ ok(cell('2026-09-21').dataset.u==='5'&&cell('2026-09-21').dataset.l==='1'&&cell('2026-09-28').dataset.u==='3'&&cell('2026-10-03').dataset.u==='2.7'&&cell('2026-10-09').dataset.u==='2.7'&&cell('2026-10-12').dataset.u==='2'&&cell('2026-09-22').dataset.l==='0','Consistency: square intensity = sets + endurance minutes / 15 (21 Sep 5, 28 Sep 3, 3 Oct 2.7, today 2)');
+ ok(['2026-09-24','2026-09-26','2026-10-08','2026-10-10'].every(k=>cell(k).classList.contains('miss'))&&!cell('2026-10-01').classList.contains('miss')&&cell('2026-10-05').classList.contains('skip')&&!cell('2026-10-05').classList.contains('miss'),'Consistency: the 4 missed planned days are outlined, the tombstone day is not, the skipped day has its own outline');
+ cell('2026-10-07').click();
+ ok(cell('2026-10-07').classList.contains('sel')&&/Wednesday 7 October/.test(xq('#sxDay').textContent)&&/Legs/.test(xq('#sxDay').textContent)&&/3 sets/.test(xq('#sxDay').textContent)&&xq('#sxDay [data-sxlog]')&&xq('#sxDay [data-sxcal]'),'Consistency: clicking a day lists its sessions with "Open log" and "Show in the calendar"');
+ cell('2026-10-08').click();
+ ok(/Push/.test(xq('#sxDay').textContent)&&/missed/.test(xq('#sxDay').textContent)&&!xq('#sxDay [data-sxlog]')&&/weekly pattern/.test(xq('#sxDay').textContent),'Consistency: a day with an untouched pattern session shows it as missed (no log to open)');
+ cell('2026-10-07').click();xq('#sxDay [data-sxlog]').click();
+ ok(!xq('#td').hidden&&xq('#tdTitle').textContent==='Legs'&&!xq('#sx').hidden,'Consistency: "Open log" opens that session in the Today view, over the statistics');
+ xq('#tdClose').click();
+ ok(xq('#td').hidden&&!xq('#sx').hidden,'... closing it returns to the statistics');
+ xq('#sxDay [data-sxcal]').click();
+ ok(xq('#sx').hidden&&!xq('#paneWk').hidden&&/Wednesday 7 October/.test(xq('#dayLbl').textContent),'Consistency: "Show in the calendar" closes the statistics and selects that date in the Workout tab ('+xq('#dayLbl').textContent+')');
+ xq('#sxOpen').click();range(4);cell('2026-09-21').click();xq('#sxDay [data-sxcal]').click();
+ ok(xq('#sx').hidden&&/Sep/.test(xq('#winLbl').textContent)&&/Monday 21 September/.test(xq('#dayLbl').textContent),'... a date outside the 7-day window moves the window ('+xq('#winLbl').textContent+')');
+ xq('#sxOpen').click();range(4);
+ // sets per muscle group
+ const mid=cells('Mid and lower chest'),up=cells('Upper chest'),quad=cells('Quadriceps');
+ ok(mid.length===5&&mid.slice(0,4).map(c=>c.dataset.v).join()==='3,3,0,2'&&mid[4].dataset.avg==='2.5'&&mid.slice(0,4).map(c=>c.textContent).join()==='3,3,–,2','Sets per group: Mid and lower chest = 3, 3, none, 2 sets in the 4 weeks, average per week 2.5 (8 sets / 3.1 weeks)');
+ ok(mid.map(c=>(c.className.match(/\bv\d\b|\bz\b/)||[''])[0]).join()==='v3,v3,z,v2,v3'&&up[0].classList.contains('v1')&&up[0].textContent==='1.5'&&quad[2].classList.contains('v3')&&quad[2].textContent==='3'&&mid[3].classList.contains('pt'),'Sets per group: cells follow the goal bands (custom goal 2–2: 3 = more than needed, 2 = in target, 1.5 = below target); the partial week is dashed');
+ xq('#sxGrid [data-sxs="avg"]').click();
+ {const first=xqa('#sxGridT tbody tr[data-g]'),av=first.map(r=>+r.querySelector('td.av').dataset.avg);
+  ok(first[0].querySelector('th.rl button').textContent==='Mid and lower chest'&&av.every((v,i)=>!i||av[i-1]>=v)&&!xq('#sxGridT tr.sec')&&xq('#sxGrid [data-sxs="avg"]').getAttribute('aria-pressed')==='true','Sets per group: sorting by the average puts the biggest first, no section rows');}
+ xq('#sxGrid [data-sxs="nat"]').click();
+ ok(xq('#sxGridT tr.sec')&&xqa('#sxGridT tbody tr[data-g]').length===27&&xqa('#sxGridT tbody tr[data-g]')[0].querySelector('th.rl button').textContent==='Upper chest','... and "Muscle group" restores the natural order (27 rows in 5 sections)');
+ ok(xq('#sxGrp').innerHTML==='','Sets per group: no chart before a group is chosen');
+ rowOf('Mid and lower chest').querySelector('button.rb').click();
+ ok(rowOf('Mid and lower chest').classList.contains('on')&&/Mid and lower chest/.test(xq('#sxGrp h3').textContent)&&xqa('#sxGrp svg .sxb').length===3&&xq('#sxGrp svg .band')&&xq('#sxGrp details table'),'Sets per group: clicking a row shows its weekly bars (3 trained weeks) with the goal band and a table alternative');
+ // volume load
+ ok(xq('#sxVol svg')&&xq('#sxVolEx').value===''&&/All exercises/.test(xq('#sxVolEx').options[0].textContent)&&[...xq('#sxVolEx').options].slice(1).map(o=>o.value).join()==='Barbell bench press,Back squat,Barbell row'&&/Total 5\.7 t/.test(xq('#sxVol').textContent),'Volume load: all exercises, 5.7 t in total; the filter lists exercises with weights, biggest first');
+ xq('#sxVolEx').value='Barbell bench press';ev(xq('#sxVolEx'),'change');
+ ok(/Total 3\.4 t/.test(xq('#sxVol').textContent)&&xqa('#sxVol svg rect.sxb').length===3&&/3\.4 t/.test(xq('#sxVol h3').nextElementSibling.textContent),'Volume load: filtered to Barbell bench press = 3.4 t (1225 + 1300 + 900 kg) in 3 weekly bars');
+ xq('#sxVolEx').value='';ev(xq('#sxVolEx'),'change');
+ // strength progress
+ range(8);
+ ok(xq('#sxStrEx').value==='Barbell bench press'&&[...xq('#sxStrEx').options].map(o=>o.value).join()==='Barbell bench press,Back squat,Barbell row'&&/8 sets/.test(xq('#sxStrEx').options[0].textContent),'Strength: the exercise list is ordered by logged sets (bench 8, squat 4, row 2)');
+ ok(xqa('#sxStr svg circle.dot').length===3&&/best estimated 1RM 105 kg \(5 × 90 kg, 28 Sep\)/.test(xq('#sxStr').textContent)&&/heaviest set 5 × 90 kg/.test(xq('#sxStr').textContent),'Strength: bench e1RM points for 21 Sep, 28 Sep, 12 Oct; best e1RM 105 kg = 90 × (1 + 5/30)');
+ {const t=rowsOf('#sxStr details table');ok(t.length===3&&t[0][0]==='Mon 21 Sep'&&t[0][1]==='99'&&t[1][1]==='105'&&t[2][0]==='Mon 12 Oct'&&t[2][1]==='105'&&t[0][2]==='5 × 85 kg','Strength: table alternative: 21 Sep e1RM 99 (5 × 85), 28 Sep 105, today 105 ('+JSON.stringify(t[0])+')');}
+ xq('#sxStrEx').value='Back squat';ev(xq('#sxStrEx'),'change');
+ {const t=rowsOf('#sxStr details table');ok(xqa('#sxStr svg circle.dot').length===2&&t[1][1]==='121'&&t[1][3]==='3 × 110 kg'&&t[1][2]==='3 × 110 kg','Strength: squat e1RM 121 = 110 × (1 + 3/30); the unfinished set of 7 Oct is ignored');}
+ ok(xqa('#sxPR li').length===3&&/7 Oct/.test(xqa('#sxPR li')[0].textContent)&&/Back squat/.test(xqa('#sxPR li')[0].textContent)&&/121 kg/.test(xqa('#sxPR li')[0].textContent)&&/110 kg/.test(xqa('#sxPR li')[0].textContent)&&xqa('#sxPR li').map(l=>l.dataset.pr).join()==='Back squat,Barbell bench press,Barbell bench press','Personal records: 7 Oct squat, 28 Sep bench, 21 Sep bench (the first session of an exercise is a baseline; today\'s bench 5 × 90 does not beat 28 Sep)');
+ range(26);xq('#sxStrEx').value='Barbell bench press';ev(xq('#sxStrEx'),'change');
+ ok(xqa('#sxStr svg circle.dot').length===4,'Strength: range 26 weeks adds the bench session of 1 Jul (4 points)');
+ // endurance
+ range(4);
+ {const t=rowsOf('#sxEnd details table'),r=n=>t.find(x=>x[0]==='Week of '+n);
+  ok(r('21 Sep').slice(1).join()==='0,0,0,0,0,0,0,0'&&r('28 Sep').slice(1).join()==='0,40,0,0,0,40,40,0'&&r('5 Oct').slice(1).join()==='0,24,0,0,16,40,56,1'&&/^Week of 12 Oct/.test(t[3][0]),'Endurance: minutes per zone and week (28 Sep: Z2 40; 5 Oct: Z2 24 + Z5 16 = 40 min, 56 WHO-equivalent, 1 VO2max-like)');}
+ ok(xqa('#sxEnd svg rect.z2').length===2&&xqa('#sxEnd svg rect.z5').length===1&&xq('#sxEnd svg path.ln')&&xq('#sxEnd svg .band'),'Endurance: stacked zone bars, WHO-equivalent line and goal band');
+ ok(xq('#sxEnd [data-b="split"]').dataset.easy==='80'&&xq('#sxEnd [data-b="split"]').dataset.hard==='20'&&/at least 75 % easy/.test(xq('#sxEnd [data-b="split"]').textContent)&&xq('#sxEnd [data-b="vo2"]').dataset.v==='1'&&/140 bpm/.test(xq('#sxEnd [data-b="hr"]').textContent),'Endurance: 80 / 0 / 20 % easy / moderate / hard against the 75 % goal, 1 VO2max-like session, average heart rate 140 bpm');
+ // 8 weeks, 26 weeks, all, 52 weeks
+ range(8);
+ ok(cv('sessions')==='6'&&cv('adh')==='55'&&cv('sets')==='14'&&/6\.2 t/.test(ctext('vol'))&&buckets()===8,'Range 8: the squat session of 26 Aug joins (6 of 11 sessions, 55 %, 14 sets, 6.2 t)');
+ range(26);
+ ok(buckets()===26&&cv('sets')==='15'&&cv('sessions')==='7'&&/6\.5 t/.test(ctext('vol')),'Range 26: the session of 1 Jul joins (15 sets, 6.5 t)');
+ range('all');
+ ok(buckets()===16&&/All logged weeks/.test(xq('#sxSub').textContent)&&/29 Jun – 12 Oct/.test(xq('#sxSub').textContent),'Range all: starts in the week of the first logged session (16 weeks from 29 Jun)');
+ range(52);
+ ok(buckets()===52&&xqa('#sxDays .sxd').length===364,'Range 52 weeks: 52 buckets');
+ range(8);
+ // units
+ range(4);xq('#segUnit [data-unit="lb"]').click();
+ ok(/13k lb/.test(ctext('vol'))&&cv('vol')==='5715','Units: lb shows the volume load as 13k lb (stored value unchanged, 5715 kg)');
+ range(8);xq('#sxStrEx').value='Barbell bench press';ev(xq('#sxStrEx'),'change');
+ ok(/best estimated 1RM 231 lb/.test(xq('#sxStr').textContent)&&/heaviest set 5 × 198 lb/.test(xq('#sxStr').textContent)&&/lb/.test(xq('#sxPR').textContent)&&!/ kg/.test(xq('#sxPR').textContent),'Units: lb changes the strength values and the records (231 lb e1RM, 5 × 198 lb)');
+ xq('#segUnit [data-unit="kg"]').click();
+ ok(/6\.2 t/.test(ctext('vol')),'Units: back to kg');
+ // week start Sunday: weekly buckets follow the setting
+ range(4);xq('#segWeek [data-ws="sun"]').click();
+ ok(buckets()===4&&/weeks start on Sunday/.test(xq('#sxSub').textContent)&&/20 Sep – 12 Oct/.test(xq('#sxSub').textContent)&&xq('#sxDays .sxd').dataset.d==='2026-09-20','Week start Sunday: buckets start on Sundays (20 Sep), the calendar rows follow ('+xq('#sxSub').textContent.replace(/\s+/g,' ')+')');
+ xq('#segWeek [data-ws="mon"]').click();
+ // show on body
+ const meshes=(kind,k,part)=>{const a=[];x.__scene.traverse(o=>{if(o.isMesh&&o.userData.kind===kind&&o.userData.key===k&&(part===undefined||o.userData.part===part))a.push(o);});return a;};
+ const lin=h=>new x.THREE.Color(h).convertSRGBToLinear().getHexString(),P=n=>xd.documentElement.style.getPropertyValue('--m-'+n);
+ range(4);
+ xq('#sxShow').click();
+ {const pec=meshes('muscle','pectoralis major','sternocostal part'),pc=meshes('muscle','pectoralis major','clavicular part'),del=meshes('muscle','gastrocnemius');
+  ok(xq('#sx').hidden&&xq('#tVol').checked&&!xq('#sxBan').hidden&&/Average weekly sets/.test(xq('#sxBan').textContent)&&/Last 4 weeks/.test(xq('#sxBan').textContent)&&xqa('#sxBanLeg .sw').length>=4&&xq('#vp').contains(xq('#sxBan')),'Show on body: closes the overlay, switches the volume heatmap on and shows a banner with title, range and the band legend');
+  ok(pec.length>0&&pec.every(m=>m.visible&&m.material.color.getHexString()===lin(P('v3')))&&pc.every(m=>m.material.color.getHexString()===lin(P('v1')))&&del.every(m=>!m.material.color||m.material.color.getHexString()!==lin(P('v3'))),'Show on body: Mid and lower chest (average 2.5 > goal 2) is painted in the "more than needed" colour, Upper chest (1.3) in "below target", untrained muscles stay grey');}
+ xq('#sxBackSt').click();
+ ok(!xq('#sx').hidden,'Show on body: the banner links back to the statistics');
+ xq('#sxClose').click();
+ xq('#sxBack').click();
+ {const pec=meshes('muscle','pectoralis major','sternocostal part');
+  ok(xq('#sxBan').hidden&&!xq('#tVol').checked&&pec.every(m=>m.material.color.getHexString()!==lin(P('v3'))),'Show on body: "Back to the normal view" removes the heat and the banner');}
+ xq('#sxOpen').click();range(8);xq('#sxShow').click();xq('#tVol').checked=false;ev(xq('#tVol'),'change');
+ ok(xq('#sxBan').hidden,'Show on body: switching the volume toggle off also removes the banner');
+ xq('#tVol').checked=true;ev(xq('#tVol'),'change');
+ ok(xq('#sxBan').hidden,'... and switching it on again shows the 7-day plan volume, not the statistics');
+ xq('#tVol').checked=false;ev(xq('#tVol'),'change');
+ x.close();
+ // a later heavier set creates a record; sets without weight or reps are ignored
+ {const y=boot({store:store({'2026-10-11':[S('i11',{lg:lg([['Barbell bench press',[[5,95],[10,undefined],[undefined,200]]]])})]})}),yd=y.document,yq=s=>yd.querySelector(s),yqa=s=>[...yd.querySelectorAll(s)];
+  await waitFor(()=>!yd.getElementById('loading'),60000,'statistics record instance');
+  yq('#sxOpen').click();
+  const L=yqa('#sxPR li');
+  ok(L.length===4&&L[0].dataset.pr==='Barbell bench press'&&/11 Oct/.test(L[0].textContent)&&/111 kg/.test(L[0].textContent)&&/95 kg/.test(L[0].textContent)&&!/200/.test(yq('#sxPR').textContent),'Records: a later heavier bench set (5 × 95 on 11 Oct) adds a record (e1RM 111 kg, heaviest 95 kg); the set with 200 kg but no reps and the set with reps but no weight are ignored');
+  ok(yq('#sxSum [data-k="sets"]').dataset.v==='17'&&yq('#sxSum [data-k="vol"]').dataset.v==='6640','... all three sets count as strength sets (14 + 3), only the complete one adds volume (6165 + 475 = 6640 kg)');
+  y.close();}
+ // empty states
+ {const e=boot({store:{}}),ed=e.document,eq=s=>ed.querySelector(s);
+  await waitFor(()=>!ed.getElementById('loading'),60000,'statistics empty instance');
+  eq('#sxOpen').click();
+  ok(!eq('#sx').hidden&&!eq('#sxEmpty').hidden&&/Log a session with ▶ Start to see statistics here/.test(eq('#sxEmpty').textContent)&&eq('#sxMain').hidden&&eq('#sxShow').disabled,'Empty state: "Log a session with ▶ Start to see statistics here.", no charts, "Show on body" disabled');
+  e.close();
+  const o=boot({store:{'aom.tpl.v1':'[]','aom.cal.v1':JSON.stringify({v:1,mig:1,seq:3,pattern:[],days:{'2026-07-01':[S('i1',{lg:lg([['Barbell bench press',[[5,70]]]])})]}})}}),od=o.document,oq=s=>od.querySelector(s);
+  await waitFor(()=>!od.getElementById('loading'),60000,'statistics old-data instance');
+  oq('#sxOpen').click();
+  ok(!oq('#sxEmpty').hidden&&/Nothing logged in the last 8 weeks/.test(oq('#sxEmpty').textContent),'Empty state: data outside the range explains that and suggests a longer range ('+oq('#sxEmpty').textContent+')');
+  oq('#sxRange [data-sxr="all"]').click();
+  ok(oq('#sxEmpty').hidden&&!oq('#sxMain').hidden&&oq('#sxSum [data-k="sets"]').dataset.v==='1'&&oq('#sxSum [data-k="adh"]').dataset.v==='100'&&oq('#sxSum [data-k="sessions"]').dataset.v==='1','Range all shows it (a manual session that was done counts as planned and done: 100 %)');
+  o.close();}
+ // deep link
+ {const l=boot({store:store(),url:'https://example.test/#stats'}),ld=l.document;
+  await waitFor(()=>!ld.getElementById('loading'),60000,'statistics deep link');
+  ok(!ld.getElementById('sx').hidden&&/stats/.test(l.location.hash)&&ld.getElementById('sxSum').textContent.length>20,'Deep link: #stats opens the statistics at start-up');
+  ld.dispatchEvent(new l.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+  ok(ld.getElementById('sx').hidden&&!/stats/.test(l.location.hash),'... Escape closes it and clears the hash');
+  l.close();}
+ // phone
+ {const p=boot({phone:true,store:store()}),pd=p.document,pq=s=>pd.querySelector(s),pqa=s=>[...pd.querySelectorAll(s)];
+  await waitFor(()=>!pd.getElementById('loading'),60000,'statistics phone instance');
+  pq('[data-tab="wk"]').click();pq('#sxOpen').click();
+  ok(!pq('#sx').hidden&&pq('#vp').contains(pq('#sx'))&&pqa('#sxRange [data-sxr]').length===6&&pqa('#sxSum .sxcard').length===6&&pqa('#sxGridT tbody tr[data-g]').length===27,'Phone: the overlay opens (in the viewport, over the sheet) with range buttons, 6 summary cards and the group table');
+  pq('#sxRange [data-sxr="12"]').click();
+  ok(pqa('#sxGridT thead th').length-2===12&&pq('#sxCalW')&&pq('#sxCalW').classList.contains('sxcalw'),'Phone: range change works; the day squares sit in a horizontally scrollable strip');
+  pq('#sxShow').click();
+  ok(pq('#sx').hidden&&!pq('#sxBan').hidden&&pq('#vp').contains(pq('#sxBan')),'Phone: "Show on body" closes the overlay and shows the banner over the body');
+  pq('#sxBack').click();
+  ok(pq('#sxBan').hidden,'Phone: "Back to the normal view" hides it');
+  p.close();}
+}
 async function phoneRun(){
  const p=boot({phone:true}),pd=p.document,pq=x=>pd.querySelector(x),pqa=x=>[...pd.querySelectorAll(x)];
  const t0=Date.now();
@@ -2164,6 +2363,8 @@ async function boardRun(){
  await run('migrateRun',migrateRun);
  await run('calRun',calRun);
  await run('settingsRun',settingsRun);
+ await run('statsRun',statsRun);
+ await run('pastMoveRun',pastMoveRun);
  await run('searchRun',searchRun);
  await run('movementRun',movementRun);
  await run('eyeRun',eyeRun);
