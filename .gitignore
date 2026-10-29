@@ -8,3 +8,4 @@ tools/test/node_modules/
 .claude/
 *.pem
 license-private*
+brag-output/
