@@ -500,6 +500,140 @@ async function logRun(){
   y.close();
  }
 }
+// ---- v2.3: adding exercises / endurance from the Today view ----
+async function tdAddRun(){
+ const lg=(n,v,sets)=>({n:n,v:v,o:0,sets:sets});
+ const seed={v:1,mig:1,seq:5,note:0,pattern:[{id:'p1',tid:'t1',wd:[0],from:TODAY}],days:{
+  '2020-01-02':[{id:'i1',name:'Old',items:[{n:'Lat pulldown',sets:2,v:[''],o:0}],ses:[],status:'done',startedAt:1,finishedAt:2,lg:{ex:[lg('Lat pulldown',[''],[{r:10,w:50,done:true},{r:8,w:55,done:true}])],ses:[]}}],
+  '2020-01-03':[{id:'i2',name:'Old 2',items:[{n:'Lat pulldown',sets:1,v:['Underhand'],o:0}],ses:[],status:'done',startedAt:1,finishedAt:2,lg:{ex:[lg('Lat pulldown',['Underhand'],[{r:12,w:40,done:true}])],ses:[]}}]}};
+ const tp=[{id:'t1',name:'Push',items:[{n:'Barbell bench press',sets:3,v:[''],o:0}],ses:[]}];
+ const w=boot({win:TODAY,store:{'aom.cal.v1':JSON.stringify(seed),'aom.tpl.v1':JSON.stringify(tp)}}),d=w.document,q=s=>d.querySelector(s),qa=s=>[...d.querySelectorAll(s)],ev=(el,t)=>el.dispatchEvent(new w.Event(t,{bubbles:true}));
+ await waitFor(()=>!d.getElementById('loading'),60000,'Today view add instance');
+ const wk=()=>JSON.parse(w.localStorage.getItem('aom.cal.v1')||'null'),tpl=()=>JSON.parse(w.localStorage.getItem('aom.tpl.v1')||'[]'),sess=dk=>((wk()||{days:{}}).days[dk]||[]).filter(x=>x.id),dayBtn=i=>q('#wstrip [data-day="'+i+'"]'),selDay=i=>dayBtn(i).click();
+ const tdo=()=>!q('#td').hidden,train=()=>q('#sessList .scard.sel [data-sact="train"]'),today=()=>sess(TODAY);
+ const prog=()=>q('#tdProg').textContent.replace(/\s+/g,' ').trim(),left=()=>q('#tdLeft').textContent.replace(/\s+/g,' ').trim();
+ const blocks=()=>qa('#tdList .tx'),setsOf=b=>[...b.querySelectorAll('.tset')],bn=b=>b.querySelector('.tn b').textContent;
+ const setv=(el,v)=>{el.value=v;ev(el,'input');},chg=(el,v)=>{el.value=v;ev(el,'change');};
+ const esc=()=>d.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+ const vals=b=>setsOf(b).map(r=>r.querySelector('[data-f="r"]').value+'x'+r.querySelector('[data-f="w"]').value).join(' ');
+ const res=()=>qa('#tdRes [data-tdadd]'),resNames=()=>res().map(b=>b.firstChild.textContent.replace(/^\+\s*/,'').trim());
+ const search=t=>{setv(q('#tdQ'),t);return resNames();};
+ const pick=n=>{const b=res().find(x=>x.firstChild.textContent.replace(/^\+\s*/,'').trim()===n);if(!ok(b,'the add search offers "'+n+'"'))return;b.click();};
+ const confirms=[];let answer=true;w.confirm=m=>{confirms.push(m);return answer;};
+ q('[data-tab="wk"]').click();
+ // a pattern session is virtual until it is started; adding stores it
+ ok(sess(TODAY).length===0&&qa('#sessList .scard').length===1,'today\'s pattern session "Push" is still virtual (nothing stored)');
+ train().click();
+ ok(tdo()&&today().length===1&&today()[0].pid==='p1'&&today()[0].tid==='t1'&&blocks().map(bn).join()==='Barbell bench press'&&prog()==='0 / 3 sets','Start stores the pattern session (pid p1, tid t1) and logs its plan');
+ ok(q('#tdAdd')&&q('#tdBody').contains(q('#tdAdd'))&&q('#tdAddEx').textContent==='+ Add exercise'&&q('#tdAddEnd').textContent==='+ Add endurance'&&q('#tdExForm').hidden&&q('#tdEndForm').hidden&&q('#tdAddEx').getAttribute('aria-expanded')==='false','the Today view ends with "+ Add exercise" and "+ Add endurance", both forms closed');
+ ok(!blocks()[0].querySelector('[data-act="rmex"]')&&!!blocks()[0].querySelector('[data-act="skip"]'),'a planned entry has Skip but no Remove');
+ // search: alias, typo, equipment filter, empty
+ q('#tdAddEx').click();
+ ok(!q('#tdExForm').hidden&&q('#tdAddEx').getAttribute('aria-expanded')==='true'&&d.activeElement===q('#tdQ')&&q('#tdQ').type==='search'&&q('#tdAddEnd').getAttribute('aria-expanded')==='false','"+ Add exercise" opens the search and focuses it');
+ ok(search('lats').includes('Lat pulldown')&&search('lats').includes('Pull-up'),'alias "lats" finds exercises that train the latissimus dorsi ('+search('lats').join(', ')+')');
+ ok(search('pulldwon').includes('Lat pulldown'),'a typo ("pulldwon") still finds Lat pulldown');
+ ok(search('zzzzqq').length===0&&/No match/.test(q('#tdRes').textContent)&&search('').length===0&&q('#tdRes').textContent==='','no match: a note; empty query: no list');
+ // add: prefilled from the last done session, in lg AND items, progress grows, focus on the first reps input
+ search('lats');pick('Lat pulldown');
+ ok(blocks().length===2&&bn(blocks()[1])==='Lat pulldown'&&setsOf(blocks()[1]).length===3&&vals(blocks()[1])==='10x50 8x55 8x55','the exercise is appended with 3 set rows prefilled from the last done session ('+vals(blocks()[1])+')');
+ ok(q('#tdExForm').hidden&&q('#tdQ').value===''&&d.activeElement===blocks()[1].querySelector('[data-f="r"]'),'the form closes and focus is on the first reps input of the new entry');
+ ok(prog()==='0 / 6 sets'&&left()==='Still left: 2 exercises, 6 sets'&&/Added Lat pulldown/.test(q('#tdMsg').textContent),'progress and "still left" grow ('+prog()+' | '+left()+')');
+ let I=today()[0];
+ ok(I.lg.ex.length===2&&I.lg.ex[1].n==='Lat pulldown'&&I.lg.ex[1].add===true&&I.lg.ex[1].sets.length===3&&!I.lg.ex[0].add&&I.items.length===2&&I.items[1].n==='Lat pulldown'&&I.items[1].sets===3&&I.items[1].o===1&&I.items[0].o===0,'saved in lg.ex (add:true) and in the planned items (3 sets, after the last entry)');
+ ok(tpl().length===1&&tpl()[0].items.length===1&&tpl()[0].items[0].n==='Barbell bench press','the template is untouched');
+ ok(/6 sets/.test(dayBtn(0).textContent),'the date card counts the added sets ('+dayBtn(0).textContent.replace(/\s+/g,' ').trim()+')');
+ ok(blocks()[1].querySelector('[data-act="rmex"]')&&blocks()[1].querySelector('[data-act="skip"]'),'the added entry has Remove and Skip');
+ // variation select: lg + items + prefill follow
+ const vs=()=>blocks()[1].querySelector('select[data-tdv="0"]');
+ ok(vs()&&[...vs().options].map(o=>o.textContent).join()==='Wide overhand,Close neutral,Underhand'&&vs().value==='0'&&!blocks()[0].querySelector('select')&&!q('#tdList .tx small'),'an added exercise with variations has a select per variation group (default selected), planned entries have none');
+ chg(vs(),'2');
+ I=today()[0];
+ ok(I.lg.ex[1].v.join()==='Underhand'&&I.items[1].v.join()==='Underhand'&&vals(blocks()[1])==='12x40 12x40 12x40'&&vs().value==='2'&&d.activeElement===vs(),'choosing Underhand updates log, plan and the prefill ('+vals(blocks()[1])+')');
+ chg(vs(),'0');
+ ok(today()[0].lg.ex[1].v.join()===''&&today()[0].items[1].v.join()===''&&vals(blocks()[1])==='10x50 8x55 8x55','back to the default option');
+ // Remove: no confirm when nothing is done; the plan item goes too
+ confirms.length=0;blocks()[1].querySelector('[data-act="rmex"]').click();
+ I=today()[0];
+ ok(confirms.length===0&&blocks().length===1&&I.lg.ex.length===1&&I.items.length===1&&prog()==='0 / 3 sets'&&d.activeElement===q('#tdAddEx'),'Remove drops the added entry from log and plan without a confirm when nothing is done');
+ // add again, tick a set -> Remove needs a confirm
+ q('#tdAddEx').click();search('lat pulldown');pick('Lat pulldown');
+ setsOf(blocks()[1])[0].querySelector('[data-f="done"]').click();
+ answer=false;confirms.length=0;blocks()[1].querySelector('[data-act="rmex"]').click();
+ ok(confirms.length===1&&/Lat pulldown/.test(confirms[0])&&blocks().length===2&&today()[0].items.length===2,'Remove with a done set asks first; declining keeps everything');
+ answer=true;blocks()[1].querySelector('[data-act="rmex"]').click();
+ ok(confirms.length===2&&blocks().length===1&&today()[0].items.length===1&&today()[0].lg.ex.length===1,'confirming removes it from log and plan');
+ // endurance
+ q('#tdAddEnd').click();
+ ok(!q('#tdEndForm').hidden&&q('#tdExForm').hidden&&q('#tdAddEnd').getAttribute('aria-expanded')==='true'&&q('#tdEndAct').value==='running'&&q('#tdEndKind').value==='easy','"+ Add endurance" opens the compact form (running, easy by default)');
+ chg(q('#tdEndAct'),'cycling');
+ ok(q('#tdEndKind').value==='easy'&&q('#tdEndMin').value==='60','cycling takes the activity default (easy, 60 min)');
+ chg(q('#tdEndMin'),'30');
+ q('#tdEndAdd').click();
+ I=today()[0];
+ ok(q('#tdEndForm').hidden&&blocks().length===2&&blocks()[1].classList.contains('e')&&I.lg.ses.length===1&&I.lg.ses[0].a==='cycling'&&I.lg.ses[0].min===30&&I.lg.ses[0].add===true&&I.ses.length===1&&I.ses[0].a==='cycling'&&I.ses[0].min===30&&I.ses[0].o===1,'the endurance session is appended to log and plan ('+prog()+')');
+ ok(prog()==='0 / 3 sets · 0 / 30 min'&&d.activeElement===blocks()[1].querySelector('[data-f="act"]')&&blocks()[1].querySelector('[data-act="rmex"]'),'minutes count in the progress; focus on the actual-minutes input; Remove offered');
+ setv(blocks()[1].querySelector('[data-f="act"]'),'25');
+ ok(prog()==='0 / 3 sets · 25 / 30 min','actual minutes are counted ('+prog()+')');
+ answer=false;confirms.length=0;blocks()[1].querySelector('[data-act="rmex"]').click();
+ ok(confirms.length===1&&blocks().length===2,'removing an endurance entry with logged time asks first');
+ answer=true;blocks()[1].querySelector('[data-act="rmex"]').click();
+ ok(blocks().length===1&&today()[0].ses.length===0&&today()[0].lg.ses.length===0,'... and removes it from log and plan');
+ q('#tdAddEnd').click();esc();
+ ok(tdo()&&q('#tdEndForm').hidden&&d.activeElement===q('#tdAddEnd'),'the first Escape only closes an open add form');
+ // Finish: offer to add to the template (never automatic)
+ q('#tdAddEx').click();search('lats');pick('Lat pulldown');q('#tdAddEnd').click();chg(q('#tdEndMin'),'30');q('#tdEndAdd').click();
+ q('#tdFinish').click();
+ ok(tdo()&&!q('#tdOffer').hidden&&/Add the new exercises to the template “Push” too\?/.test(q('#tdOfferTxt').textContent)&&/Lat pulldown/.test(q('#tdOfferTxt').textContent)&&q('#tdOfferYes').textContent==='Add to template'&&q('#tdOfferNo').textContent==='Not now'&&today()[0].finishedAt>0,'Finish with new entries and a template shows the offer; the session is finished ('+q('#tdOfferTxt').textContent+')');
+ ok(tpl()[0].items.length===1&&q('#tdFinish').textContent==='Close','nothing changed in the template yet');
+ q('#tdOfferNo').click();
+ ok(!tdo()&&tpl()[0].items.length===1&&tpl()[0].ses.length===0&&today()[0].lg.ex[1].n==='Lat pulldown','"Not now" closes and leaves the template alone, the additions stay in the session');
+ // a second session from the template: Add to template
+ selDay(3);q('#addTpl').value='t1';ev(q('#addTpl'),'change');q('#addSess').click();
+ ok(sess(D(3)).length===1&&sess(D(3))[0].tid==='t1','a session made from the template on Thu');
+ train().click();
+ q('#tdAddEx').click();search('barbell row');pick('Barbell row');
+ q('#tdAddEnd').click();chg(q('#tdEndAct'),'running');q('#tdEndAdd').click();
+ q('#tdFinish').click();
+ ok(!q('#tdOffer').hidden&&/exercises/.test(q('#tdOfferTxt').textContent)&&/Barbell row/.test(q('#tdOfferTxt').textContent),'the offer for the Thursday session');
+ q('#tdOfferYes').click();
+ const T=tpl()[0];
+ ok(!tdo()&&T.items.map(x=>x.n).join()==='Barbell bench press,Barbell row'&&T.items[1].sets===3&&T.items[1].o===1&&T.ses.length===1&&T.ses[0].a==='running'&&T.ses[0].o===2&&/Added 2 entries to the template “Push”/.test(q('#dayMsg').textContent),'"Add to template" appends the new entries (3 sets, endurance) to the template ('+q('#dayMsg').textContent+')');
+ ok(sess(D(3))[0].items.length===2&&sess(D(3))[0].ses.length===1,'the Thursday session itself is unchanged');
+ // no template, no offer; Escape keeps additions of an unfinished session
+ selDay(1);q('#qa').value='bench press';ev(q('#qa'),'input');qa('#addres [data-add]').find(b=>b.firstChild.textContent.trim()==='+ Barbell bench press').click();
+ ok(sess(D(1)).length===1&&!sess(D(1))[0].tid,'a session without a template on Tue');
+ train().click();q('#tdAddEx').click();search('goblet');
+ const gob=res().map(b=>b.firstChild.textContent.replace(/^\+\s*/,'').trim())[0];
+ res()[0].click();
+ esc();
+ ok(!tdo()&&sess(D(1))[0].lg.ex.length===2&&sess(D(1))[0].lg.ex[1].n===gob&&sess(D(1))[0].items.length===2&&!sess(D(1))[0].finishedAt,'Escape without finishing keeps the addition in the session ('+gob+')');
+ train().click();q('#tdFinish').click();
+ ok(!tdo()&&!!sess(D(1))[0].finishedAt&&q('#tdOffer').hidden,'a session without a template finishes without an offer');
+ // statistics and planner see the added work; Sync with plan finds nothing missing
+ train().click();q('#tdSync').click();
+ ok(/in sync/.test(q('#tdMsg').textContent)&&blocks().length===2,'"Sync with plan" has nothing to add after an in-view addition');
+ // lb units: prefilled weights are shown in pounds
+ q('#tdClose').click();selDay(0);train().click();
+ q('#tdAddEx').click();search('lats');pick('Lat pulldown');
+ const nb=blocks().length-1;
+ ok(vals(blocks()[nb])==='10x50 8x55 8x55','kg: weights shown in kg');
+ q('#stOpen').click();q('#segUnit [data-unit="lb"]').click();
+ ok(vals(blocks()[nb])==='10x110 8x121 8x121'&&blocks()[nb].querySelector('[data-f="w"]').getAttribute('aria-label').indexOf('pounds')>0&&today()[0].lg.ex[today()[0].lg.ex.length-1].sets[0].w===50,'lb: the added row shows pounds (110 / 121 lb) while the stored weight stays in kg');
+ q('#segUnit [data-unit="kg"]').click();
+ q('#stClose').click();
+ q('#tdClose').click();
+ // reload: the add flag survives, so Remove is still offered
+ const keep={'aom.cal.v1':w.localStorage.getItem('aom.cal.v1'),'aom.tpl.v1':w.localStorage.getItem('aom.tpl.v1')};
+ w.close();
+ {
+  const r=boot({win:TODAY,store:keep}),rd=r.document;
+  await waitFor(()=>!rd.getElementById('loading'),60000,'reload instance');
+  rd.querySelector('[data-tab="wk"]').click();rd.querySelector('#wstrip [data-day="1"]').click();rd.querySelector('#sessList .scard.sel [data-sact="train"]').click();
+  const rb=[...rd.querySelectorAll('#tdList .tx')];
+  ok(rb.length===2&&!rb[0].querySelector('[data-act="rmex"]')&&rb[1].querySelector('[data-act="rmex"]'),'after a reload the added entry still has Remove, the planned one has not');
+  r.close();
+ }
+}
 async function sugRun(){
  const numOf=x=>parseFloat(x),rowVal=n=>{const r=qa('#volsum tr').find(r=>r.cells[0].textContent.trim()===n);return r?parseFloat(r.cells[2].textContent):NaN;};
  const exOf=n=>META.ex.find(e=>e.n===n);
@@ -1784,6 +1918,19 @@ async function phoneRun(){
  const pr=pq('#tdBody .tset input[data-f="r"]');pr.value='9';pr.dispatchEvent(new p.Event('input',{bubbles:true}));
  const plg=psess(tkey);
  ok(/^1 \/ \d+ sets/.test(pq('#tdProg').textContent.trim())&&plg.length===1&&plg[0].lg.ex[0].sets[0].r===9&&plg[0].lg.ex[0].sets[0].done===true,'phone: typing reps marks the set done and saves it in the session of that date');
+ // phone: add an exercise and an endurance session from the Today view
+ const nb0=pqa('#tdList .tx').length,pst=pd.querySelector('style').textContent;
+ pq('#tdAddEx').click();
+ ok(!pq('#tdExForm').hidden&&pq('#tdQ').type==='search'&&pd.activeElement===pq('#tdQ')&&/input\.search,select\.search,input\.num,textarea\.search\{font-size:16px;min-height:44px;\}/.test(pst)&&/\.tdab \.btn[^{]*\{[^}]*min-height:44px/.test(pst)&&/\.tdrm[^{]*\{[^}]*min-height:44px/.test(pst),'phone: the add search is a 16 px input, buttons and results have 44 px targets (stylesheet rules)');
+ pq('#tdQ').value='lats';pq('#tdQ').dispatchEvent(new p.Event('input',{bubbles:true}));
+ const pres=pqa('#tdRes [data-tdadd]');
+ ok(pres.length>0&&pres.length<=7&&pres.some(b=>/Lat pulldown/.test(b.textContent)),'phone: the alias "lats" lists exercises ('+pres.length+')');
+ pres.find(b=>/Lat pulldown/.test(b.textContent)).click();
+ ok(pqa('#tdList .tx').length===nb0+1&&pq('#tdExForm').hidden&&pqa('#tdList .tx')[nb0].querySelectorAll('.tset').length===3&&pd.activeElement===pqa('#tdList .tx')[nb0].querySelector('[data-f="r"]')&&psess(tkey)[0].items.some(x=>x.n==='Lat pulldown')&&psess(tkey)[0].lg.ex.some(x=>x.n==='Lat pulldown'&&x.add),'phone: picking an exercise appends it (3 set rows, focus on reps) to log and plan');
+ pq('#tdAddEnd').click();pq('#tdEndAdd').click();
+ ok(pqa('#tdList .tx.e').length>=1&&psess(tkey)[0].lg.ses.some(x=>x.add)&&psess(tkey)[0].ses.length>=1&&pq('#tdBody').contains(pq('#tdEndForm')),'phone: the endurance form adds a session');
+ for(let g=0;g<4&&pq('#tdList .tx [data-act="rmex"]');g++) pq('#tdList .tx [data-act="rmex"]').click();
+ ok(pqa('#tdList .tx').length===nb0&&!psess(tkey)[0].lg.ex.some(x=>x.add)&&!psess(tkey)[0].lg.ses.some(x=>x.add),'phone: Remove takes the added entries out again');
  pd.dispatchEvent(new p.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
  ok(ptd.hidden&&/Bench|Session/.test(psw(1).textContent)&&psw(1).querySelector('.pl.se.s-doing'),'phone: Escape closes the Today view, the Tue card shows the session in progress');
  p.__setPhone(false);
@@ -2359,6 +2506,7 @@ async function boardRun(){
  await run('endRun',endRun);
  await run('boardRun',boardRun);
  await run('logRun',logRun);
+ await run('tdAddRun',tdAddRun);
  await run('sugRun',sugRun);
  await run('migrateRun',migrateRun);
  await run('calRun',calRun);

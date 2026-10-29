@@ -1,0 +1,227 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Atlas of Motion · launch video</title>
+<style>
+@font-face{font-family:"Fraunces";font-weight:400 700;src:url(/fonts/fraunces-latin.woff2) format("woff2");}
+@font-face{font-family:"Archivo";font-weight:400 700;src:url(/fonts/archivo-latin.woff2) format("woff2");}
+@font-face{font-family:"Source Serif 4";font-style:normal;font-weight:400;src:url(/fonts/source-serif-4-latin-400.woff2) format("woff2");}
+@font-face{font-family:"Source Serif 4";font-style:italic;font-weight:400;src:url(/fonts/source-serif-4-latin-italic-400.woff2) format("woff2");}
+:root{--bg:#17120E;--ink:#EDE4D6;--muted:#A89886;--accent:#D86F59;--ochre:#D9A84E;--line:#3A2E24;--card:#241C15;
+  --f-disp:"Fraunces",Georgia,serif;--f-read:"Source Serif 4",Georgia,serif;--f-ui:"Archivo",system-ui,sans-serif;}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;}
+#win{position:absolute;left:0;top:0;width:1920px;height:1080px;overflow:hidden;background:var(--bg);}
+#win.framed{border-radius:14px;box-shadow:0 0 0 1px var(--line),0 30px 80px rgba(0,0,0,.55);}
+#app{position:absolute;left:0;top:0;width:1920px;height:1080px;border:0;display:block;}
+#wcov,#cover{position:absolute;inset:0;background:var(--bg);opacity:0;pointer-events:none;}
+#cover{z-index:20;}
+.blk{position:absolute;z-index:10;opacity:1;}
+.w{display:inline-block;will-change:transform,opacity;}
+h1,h2,p{margin:0;font-weight:400;}
+#hook{left:140px;top:330px;width:760px;}
+#hook h1{font:500 92px/1.02 var(--f-disp);letter-spacing:-.015em;font-variation-settings:"opsz" 144;}
+.lg{display:flex;gap:30px;margin-top:44px;font:500 26px/1 var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.11em;color:var(--ink);}
+.lg span{display:inline-flex;align-items:center;gap:12px;}
+.lg i{display:inline-block;width:20px;height:20px;border-radius:3px;}
+#reveal,#outro{left:140px;top:360px;width:900px;}
+#reveal h1,#outro h1{font:500 132px/1 var(--f-disp);letter-spacing:-.02em;font-variation-settings:"opsz" 144;}
+#reveal p,#outro p{font:italic 400 42px/1.3 var(--f-read);color:var(--muted);margin-top:26px;}
+#outro{top:330px;}
+#outro .url{font:600 34px/1 var(--f-ui);letter-spacing:.02em;color:var(--ochre);margin-top:46px;}
+.cap{left:160px;top:58px;width:1600px;}
+.cap .k{font:600 24px/1 var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.16em;color:var(--accent);}
+.cap h2{font:500 62px/1.05 var(--f-disp);letter-spacing:-.012em;margin-top:14px;font-variation-settings:"opsz" 96;}
+.cap .lg{position:absolute;right:0;top:0;margin:0;font-size:24px;gap:26px;color:var(--muted);}
+.cap .lg i{width:18px;height:18px;}
+#cur{position:absolute;left:0;top:0;z-index:15;width:34px;height:40px;transform-origin:3px 3px;filter:drop-shadow(0 3px 6px rgba(0,0,0,.55));opacity:0;}
+#rip{position:absolute;z-index:14;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;border:3px solid var(--ochre);opacity:0;}
+</style></head>
+<body>
+<div id="win"><iframe id="app" src="/app.html"></iframe><div id="wcov"></div></div>
+
+<div class="blk" id="hook"><h1 data-split>What does a squat actually train?</h1>
+  <div class="lg" id="hookLg"><span><i style="background:#A62E1C"></i>Prime mover</span><span><i style="background:#D8743F"></i>Synergist</span><span><i style="background:#EBCB7F"></i>Stabiliser</span></div></div>
+<div class="blk" id="reveal"><h1 data-split>Atlas of Motion</h1><p data-split>176 muscles. 148 exercises. One body.</p></div>
+<div class="blk cap" id="cap1"><div class="k">I · Anatomy</div><h2 data-split>Click any muscle. See what trains it.</h2></div>
+<div class="blk cap" id="cap2"><div class="k">II · Exercises</div><h2 data-split>Compare two lifts, muscle by muscle.</h2></div>
+<div class="blk cap" id="cap3"><div class="k">III · Workout</div><h2 data-split>Plan your week. Spot the muscles you skip.</h2>
+  <div class="lg" id="volLg"><span><i style="background:#A89886;opacity:.55"></i>Not trained</span><span><i style="background:#E8D39B"></i>Low</span><span><i style="background:#D9784C"></i>Below target</span><span><i style="background:#7A9E6E"></i>In target</span></div></div>
+<div class="blk" id="outro"><h1 data-split>Atlas of Motion</h1><p data-split>Free in your browser. Works offline.</p><div class="url" data-split>atzeginter.github.io/atlas-of-motion</div></div>
+
+<svg id="cur" viewBox="0 0 34 40"><path d="M3 3 L3 31 L10.5 24.5 L15.5 36 L20.5 33.8 L15.6 22.6 L25.5 22.6 Z" fill="#F6EFE4" stroke="#17120E" stroke-width="2.2" stroke-linejoin="round"/></svg>
+<div id="rip"></div>
+<div id="cover"></div>
+
+<script>
+const $=s=>document.querySelector(s), FPS=30, DUR=22.0;
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x)), lerp=(a,b,x)=>a+(b-a)*x;
+const eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2, eout=x=>1-Math.pow(1-x,3), esine=x=>-(Math.cos(Math.PI*x)-1)/2;
+const prog=(t,a,b)=>clamp((t-a)/(b-a));
+// split text into word spans
+document.querySelectorAll("[data-split]").forEach(el=>{ el.innerHTML=el.textContent.trim().split(/\s+/).map(w=>'<span class="w">'+w+'</span>').join(" "); });
+function words(el,t,tin,tout,stag=.05,dur=.42,dy=22){
+  [...el.querySelectorAll(".w")].forEach((w,i)=>{
+    const a=eout(prog(t,tin+i*stag,tin+i*stag+dur)), b=esine(prog(t,tout+i*.02,tout+i*.02+.24));
+    w.style.opacity=(a*(1-b)).toFixed(3); w.style.transform="translateY("+((1-a)*dy-b*12).toFixed(2)+"px)";
+  });
+}
+function items(el,t,tin,tout,stag=.08){ [...el.children].forEach((c,i)=>{ const a=eout(prog(t,tin+i*stag,tin+i*stag+.4)), b=esine(prog(t,tout,tout+.24)); c.style.opacity=(a*(1-b)).toFixed(3); c.style.transform="translateY("+((1-a)*14).toFixed(1)+"px)"; }); }
+const vis=(el,on)=>el.style.display=on?"":"none";
+
+/* ---------- app access ---------- */
+let A, D, IW; // app hook, app document, app window
+const ix=n=>A.EX.findIndex(e=>e.n===n);
+const raf=()=>new Promise(r=>IW.requestAnimationFrame(()=>r()));
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+let layout=null, OFF=0;
+const WINR={x:160,y:200,w:1600,h:840};
+async function setLayout(l){
+  if(layout===l) return; layout=l;
+  const win=$("#win"), fr=$("#app");
+  if(l==="clean"){ Object.assign(win.style,{left:"0px",top:"0px",width:"1920px",height:"1080px"}); win.classList.remove("framed"); fr.style.width="1920px"; fr.style.height="1080px"; D.documentElement.classList.add("clean"); }
+  else { Object.assign(win.style,{left:WINR.x+"px",top:WINR.y+"px",width:WINR.w+"px",height:WINR.h+"px"}); win.classList.add("framed"); fr.style.width=WINR.w+"px"; fr.style.height=WINR.h+"px"; D.documentElement.classList.remove("clean"); }
+  IW.dispatchEvent(new IW.Event("resize")); for(let i=0;i<4;i++) await raf(); await sleep(60);
+}
+function winPos(){ return layout==="clean"?{x:0,y:0}:{x:WINR.x,y:WINR.y}; }
+function rectOf(el){ const r=el.getBoundingClientRect(), o=winPos(); return {x:o.x+r.left+r.width/2, y:o.y+r.top+r.height/2, r}; }
+function projMeshes(ms){
+  const THREE=IW.THREE, b=new THREE.Box3(); ms.forEach(m=>b.union(m.geometry.boundingBox));
+  const c=b.getCenter(new THREE.Vector3()).project(A.camera), cv=A.renderer.domElement.getBoundingClientRect(), o=winPos();
+  return {x:o.x+cv.left+(c.x+1)/2*cv.width, y:o.y+cv.top+(1-c.y)/2*cv.height};
+}
+function applyCam(c){
+  for(const k of ["theta","phi","r","tx","ty","tz"]){ A.orbit[k]=c[k]; A.goal[k]=c[k]; }
+  const cam=A.camera, s=Math.sin(c.phi), cv=A.renderer.domElement, W=cv.clientWidth, H=cv.clientHeight;
+  cam.position.set(c.tx+c.r*s*Math.sin(c.theta), c.ty+c.r*Math.cos(c.phi), c.tz+c.r*s*Math.cos(c.theta));
+  cam.lookAt(c.tx,c.ty,c.tz);
+  if(OFF) cam.setViewOffset(W,H,-OFF,0,W,H); else cam.clearViewOffset();
+  cam.updateProjectionMatrix(); cam.updateMatrixWorld(); A.renderer.render(A.scene,cam);
+}
+const camLerp=(a,b,x)=>{ const o={}; for(const k in a) o[k]=lerp(a[k],b[k],x); return o; };
+const CAM=(theta,r,ty,phi=1.5,tx=0,tz=0)=>({theta,phi,r,tx,ty,tz});
+
+/* ---------- timeline ---------- */
+const T={hit:1.8, s2:3.6, s3:6.6, s4:10.8, s5:15.0, s6:18.6, end:DUR};
+const SFX=[];  // sound cues for the soundtrack: [time, kind]
+let C3from=null,C3to=null, C4from=null,C4to=null, C5from=null,C5to=null, glSide="L";
+// cursor path: segments {t0,t1,from,to(fn)} + clicks
+const cursorKeys=[]; const clicks=[];
+function cursorAt(t){
+  let p=null;
+  for(const s of cursorKeys){ if(t<s.t0) break; const to=s.to(); if(!p||s.t1<=s.t0){ p=to; continue; } const x=eio(prog(t,s.t0,s.t1)); p={x:lerp(p.x,to.x,x),y:lerp(p.y,to.y,x)}; }
+  return p;
+}
+function seg(t0,t1,toFn){ const s={t0,t1,toFn,fixed:null}; s.to=()=>s.fixed||s.toFn(); cursorKeys.push(s); return s; }
+const EV=[];
+const at=(t,fn)=>EV.push([t,fn]);
+
+async function setupApp(){
+  // demo week for the Workout scene (fictional plan, added through the app's own addToPlan)
+  A.setWin("2026-10-15",true);
+  const add=(n,d,s)=>A.addToPlan(ix(n),[],d,s);
+  add("Barbell bench press",0,4); add("Overhead press",0,3); add("Triceps pushdown",0,3);
+  add("Pull-up",2,4); add("Barbell row",2,3); add("Barbell curl",2,3);
+  add("Back squat",4,4); add("Leg extension",4,3);
+  add("Incline dumbbell press",5,3); add("Lateral raise",5,3); add("Face pull",5,3);
+  A.selectDay(0); A.openTab("anat"); A.volOn=false; A.setMode(null); A.select(null);
+}
+
+/* scene 1 + 2: hook and reveal, clean full-bleed, one continuous orbit */
+at(0,async()=>{ await setLayout("clean"); OFF=330; });
+at(T.hit,async()=>{ A.selectEx(ix("Back squat")); SFX.push([T.hit,"hit"]); });
+/* scene 3: anatomy, windowed */
+at(T.s3-.02,async()=>{ await setLayout("window"); OFF=0; A.clearEx(); A.select(null); A.openTab("anat"); SFX.push([T.s3-.25,"dip"]); });
+seg(7.0,7.0,()=>({x:1530,y:1000}));
+const g1=seg(7.0,7.8,()=>{ const ms=A.byKey["gluteus maximus"]; const L=projMeshes(ms.filter(m=>m.userData.side==="L")), R=projMeshes(ms.filter(m=>m.userData.side==="R")); glSide=R.x>L.x?"R":"L"; const p=glSide==="R"?R:L; return {x:p.x+6,y:p.y-4}; });
+clicks.push(7.86);
+at(7.9,async()=>{ g1.fixed=g1.toFn(); C3from=cam3pre(7.9); A.select("muscle","gluteus maximus",true,{side:glSide}); C3to={...A.goal}; C3to.r=Math.max(C3to.r,1.15); SFX.push([7.86,"click"]); cardIn=7.92; });
+seg(8.5,9.4,()=>{ const p=g1.fixed; return {x:p.x+150,y:p.y+190}; });
+/* scene 4: exercises, comparison */
+at(T.s4-.02,async()=>{ A.select(null); A.openTab("ex"); A.selectEx(ix("Back squat")); A.startCmp(); const qe=D.querySelector("#qe"); qe.value=""; qe.dispatchEvent(new IW.Event("input")); const sb=D.querySelector("#sbody"); sb.scrollTop+=qe.getBoundingClientRect().top-300; cardIn=-9; SFX.push([T.s4-.25,"dipsoft"]); });
+seg(11.0,11.0,()=>({x:1180,y:1000}));
+seg(11.05,11.6,()=>{ const p=rectOf(D.querySelector("#qe")); return {x:p.r.left+WINR.x+110,y:p.y+4}; });
+clicks.push(11.62);
+at(11.64,async()=>{ D.querySelector("#qe").focus(); SFX.push([11.62,"click"]); });
+"romanian".split("").forEach((ch,i)=>{ const tt=11.76+i*.068; at(tt,async()=>{ const q=D.querySelector("#qe"); q.value+=ch; q.dispatchEvent(new IW.Event("input")); SFX.push([tt,"key"]); }); });
+const rdl=()=>[...D.querySelectorAll("#exlist .item")].find(b=>b.textContent.trim()==="Romanian deadlift");
+const g2=seg(12.38,12.85,()=>{ const p=rectOf(rdl()); return {x:p.r.left+WINR.x+120,y:p.y+3}; });
+clicks.push(12.9);
+at(12.93,async()=>{ g2.fixed=g2.toFn(); C4from=cam4pre(12.93); rdl().click(); D.querySelector("#qe").blur(); C4to=CAM(1.95,2.85,0.72,1.52); SFX.push([12.9,"click"]); cardIn=12.95; });
+seg(13.4,14.2,()=>({x:g2.fixed.x+300,y:g2.fixed.y+40}));
+/* scene 5: workout, weekly volume + gap filler */
+const sgLi=()=>D.querySelector("#sug li.sg"), btnIn=(li,f)=>[...li.querySelectorAll("button")].find(f);
+at(T.s5-.02,async()=>{ A.clearEx(); A.openTab("wk"); A.volOn=true; A.setMode("vol"); const sb=D.querySelector("#sbody"); const li=sgLi(); sb.scrollTop+=li.getBoundingClientRect().top-260; cardIn=-9; SFX.push([T.s5-.25,"dipsoft"]); });
+seg(15.2,15.2,()=>({x:1100,y:1010}));
+const plus=()=>btnIn(sgLi(),b=>b.textContent.trim()==="+");
+const addB=()=>btnIn(sgLi(),b=>/^\+ Add/.test(b.textContent.trim()));
+const g3=seg(15.25,15.85,()=>{ const p=rectOf(plus()); return {x:p.x+4,y:p.y+4}; });
+clicks.push(15.92,16.24);
+at(15.94,async()=>{ g3.fixed=g3.toFn(); plus().click(); SFX.push([15.92,"tick"]); });
+at(16.26,async()=>{ plus().click(); SFX.push([16.24,"tick"]); });
+const g4=seg(16.36,16.8,()=>{ const p=rectOf(addB()); return {x:p.x-10,y:p.y+4}; });
+clicks.push(16.86);
+at(16.88,async()=>{ g4.fixed=g4.toFn(); C5from=cam5pre(16.88); addB().click(); C5to=CAM(Math.PI-.18,2.55,0.6,1.52); SFX.push([16.86,"click"]); SFX.push([16.95,"lift"]); });
+seg(17.2,17.9,()=>({x:g4.fixed.x+120,y:g4.fixed.y+140}));
+/* scene 6: outro */
+at(T.s6-.02,async()=>{ await setLayout("clean"); OFF=330; A.volOn=false; A.setMode(null); A.select(null); SFX.push([T.s6-.25,"dip"]); SFX.push([T.s6,"resolve"]); });
+EV.sort((a,b)=>a[0]-b[0]);
+
+/* camera per scene */
+const cam12=t=>{ const x=esine(prog(t,0,T.s3)); return CAM(lerp(.62,-.78,x),lerp(3.55,3.3,x),.9,1.5); };
+const cam3pre=t=>{ const x=prog(t,T.s3,7.9); return CAM(Math.PI+lerp(.22,.12,x),lerp(3.25,3.15,x),.9); };
+const cam4pre=t=>{ const x=prog(t,T.s4,12.93); return CAM(lerp(.42,.28,x),3.35,.9); };
+const cam5pre=t=>{ const x=prog(t,T.s5,16.88); return CAM(Math.PI+lerp(.12,.02,x),3.3,.86,1.52); };
+const cam6=t=>{ const x=esine(prog(t,T.s6,T.end)); return CAM(lerp(.85,.35,x),lerp(3.7,3.5,x),.9,1.5); };
+function camAt(t){
+  if(t<T.s3) return cam12(t);
+  if(t<T.s4) return t<7.9||!C3to?cam3pre(t):camLerp(C3from,C3to,eio(prog(t,7.9,9.2)));
+  if(t<T.s5) return t<12.93||!C4to?cam4pre(t):camLerp(C4from,C4to,eio(prog(t,12.93,14.4)));
+  if(t<T.s6) return t<16.88||!C5to?cam5pre(t):camLerp(C5from,C5to,eio(prog(t,16.88,18.2)));
+  return cam6(t);
+}
+let cardIn=-9;
+
+/* ---------- one frame ---------- */
+let evi=0, lastCur=null;
+async function frame(t){
+  while(evi<EV.length&&EV[evi][0]<=t+1e-6){ await EV[evi][1](); evi++; }
+  applyCam(camAt(t));
+  // the app card slides in after a click
+  const card=D.querySelector("#card"); if(card){ const a=eout(prog(t,cardIn,cardIn+.38)); if(t<cardIn+.5&&t>=cardIn){ card.style.opacity=a.toFixed(3); card.style.transform="translateX("+((1-a)*40).toFixed(1)+"px)"; } else { card.style.opacity=""; card.style.transform=""; } }
+  // titles
+  vis($("#hook"),t<T.s2); words($("#hook h1"),t,.12,3.3); items($("#hookLg"),t,2.0,3.3);
+  vis($("#reveal"),t>=T.s2-.1&&t<T.s3); words($("#reveal h1"),t,3.72,6.28,.06,.5,26); words($("#reveal p"),t,3.9,6.3,.045);
+  vis($("#cap1"),t>=T.s3&&t<T.s4); items($("#cap1"),t,6.72,10.5,0); words($("#cap1 h2"),t,6.8,10.5);
+  vis($("#cap2"),t>=T.s4&&t<T.s5); items($("#cap2"),t,10.95,14.72,0); words($("#cap2 h2"),t,11.0,14.72);
+  vis($("#cap3"),t>=T.s5&&t<T.s6); items($("#cap3"),t,15.15,18.32,0); words($("#cap3 h2"),t,15.2,18.32); items($("#volLg"),t,15.6,18.32);
+  vis($("#outro"),t>=T.s6); words($("#outro h1"),t,18.85,99,.06,.5,26); words($("#outro p"),t,19.05,99,.045); words($("#outro .url"),t,19.4,99,.05,.5);
+  // dips: full cover for layout changes, window cover between windowed scenes
+  const dip=(a,b,c)=>Math.max(0,Math.min(prog(t,a,b),1-prog(t,b,c)));
+  $("#cover").style.opacity=Math.max(esine(dip(6.38,6.6,6.92)),esine(dip(18.36,18.6,18.92)),esine(prog(t,21.55,22.0))).toFixed(3);
+  $("#wcov").style.opacity=Math.max(esine(dip(10.56,10.8,11.06)),esine(dip(14.76,15.0,15.26))).toFixed(3);
+  // cursor
+  const cur=$("#cur"), p=cursorAt(t), on=t>=T.s3&&t<T.s6, fade=Math.min(prog(t,7.0,7.2), 1-prog(t,10.25,10.5), 1)*(t<T.s4?1:0)+Math.min(prog(t,11.0,11.2),1-prog(t,14.4,14.65))*(t>=T.s4&&t<T.s5?1:0)+Math.min(prog(t,15.2,15.4),1-prog(t,17.9,18.2))*(t>=T.s5?1:0);
+  if(p&&on){ let sc=1; clicks.forEach(c=>{ const d=t-c; if(d>=-.06&&d<.12) sc=Math.min(sc,1-.16*Math.sin(Math.PI*(d+.06)/.18)); });
+    cur.style.opacity=clamp(fade).toFixed(3); cur.style.transform="translate("+(p.x-3).toFixed(1)+"px,"+(p.y-3).toFixed(1)+"px) scale("+sc.toFixed(3)+")"; lastCur=p; }
+  else cur.style.opacity=0;
+  const rip=$("#rip"); let ro=0, rs=0; clicks.forEach(c=>{ const d=(t-c)/.5; if(d>=0&&d<1){ ro=(1-d)*.9; rs=.3+eout(d)*1.1; } });
+  if(ro&&lastCur){ rip.style.opacity=ro.toFixed(3); rip.style.transform="translate("+lastCur.x.toFixed(1)+"px,"+lastCur.y.toFixed(1)+"px) scale("+rs.toFixed(3)+")"; } else rip.style.opacity=0;
+  A.setDirty(); await raf(); await raf();
+}
+window.frame=frame; window.SFX=SFX; window.DUR=DUR; window.FPS=FPS;
+/* ---------- boot ---------- */
+window.ready=(async()=>{
+  const fr=$("#app"); await new Promise(r=>{ if(fr.contentWindow&&fr.contentWindow.__v&&fr.contentDocument.readyState==="complete") r(); else fr.addEventListener("load",r,{once:true}); });
+  IW=fr.contentWindow; D=fr.contentDocument;
+  for(let i=0;i<600&&!(IW.__v&&!D.querySelector("#loading"));i++) await sleep(100);
+  A=IW.__v;
+  const st=D.createElement("style"); st.textContent=`*,*::before,*::after{transition:none!important;animation:none!important;caret-color:transparent!important;}
+    #hint,#ver{display:none!important} *{scrollbar-width:none!important} ::-webkit-scrollbar{display:none!important}
+    html.clean .app{grid-template-columns:minmax(0,1fr)!important} html.clean #side,html.clean #toolbar,html.clean #card{display:none!important} html.clean .vp::before{display:none!important}
+    #card .close{visibility:hidden}`;
+  D.head.appendChild(st);
+  await A.setLod("high"); for(let i=0;i<300&&D.querySelector('[aria-busy="true"]');i++) await sleep(100);
+  await setupApp();
+  await document.fonts.ready; await D.fonts.ready; await sleep(300);
+  return {faces:A.renderer.info.render.triangles};
+})();
+</script>
+</body></html>

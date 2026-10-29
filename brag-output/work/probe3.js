@@ -1,0 +1,25 @@
+const puppeteer = require("puppeteer-core");
+const EDGE = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe";
+const W=ms=>new Promise(r=>setTimeout(r,ms));
+(async () => {
+  const b = await puppeteer.launch({ executablePath: EDGE, headless: "new", args: ["--use-angle=d3d11","--enable-gpu","--ignore-gpu-blocklist"] });
+  const p = await b.newPage();
+  p.on("pageerror", e => console.log("pageerror:", e.message));
+  await p.setViewport({ width: 1600, height: 860 });
+  await p.emulateMediaFeatures([{name:"prefers-color-scheme",value:"dark"}]);
+  await p.goto("http://localhost:8765/app.html", { waitUntil: "load" });
+  await p.waitForFunction(() => window.__v && !document.querySelector("#loading"), { timeout: 60000 });
+  await W(800);
+  await p.evaluate(`__v.setWin("2026-10-15",true);
+    const A=(n,d,s)=>__v.addToPlan(__v.EX.findIndex(e=>e.n===n),[],d,s);
+    A("Barbell bench press",0,4);A("Overhead press",0,3);A("Triceps pushdown",0,3);
+    A("Pull-up",2,4);A("Barbell row",2,3);A("Barbell curl",2,3);
+    A("Back squat",4,4);A("Leg extension",4,3);
+    A("Incline dumbbell press",5,3);A("Lateral raise",5,3);A("Face pull",5,3);
+    __v.selectDay(0); __v.openTab("wk"); __v.volOn=true; __v.setMode("vol");`);
+  await W(1000);
+  console.log(await p.evaluate(`JSON.stringify({sug:document.querySelector("#sug").innerText.slice(0,900), y:document.querySelector("#sug").getBoundingClientRect().top, sb:document.querySelector("#sbody")&&document.querySelector("#sbody").scrollHeight})`));
+  await p.evaluate(`document.querySelector("#sug").scrollIntoView({block:"start"})`);
+  await W(800); await p.screenshot({ path: "probe-7.png" });
+  await b.close();
+})();

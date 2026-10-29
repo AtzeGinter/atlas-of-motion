@@ -608,6 +608,22 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
 .tdmsg:empty{display:none;}
 .tdfin{width:auto;padding:10px 22px;}
 .tdempty{margin:6px 0;font:italic 400 15px var(--f-read);color:var(--muted);}
+.tdlist{flex:none;display:flex;flex-direction:column;gap:10px;}
+.tdadd{flex:none;display:flex;flex-direction:column;gap:8px;}
+.tdab{display:flex;flex-wrap:wrap;gap:8px;}
+.tdab .btn{flex:1 1 140px;border-style:dashed;border-color:var(--accent);color:var(--accent);font-weight:600;min-height:40px;}
+.tdform{padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:3px;}
+.tdform[hidden]{display:none;}
+.tdform .search{margin:0 0 4px;}
+.tdform .addres button{min-height:40px;}
+.tdoffer{flex:none;margin-top:8px;padding:8px 10px;background:var(--card);border:1px solid var(--accent);border-radius:3px;}
+.tdoffer[hidden]{display:none;}
+.tdoffer p{margin:0 0 6px;font:400 15px/1.35 var(--f-read);}
+.tdoffer p small{display:block;color:var(--muted);font:italic 400 13px var(--f-read);}
+.tdoffer .ea{display:flex;gap:8px;justify-content:flex-end;align-items:center;}
+.tvar{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 2px;}
+.tvar select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);background:var(--bg);border-radius:3px;color:var(--ink);min-width:0;max-width:100%;}
+.tx.skip .tvar{display:none;}
 @media (max-width:760px){
   .tdsum{padding:8px 10px;gap:2px 12px;}
   .tdring{width:68px;height:68px;}
@@ -623,6 +639,8 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
 @media (pointer:coarse){
   .btrain{min-height:36px;padding:2px 10px;}
   .tdfin,.tadd{min-height:44px;}
+  .tdab .btn,.tdoffer .btn,.tdform .addres button,.tvar select,.tsk,.tdrm{min-height:44px;}
+  .tdoffer .linkbtn{min-height:44px;display:inline-flex;align-items:center;}
   .tck{height:44px;}
 }
 @media (max-width:760px){
@@ -1142,7 +1160,7 @@ input.mvdate[hidden]{display:none;}
     </div>
     <div class="loading" id="loading"><div><strong>Atlas of Motion</strong><em>preparing the plates…</em><span id="loadMsg">Loading model</span></div></div>
     <div class="tip" id="tip"></div>
-    <div class="ver" id="ver" title="Atlas of Motion, version 2.2 (build c437b0f)">v2.2 · c437b0f</div>
+    <div class="ver" id="ver" title="Atlas of Motion, version 2.3 (build 448a229)">v2.3 · 448a229</div>
     <div class="hint" id="hint">Drag to rotate, scroll to zoom, right-drag to pan, click to inspect, H to hide</div>
     <div class="card" id="card" aria-live="polite"></div>
     <section class="ov" id="ov" role="dialog" aria-label="Week overview" hidden>
@@ -1164,7 +1182,24 @@ input.mvdate[hidden]{display:none;}
       <div class="tdw">
         <div class="ovhead"><div class="tdh"><small class="tdd" id="tdDate"></small><h2 id="tdTitle"></h2></div><button class="btn" id="tdClose" type="button">Show body</button></div>
         <div class="tdsum" id="tdSum"></div>
-        <div class="tdbody" id="tdBody"></div>
+        <div class="tdbody" id="tdBody">
+          <div class="tdlist" id="tdList"></div>
+          <div class="tdadd" id="tdAdd">
+            <div class="tdab"><button class="btn" id="tdAddEx" type="button" aria-expanded="false" aria-controls="tdExForm">+ Add exercise</button><button class="btn" id="tdAddEnd" type="button" aria-expanded="false" aria-controls="tdEndForm">+ Add endurance</button></div>
+            <div class="tdform" id="tdExForm" hidden>
+              <input class="search" id="tdQ" type="search" placeholder="Search exercises or muscles" aria-label="Add an exercise to this session" autocomplete="off" enterkeyhint="go">
+              <div class="addres" id="tdRes"></div>
+            </div>
+            <div class="endform" id="tdEndForm" hidden>
+              <label>Activity<select id="tdEndAct" aria-label="Activity"></select></label>
+              <label>Type<select id="tdEndKind" aria-label="Session type"></select></label>
+              <label>Minutes<input class="num" id="tdEndMin" type="number" min="5" max="600" step="5" inputmode="numeric" aria-label="Total minutes"></label>
+              <p class="fine" id="tdEndHint" style="margin:0!important;align-self:center"></p>
+              <div class="ea"><button class="linkbtn" id="tdEndCancel" type="button">Cancel</button><button class="btn" id="tdEndAdd" type="button">Add</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="tdoffer" id="tdOffer" role="group" aria-label="Template" hidden><p id="tdOfferTxt"></p><div class="ea"><button class="linkbtn" id="tdOfferNo" type="button">Not now</button><button class="btn" id="tdOfferYes" type="button">Add to template</button></div></div>
         <div class="tdfoot"><button class="linkbtn" id="tdSync" type="button">Sync with plan</button><span class="tdmsg" id="tdMsg" role="status"></span><span class="sp"></span><button class="btn prim tdfin" id="tdFinish" type="button">Finish day</button></div>
       </div>
     </section>
@@ -1250,7 +1285,7 @@ input.mvdate[hidden]{display:none;}
           </div>
           <div class="sec" id="stAbout">
             <h2>About</h2>
-            <p class="stver" id="stVer">Atlas of Motion, version 2.2 (build c437b0f)</p>
+            <p class="stver" id="stVer">Atlas of Motion, version 2.3 (build 448a229)</p>
             <p class="fine" style="margin-top:0!important">A 3D atlas of the muscular system with a strength and endurance planner. Static page, no account, no tracking; it works offline once loaded.</p>
             <p class="fine" style="margin-top:0!important"><button class="linkbtn" id="stCredits" type="button" style="padding:0">Credits and sources (colophon)</button> · <a href="https://github.com/AtzeGinter/atlas-of-motion#credits-and-licensing" target="_blank" rel="noopener">Licence notes</a> · <a href="https://github.com/AtzeGinter/atlas-of-motion#commercial-use-of-the-3d-models" target="_blank" rel="noopener">Commercial use of the 3D models</a></p>
           </div>
@@ -1637,19 +1672,19 @@ function listOut(W){ // {items,ses} -> disk arrays (variation option names; o = 
   return {items:items,ses:ses};
 }
 const copyItems=a=>a.map(x=>Object.assign({},x,{v:x.v.slice()})), copySes=a=>a.map(s=>Object.assign({},s));
-// training data of one session (the old aom.log.v1 entry shape): ex:[{n, v:[option names], o, skip?, sets:[{r?,w?,done}]}], ses:[{a,k,min,o,done,act?,hr?,skip?, n?,len?,rec?,sp?}]
+// training data of one session (the old aom.log.v1 entry shape): ex:[{n, v:[option names], o, skip?, add?, sets:[{r?,w?,done}]}], ses:[{a,k,min,o,done,act?,hr?,skip?,add?, n?,len?,rec?,sp?}]  (add = added in the Today view, not planned)
 function cleanLg(e){
   const L={ex:[],ses:[]};
   (Array.isArray(e.ex)?e.ex:[]).forEach((x,ix)=>{
     if(!x||typeof x.n!=="string"||!x.n) return;
     const r={n:x.n.slice(0,80),v:(Array.isArray(x.v)?x.v:[]).map(t=>typeof t==="string"?t.slice(0,40):""),o:numO(x.o,ix),
       sets:(Array.isArray(x.sets)?x.sets:[]).slice(0,40).map(t=>{ t=t||{}; const c={done:!!t.done}, a=nN(t.r,0,999), b=nN(t.w,0,999); if(a!==undefined) c.r=a; if(b!==undefined) c.w=b; return c; })};
-    if(x.skip) r.skip=true; L.ex.push(r);
+    if(x.skip) r.skip=true; if(x.add) r.add=true; L.ex.push(r);
   });
   (Array.isArray(e.ses)?e.ses:[]).forEach((x,ix)=>{
     if(!x||typeof x.a!=="string"||!hasOwn(ACTI,x.a)) return;
     const A=ACT[ACTI[x.a]], r={a:x.a,k:KL[x.k]?x.k:A.d[0],min:nI(x.min,1,600,A.d[1]),o:numO(x.o,1000+ix),done:!!x.done}, a=nI(x.act,1,900,0), h=nI(x.hr,30,230,0);
-    if(a) r.act=a; if(h) r.hr=h; if(x.skip) r.skip=true;
+    if(a) r.act=a; if(h) r.hr=h; if(x.skip) r.skip=true; if(x.add) r.add=true;
     ["n","len","rec","sp"].forEach(f=>{ const v=numO(x[f],undefined); if(v!==undefined&&v>=0&&v<=600) r[f]=v; });
     L.ses.push(r);
   });
@@ -3223,10 +3258,11 @@ function tdSetRow(t,k,nm){
     '<button class="x" type="button" data-act="rmset" aria-label="Remove set '+n+', '+nm+'">×</button></div>';
 }
 function tdBlock(e,i){
-  const x=e.x, sk=!!x.skip, skb=nm=>'<button class="linkbtn tsk" type="button" data-act="skip" aria-pressed="'+sk+'">'+(sk?'Skipped · undo':'Skip')+'<span class="sronly"> '+nm+'</span></button>';
+  const x=e.x, sk=!!x.skip, skb=nm=>'<button class="linkbtn tsk" type="button" data-act="skip" aria-pressed="'+sk+'">'+(sk?'Skipped · undo':'Skip')+'<span class="sronly"> '+nm+'</span></button>'+(x.add?'<button class="linkbtn tsk tdrm warnb" type="button" data-act="rmex">Remove<span class="sronly"> '+nm+'</span></button>':'');
   if(e.t==="s"){
-    const dn=x.sets.filter(t=>t.done).length, nm=esc(x.n), vt=x.v.filter(Boolean).join(", ");
-    return '<article class="tx s'+(sk?' skip':'')+(!sk&&x.sets.length&&dn===x.sets.length?' done':'')+'" data-i="'+i+'" aria-label="'+nm+'"><header><div class="tn"><b>'+nm+'</b>'+(vt?'<small>'+esc(vt)+'</small>':'')+'</div><span class="tcnt" title="Sets done">'+dn+'/'+x.sets.length+'</span>'+skb(nm)+'</header>'+
+    const dn=x.sets.filter(t=>t.done).length, nm=esc(x.n), vt=x.v.filter(Boolean).join(", "), xi=hasOwn(EXI,x.n)?EXI[x.n]:-1, vg=x.add&&xi>=0?(EX[xi].v||[]):[], vc=vg.length?varIdx(xi,x.v,false):[];
+    return '<article class="tx s'+(sk?' skip':'')+(!sk&&x.sets.length&&dn===x.sets.length?' done':'')+'" data-i="'+i+'" aria-label="'+nm+'"><header><div class="tn"><b>'+nm+'</b>'+(vt&&!vg.length?'<small>'+esc(vt)+'</small>':'')+'</div><span class="tcnt" title="Sets done">'+dn+'/'+x.sets.length+'</span>'+skb(nm)+'</header>'+
+      (vg.length?'<div class="tvar">'+vg.map((g,gi)=>'<select data-tdv="'+gi+'" aria-label="'+esc(x.n+" "+g[0])+'">'+g[1].map((op,oi)=>'<option value="'+oi+'"'+(vc[gi]===oi?' selected':'')+'>'+esc(op[0]||"Default")+'</option>').join("")+'</select>').join("")+'</div>':'')+
       '<div class="tcols" aria-hidden="true"><span>Set</span><span>Done</span><span>Reps</span><span>'+wU()+'</span><span></span></div>'+x.sets.map((t,k)=>tdSetRow(t,k,nm)).join("")+
       '<button class="linkbtn tadd" type="button" data-act="addset">+ Add set<span class="sronly"> to '+nm+'</span></button></article>';
   }
@@ -3250,7 +3286,7 @@ function tdSum(){
 function tdRender(){ // whole list (open, add/remove set, skip, sync); keeps scroll
   const L=tdLog(); if(!L) return; const sc=tdBody.scrollTop;
   tdEnts=tdOrder(L);
-  tdBody.innerHTML=tdEnts.length?tdEnts.map(tdBlock).join(""):'<p class="tdempty">Nothing in this session yet. "Sync with plan" pulls in what is planned in it.</p>';
+  $("#tdList").innerHTML=tdEnts.length?tdEnts.map(tdBlock).join(""):'<p class="tdempty">Nothing in this session yet. Add an exercise below, or use "Sync with plan" to pull in what is planned.</p>';
   tdBody.scrollTop=sc; tdSum();
 }
 function tdRefresh(){ // after an edit: summary, counts and check states only (inputs keep focus and caret)
@@ -3282,10 +3318,14 @@ function tdField(t){
   saveCal(); tdRefresh();
 }
 tdBody.addEventListener("input",e=>{ if(e.target.dataset.f&&e.target.dataset.f!=="done") tdField(e.target); });
-tdBody.addEventListener("change",e=>{ if(e.target.dataset.f) tdField(e.target); });
+tdBody.addEventListener("change",e=>{
+  if(e.target.dataset.f) tdField(e.target);
+  else if(e.target.dataset.tdv!==undefined){ const a=e.target.closest(".tx"), en=a&&tdEnts[+a.dataset.i]; if(en&&en.t==="s"&&en.x.add) tdSetVar(en,+e.target.dataset.tdv,+e.target.value,+a.dataset.i); }
+});
 tdBody.addEventListener("click",e=>{
   const b=e.target.closest("button[data-act]"); if(!b) return;
   const a=b.closest(".tx"), i=+a.dataset.i, en=tdEnts[i], act=b.dataset.act; if(!en) return; const x=en.x; let fs=null, last=false;
+  if(act==="rmex"){ if(x.add&&tdRemoveAdded(en)){ planChanged(); tdRender(); tdMsg("Removed "+(en.t==="s"?x.n:actOf(x).n)+" from the session."); $("#tdAddEx").focus(); } return; }
   if(act==="skip"){ if(x.skip) delete x.skip; else x.skip=true; fs='[data-act="skip"]'; }
   else if(act==="addset"&&en.t==="s"){ if(x.sets.length>=40) return; const l=x.sets[x.sets.length-1], t={done:false}; if(l){ if(l.r!==undefined) t.r=l.r; if(l.w!==undefined) t.w=l.w; } x.sets.push(t); fs='.tset [data-f="r"]'; last=true; }
   else if(act==="rmset"&&en.t==="s"){ x.sets.splice(+b.closest(".tset").dataset.s,1); fs='[data-act="addset"]'; }
@@ -3294,12 +3334,105 @@ tdBody.addEventListener("click",e=>{
   const ns=tdBody.querySelectorAll('.tx[data-i="'+i+'"] '+fs), n=ns.length?(last?ns[ns.length-1]:ns[0]):null; if(n) n.focus();
 });
 function tdMsg(t){ $("#tdMsg").textContent=t; }
+/* adding to the session from the Today view: "+ Add exercise" (search like the planner's, 3 sets, default variation) and "+ Add endurance". The new entry goes into the log (lg, flag add:true) AND into the
+   instance's plan (items / ses) so volume, date chips, statistics and "Sync with plan" agree; a pattern session is stored first, the template is never touched (except by the optional offer on Finish). */
+const tdExForm=$("#tdExForm"), tdEndForm=$("#tdEndForm"), tdQ=$("#tdQ"), tdRes=$("#tdRes"), tdOffer=$("#tdOffer"); let tdEndSel={};
+const tdNextO=L=>1+Math.max(-1,...L.ex.map(x=>x.o),...L.ses.map(x=>x.o));
+function planO(W){ const en=entriesOf(W); en.forEach((e,k)=>{ e.x.o=k; }); return en.length; }   // number the plan entries (as the disk format does) and return the position after the last one
+function tdForms(which){ // which: "ex" | "end" | null (all closed)
+  tdExForm.hidden=which!=="ex"; tdEndForm.hidden=which!=="end";
+  $("#tdAddEx").setAttribute("aria-expanded",String(which==="ex")); $("#tdAddEnd").setAttribute("aria-expanded",String(which==="end"));
+  if(which!=="ex"){ tdQ.value=""; tdRes.innerHTML=""; }
+  if(which==="end"){ const A=ACT[ACTI.running]||ACT[0]; tdEndSel={a:A.id,k:A.d[0],min:A.d[1]}; tdEndRender(); }
+}
+function tdBuildRes(){
+  const q=tdQ.value.trim().toLowerCase(); if(!q){ tdRes.innerHTML=""; return []; }
+  const ids=exSearch(EX.map((e,i)=>i).filter(eqOK),q,i=>(EX[i].n+" "+Object.keys(EX[i].per).join(" ")).toLowerCase()).slice(0,7);
+  tdRes.innerHTML=ids.length?ids.map(i=>'<button type="button" data-tdadd="'+i+'">+ '+esc(EX[i].n)+' <small>'+esc(EX[i].e.toLowerCase())+'</small></button>').join(""):'<p class="empty">No match with your equipment.</p>';
+  if(ids.length) tdSee(tdExForm);   // keep the list in view inside the scrolling body
+  return ids;
+}
+function tdEndRender(){
+  const A=ACT[ACTI[tdEndSel.a]], segs=sesSegs(mkSes(A,tdEndSel.k,tdEndSel.min)), g=segs[segs.length-1];
+  $("#tdEndAct").innerHTML=actOptions(tdEndSel.a); $("#tdEndKind").innerHTML=kindOptions(A,tdEndSel.k); $("#tdEndMin").value=tdEndSel.min; $("#tdEndHint").textContent=g?g.l+": "+segTxt(g):"";
+}
+function tdShowNew(x){ // after an add: redraw, focus the first reps input (or the minutes field) of the new entry
+  tdRender(); const ix=tdEnts.findIndex(e=>e.x===x), a=ix>=0?tdBody.querySelector('.tx[data-i="'+ix+'"]'):null;
+  if(a){ if(a.scrollIntoView) try{ a.scrollIntoView({block:"nearest"}); }catch(_){} const f=a.querySelector('[data-f="r"],[data-f="act"]'); if(f) f.focus(); }
+}
+function tdAddExercise(i){
+  const I=tdInst(); if(!I||!I.lg) return; mat(I); const L=I.lg, e=EX[i];
+  const item={n:e.n,sets:3,v:(e.v||[]).map(()=>0),o:planO(I)}; I.items.push(item);
+  const g=logEntry({t:"s",x:item},tdNextO(L),I.dt); g.x.add=true; L.ex.push(g.x);
+  tdForms(null); planChanged(); tdShowNew(g.x); tdMsg("Added "+e.n+": 3 sets.");
+}
+function tdAddEndurance(){
+  const I=tdInst(); if(!I||!I.lg) return; mat(I); const L=I.lg, A=ACT[ACTI[tdEndSel.a]], s=mkSes(A,tdEndSel.k,tdEndSel.min);
+  s.o=planO(I); I.ses.push(s);
+  const g=logEntry({t:"e",x:s},tdNextO(L),I.dt); g.x.add=true; L.ses.push(g.x);
+  tdForms(null); planChanged(); tdShowNew(g.x); tdMsg("Added "+A.n+", "+KL[s.k].toLowerCase()+", "+s.min+" min.");
+}
+function tdPlanIdx(I,en){ // the planned entry (items / ses of the instance) that belongs to a log entry; -1 when the plan no longer has it
+  const x=en.x;
+  if(en.t==="e"){ for(let k=I.ses.length-1;k>=0;k--){ const s=I.ses[k]; if(s.a===x.a&&s.k===x.k&&s.min===x.min) return k; } return -1; }
+  const vk=x.v.join("|"); for(let k=I.items.length-1;k>=0;k--){ const p=I.items[k]; if(p.n===x.n&&hasOwn(EXI,p.n)&&varNames(EXI[p.n],p.v).join("|")===vk) return k; }
+  return -1;
+}
+function tdRemoveAdded(en){ // drop an entry added in this view from the log and from the plan; confirm when something was already done
+  const I=tdInst(), x=en.x; if(!I||!I.lg||!x.add) return false;
+  const used=en.t==="s"?x.sets.some(t=>t.done):!!x.done;
+  if(used&&typeof confirm==="function"&&!confirm("Remove “"+(en.t==="s"?x.n:actOf(x).n)+"” from this session"+(en.t==="s"?" with the sets you logged?":" with the time you logged?"))) return false;
+  const ix=tdPlanIdx(I,en); if(ix>=0) (en.t==="s"?I.items:I.ses).splice(ix,1);
+  const arr=en.t==="s"?I.lg.ex:I.lg.ses, k=arr.indexOf(x); if(k>=0) arr.splice(k,1);
+  return true;
+}
+function tdSetVar(en,gi,oi,blk){ // variation of an added exercise: the plan item and the log entry follow, sets that are not done get the prefill of that variation
+  const I=tdInst(), x=en.x, i=EXI[x.n]; if(!I||!x.add||i===undefined) return;
+  const ix=tdPlanIdx(I,en), idx=varIdx(i,x.v,false); idx[gi]=oi;
+  if(ix>=0) I.items[ix].v=idx.slice();
+  x.v=varNames(i,idx);
+  const pv=lastSets(x.n,x.v,I.dt);
+  x.sets.forEach((t,k)=>{ if(t.done) return; delete t.r; delete t.w; const p=pv.length?pv[Math.min(k,pv.length-1)]:null; if(p){ if(p.r!==undefined) t.r=p.r; if(p.w!==undefined) t.w=p.w; } });
+  planChanged(); tdRender(); const s=tdBody.querySelector('.tx[data-i="'+blk+'"] select[data-tdv="'+gi+'"]'); if(s) s.focus();
+}
+const tdSee=el=>{ if(el.scrollIntoView) try{ el.scrollIntoView({block:"nearest"}); }catch(_){} };
+$("#tdAddEx").onclick=()=>{ const open=tdExForm.hidden; tdForms(open?"ex":null); if(open){ tdQ.focus(); tdSee(tdExForm); } else $("#tdAddEx").focus(); };
+$("#tdAddEnd").onclick=()=>{ const open=tdEndForm.hidden; tdForms(open?"end":null); if(open){ $("#tdEndAct").focus(); tdSee(tdEndForm); } else $("#tdAddEnd").focus(); };
+tdQ.addEventListener("input",tdBuildRes);
+tdQ.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); const b=tdRes.querySelector("[data-tdadd]"); if(b) tdAddExercise(+b.dataset.tdadd); } });
+tdRes.addEventListener("click",e=>{ const b=e.target.closest("[data-tdadd]"); if(b) tdAddExercise(+b.dataset.tdadd); });
+$("#tdEndAct").onchange=e=>{ const A=ACT[ACTI[e.target.value]]; if(A){ tdEndSel={a:A.id,k:A.d[0],min:A.d[1]}; tdEndRender(); } };
+$("#tdEndKind").onchange=e=>{ const A=ACT[ACTI[tdEndSel.a]]; tdEndSel.k=e.target.value; tdEndSel.min=A.d[0]===tdEndSel.k?A.d[1]:KMIN[tdEndSel.k]; tdEndRender(); };
+$("#tdEndMin").onchange=e=>{ tdEndSel.min=nI(e.target.value,5,600,tdEndSel.min); tdEndRender(); };
+$("#tdEndCancel").onclick=()=>{ tdForms(null); $("#tdAddEnd").focus(); };
+$("#tdEndAdd").onclick=tdAddEndurance;
+/* offer on Finish: entries added during the session that the session's template does not have yet. Never automatic. */
+function tdNewFor(I){
+  const T=I.tid?tplOf(I.tid):null; if(!T||!I.lg) return null;
+  const ex=I.lg.ex.filter(x=>x.add&&!x.skip&&hasOwn(EXI,x.n)&&!T.items.some(t=>t.n===x.n&&hasOwn(EXI,t.n)&&varNames(EXI[t.n],t.v).join("|")===x.v.join("|"))),
+    ses=I.lg.ses.filter(x=>x.add&&!x.skip&&!T.ses.some(t=>t.a===x.a&&t.k===x.k&&t.min===x.min));
+  return ex.length||ses.length?{T:T,ex:ex,ses:ses}:null;
+}
+function tdOfferShow(I){
+  const r=tdNewFor(I); if(!r) return false;
+  $("#tdOfferTxt").innerHTML='Add the new '+(r.ex.length?'exercises':'endurance sessions')+' to the template “'+esc(r.T.name)+'” too?<small>'+esc(r.ex.map(x=>x.n).concat(r.ses.map(x=>actOf(x).n)).join(", "))+'</small>';
+  tdOffer.hidden=false; $("#tdOfferYes").focus(); return true;
+}
+$("#tdOfferNo").onclick=()=>closeToday();
+$("#tdOfferYes").onclick=()=>{
+  const I=tdInst(), r=I&&tdNewFor(I); if(!r){ closeToday(); return; }
+  const T=r.T; let o=planO(T);
+  r.ex.forEach(x=>{ const ix=tdPlanIdx(I,{t:"s",x:x}), p=ix>=0?I.items[ix]:null; T.items.push({n:x.n,sets:p?p.sets:Math.max(1,Math.min(30,x.sets.length)),v:varIdx(EXI[x.n],x.v,false),o:o++}); });
+  r.ses.forEach(x=>{ const ix=tdPlanIdx(I,{t:"e",x:x}), s=ix>=0?I.ses[ix]:mkSes(actOf(x),x.k,x.min,x); T.ses.push(Object.assign({},s,{o:o++})); });
+  const n=r.ex.length+r.ses.length, nm=T.name; tplChanged(); closeToday(); $("#dayMsg").textContent="Added "+n+" "+(n===1?"entry":"entries")+" to the template “"+nm+"”.";
+};
 function openToday(id,from){
   const I=findInst(id); if(!I||!I.lg) return; if(ovOn) closeOv(); closePops();
+  tdForms(null); tdOffer.hidden=true;
   tdId=I.id; tdFrom=from||null; tdOn=true; tdMsg(""); tdEl.hidden=false; $("#tdDate").textContent=(I.dt===todayKey()?"Today · ":"")+fmtDate(I.dt); $("#tdTitle").textContent=I.name; tdRender(); $("#tdClose").focus();
 }
 function closeToday(){
-  if(!tdOn) return; tdOn=false; tdEl.hidden=true; planChanged();
+  if(!tdOn) return; tdOn=false; tdEl.hidden=true; tdForms(null); tdOffer.hidden=true; planChanged();
   const f=tdFrom&&tdFrom.isConnected&&!tdFrom.disabled&&!tdFrom.closest("[hidden]")?tdFrom:$("#sessList .strain"); tdFrom=null; if(f&&!f.disabled&&f.focus) f.focus();
 }
 function startInst(I,from){ // open the session's training data; the first start stores a pattern session and copies the plan into the log
@@ -3324,7 +3457,12 @@ function renderHist(){
 board.addEventListener("click",e=>{ const t=e.target.closest('[data-bact="train"]'); if(t) startInst(findInst(t.dataset.id),t); });
 $("#hist").addEventListener("click",e=>{ const b=e.target.closest("[data-id]"); if(b) openToday(b.dataset.id,b); });
 $("#tdClose").onclick=closeToday;
-$("#tdFinish").onclick=()=>{ const I=tdInst(); if(I&&!I.finishedAt){ I.finishedAt=Date.now(); I.status="done"; saveCal(); } closeToday(); };
+$("#tdFinish").onclick=()=>{
+  const I=tdInst(); if(!I||!tdOffer.hidden){ closeToday(); return; }   // with the template offer showing, "Close" = Not now
+  const fresh=!I.finishedAt; if(fresh){ I.finishedAt=Date.now(); I.status="done"; saveCal(); }
+  if(fresh&&tdOfferShow(I)){ tdRefresh(); return; }
+  closeToday();
+};
 $("#tdSync").onclick=()=>{
   const I=tdInst(); if(!I) return; const L=I.lg; let n=0, o=1+Math.max(-1,...L.ex.map(x=>x.o),...L.ses.map(x=>x.o));
   entriesOf(I).forEach(e=>{
@@ -3334,7 +3472,13 @@ $("#tdSync").onclick=()=>{
   });
   if(n) saveCal(); tdMsg(n?"Added "+n+" from the plan.":"Already in sync with the plan."); tdRender();
 };
-window.addEventListener("keydown",e=>{ if(e.key==="Escape"&&tdOn&&!stOn){ e.preventDefault(); e.stopImmediatePropagation(); closeToday(); } },true);
+window.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&tdOn&&!stOn){
+    e.preventDefault(); e.stopImmediatePropagation();
+    if((!tdExForm.hidden||!tdEndForm.hidden)&&$("#tdAdd").contains(document.activeElement)){ const ex=!tdExForm.hidden; tdForms(null); $(ex?"#tdAddEx":"#tdAddEnd").focus(); return; }   // the first Escape closes an open add form
+    closeToday();
+  }
+},true);
 function buildAdd(){
   const q=$("#qa").value.trim().toLowerCase();
   if(!q){$("#addres").innerHTML=""; return;}
