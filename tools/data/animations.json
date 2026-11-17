@@ -1,0 +1,56 @@
+{
+ "_doc": "Exercise motions for the animated atlas (prototype). Format: docs/animation-design.md. Units: metres (scene space: y up, front +z, subject's left +x, feet at y=0) and degrees. Joint angles are written for the LEFT side and mirrored for the right. Checked by lint.py.",
+ "Bulgarian split squat": {
+  "dur": 3.4,
+  "camera": {"theta": 62, "phi": 84, "r": 1.25, "target": [0, 0.66, -0.12]},
+  "props": [
+   {"type": "bench", "size": [0.32, 0.06, 1.0], "top": 0.42, "pos": [-0.06, -0.82]},
+   {"type": "dumbbell", "seg": "handL", "len": 0.27, "r": 0.05},
+   {"type": "dumbbell", "seg": "handR", "len": 0.27, "r": 0.05}
+  ],
+  "keys": [
+   {"t": 0, "root": {"pos": [0, 0.79, 0.02], "rot": [5, 0, 0]},
+    "j": {"lumbar": {"flex": 0}, "chest": {"flex": 3}, "neck": {"flex": -4}, "head": {"flex": -2},
+          "clavL": {"elev": -3}, "armL": {"flex": 8, "abd": 12, "rot": 85}, "foreL": {"flex": 6},
+          "clavR": {"elev": -3}, "armR": {"flex": 8, "abd": 12, "rot": 85}, "foreR": {"flex": 6}},
+    "ik": {"thighL": {"target": [0.1, 0.075, 0.38], "pole": [0, 0.1, 1], "end": [0, 0, 0]},
+           "thighR": {"target": [-0.1, 0.445, -0.36], "pole": [0, -1, 0.5], "end": [164, 0, 0]}}},
+   {"t": 0.1},
+   {"t": 0.68, "ease": "inOut", "root": {"pos": [0, 0.5, 0.05], "rot": [14, 0, 0]},
+    "j": {"chest": {"flex": 5}, "neck": {"flex": -8}, "armL": {"flex": 19}, "armR": {"flex": 19}},
+    "ik": {"thighL": {"pole": [0, 0.2, 1]}, "thighR": {"pole": [0, -1, 0.1]}}},
+   {"t": 0.74},
+   {"t": 1, "ease": "inOut", "root": {"pos": [0, 0.79, 0.02], "rot": [5, 0, 0]},
+    "j": {"chest": {"flex": 3}, "neck": {"flex": -4}, "armL": {"flex": 8}, "armR": {"flex": 8}},
+    "ik": {"thighL": {"pole": [0, 0.1, 1]}, "thighR": {"pole": [0, -1, 0.5]}}}
+  ]
+ },
+ "Dumbbell bench press": {
+  "dur": 3.2,
+  "camera": {"theta": 60, "phi": 64, "r": 1.02, "target": [0, 0.58, 0.06]},
+  "props": [
+   {"type": "bench", "size": [0.3, 0.07, 1.12], "top": 0.43, "pos": [0, -0.14]},
+   {"type": "dumbbell", "seg": "handL", "len": 0.3, "r": 0.055},
+   {"type": "dumbbell", "seg": "handR", "len": 0.3, "r": 0.055}
+  ],
+  "keys": [
+   {"t": 0, "root": {"pos": [0, 0.533, 0.3], "rot": [-90, 0, 0]},
+    "j": {"chest": {"flex": -3}, "neck": {"flex": 4},
+          "clavL": {"prot": -8, "elev": -4}, "clavR": {"prot": -8, "elev": -4}},
+    "ik": {"thighL": {"target": [0.22, 0.075, 0.64], "pole": [0.1, 1, 0.5], "end": [0, 0, 0]},
+           "thighR": {"target": [-0.22, 0.075, 0.64], "pole": [-0.1, 1, 0.5], "end": [0, 0, 0]},
+           "armL": {"target": [0.17, 1.0, -0.17], "pole": [1, -0.4, 0.4]},
+           "armR": {"target": [-0.17, 1.0, -0.17], "pole": [-1, -0.4, 0.4]}}},
+   {"t": 0.08},
+   {"t": 0.66, "ease": "inOut",
+    "j": {"clavL": {"prot": -12, "elev": -5}, "clavR": {"prot": -12, "elev": -5}},
+    "ik": {"armL": {"target": [0.35, 0.72, -0.1], "pole": [1, -1, 0.35]},
+           "armR": {"target": [-0.35, 0.72, -0.1], "pole": [-1, -1, 0.35]}}},
+   {"t": 0.7},
+   {"t": 1, "ease": "inOut",
+    "j": {"clavL": {"prot": -8, "elev": -4}, "clavR": {"prot": -8, "elev": -4}},
+    "ik": {"armL": {"target": [0.17, 1.0, -0.17], "pole": [1, -0.4, 0.4]},
+           "armR": {"target": [-0.17, 1.0, -0.17], "pole": [-1, -0.4, 0.4]}}}
+  ]
+ }
+}

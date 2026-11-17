@@ -41,6 +41,7 @@ function boot(opts){
   w.matchMedia=q=>{const m={media:q,get matches(){return phone&&/max-width:\s*760px|pointer:\s*coarse/.test(q);},ls:[],addEventListener(t,f){this.ls.push(f);},removeEventListener(){},addListener(f){this.ls.push(f);},removeListener(){}};mqs.push(m);return m;};
   w.__setPhone=v=>{phone=v;mqs.forEach(m=>m.ls.forEach(f=>f({matches:m.matches,media:m.media})));};
  }
+ if(opts.reducedMotion&&!opts.phone) w.matchMedia=q=>({media:q,matches:/prefers-reduced-motion:\s*reduce/.test(q),addEventListener(){},removeEventListener(){},addListener(){},removeListener(){}});   // opts.reducedMotion: the user asked for reduced motion
  if(opts.store){
   Object.keys(opts.store).forEach(k=>w.localStorage.setItem(k,opts.store[k]));
  } else if(!opts.phone){
@@ -2098,6 +2099,116 @@ async function endRun(){
  clearAll();
 }
 // ---- schedule board in the week overview: view switch, cards, drag and drop (pointer events), keyboard moves, slot picker, steppers, persistence ----
+// ---- exercise animation (prototype): rig, skin weights, motions, playback, controls, rest pose, reduced motion ----
+async function animRun(){
+ const R=META.rig,A=META.anim||{},S=META.skin||{},NS=R?R.seg.length:0,nm=R?R.seg.map(s=>s[0]):[];
+ ok(R&&NS===19&&nm[0]==='pelvis'&&R.seg[0][1]===-1&&R.seg.every((s,i)=>i===0||(s[1]>=0&&s[1]<i)),'rig: 19 segments, pelvis is the root, every parent comes before its children');
+ const lo=META.lo,sp=META.span,inBox=p=>p.every((v,c)=>v>=lo[c]-0.01&&v<=lo[c]+sp[c]+0.01);
+ ok(R&&R.seg.every(s=>inBox(s[2]))&&Object.keys(R.pt).every(k=>inBox(R.pt[k])),'rig: every joint centre lies inside the body box');
+ const J=n=>R.seg[nm.indexOf(n)][2],sym=nm.filter(n=>/L$/.test(n)).every(n=>{const a=J(n),b=J(n.slice(0,-1)+'R');return Math.abs(a[0]+b[0])<0.015&&Math.abs(a[1]-b[1])<0.015&&Math.abs(a[2]-b[2])<0.015&&a[0]>0;});
+ ok(sym,'rig: left and right joint centres are mirror images within 1.5 cm (left = +x)');
+ const y=n=>J(n)[1];
+ ok(y('footL')<y('shankL')&&y('shankL')<y('thighL')&&y('thighL')<y('lumbar')&&y('lumbar')<y('chest')&&y('chest')<y('neck')&&y('neck')<y('head')&&y('handL')<y('foreL')&&y('foreL')<y('armL')&&Math.abs(y('thighL')-0.88)<0.05&&Math.abs(y('armL')-1.39)<0.05,'rig: joint heights are anatomically ordered (ankle < knee < hip < L5/S1 < T12/L1 < C7/T1 < occiput; wrist < elbow < shoulder)');
+ ok(['low','medium','high'].every(l=>S[l]&&S[l].file.startsWith('geo/skin-'+l+'.bin?v=')&&S[l].bytes>0&&S[l].bytes<META.lod[l].bytes/4),'META.skin: one content-hashed skin file per level, each under a quarter of its mesh file ('+['low','medium','high'].map(l=>Math.round(S[l].bytes/1e3)+' kB').join(', ')+')');
+ const zl=require('zlib');
+ ['low','medium','high'].forEach(l=>{
+  const b=zl.gunzipSync(fs.readFileSync(path.join(ROOT,'geo','skin-'+l+'.bin'))),cs=META.lod[l].counts;let p=0,good=b.length===3*cs.reduce((a,c)=>a+c[0],0),rigid=true,range=true;
+  if(good) cs.forEach((c,i)=>{const nv=c[0];for(let k=0;k<nv;k++){const a=b[p+k],bb=b[p+nv+k],wt=b[p+2*nv+k];if(a>=NS||bb>=NS) range=false;if(META.meshes[i][0]==='b'&&(a!==b[p]||bb!==a||wt!==255)) rigid=false;}p+=3*nv;});
+  ok(good&&range&&rigid,'skin-'+l+'.bin: 3 bytes per vertex of every mesh, segment indices < '+NS+', every bone mesh rigid to one segment');
+ });
+ ok(Object.keys(A).length>=2&&Object.keys(A).every(n=>META.ex.some(e=>e.n===n)&&A[n].keys[0].t===0&&A[n].keys[A[n].keys.length-1].t===1),'META.anim: '+Object.keys(A).join(', ')+' (exercises that exist, keys from t=0 to 1)');
+ const exp='window.__an={get anim(){return anim},skU,segPos,SEGI,cpuSkin,allMeshes,boneMeshes,muscleMeshes,byKey,HM,propGrp,nerveMeshes,get skinLv(){return skinLv}};';
+ const mk=o=>boot(Object.assign({store:{}},o,{js:js.replace('//@licexport',exp)}));
+ const x=mk({}),xd=x.document,xq=s=>xd.querySelector(s),xqa=s=>[...xd.querySelectorAll(s)];
+ await waitFor(()=>!xd.getElementById('loading'),60000,'animation test instance');
+ const X=x.__an,exI=n=>xqa('#exlist .item').find(b=>b.textContent===n),btn=()=>xq('#card [data-act="anim"]'),ident=()=>{const a=X.skU.value;for(let s=0;s<NS;s++){const e=[1,0,0,0,0,1,0,0,0,0,1,0];for(let k=0;k<12;k++) if(Math.abs(a[s*12+k]-e[k])>1e-9) return false;}return true;};
+ xq('[data-tab="ex"]').click();
+ exI('Barbell bench press').click();
+ ok(xq('#card h2').textContent==='Barbell bench press'&&!btn(),'no animation: the exercise card has no "Play movement" button');
+ exI('Bulgarian split squat').click();
+ ok(btn()&&btn().textContent==='▶ Play movement'&&btn().getAttribute('aria-pressed')==='false'&&xq('#animBar').hidden,'animated exercise: "▶ Play movement" on the card, the movement bar is hidden');
+ ok(!x.__fetched.some(u=>/skin/.test(u))&&ident(),'skin weights are not fetched before the first play; all segment matrices are the identity');
+ btn().click();
+ ok(!xq('#animBar').hidden&&/Loading the movement data/.test(xq('#animNote').textContent),'Play: the bar appears and reports loading');
+ await waitFor(()=>X.anim&&X.anim.ready,30000,'skin weights');
+ ok(x.__fetched.filter(u=>/skin/.test(u)).join()==='geo/skin-medium.bin'&&X.skinLv==='medium','Play fetches geo/skin-medium.bin once (the current level)');
+ ok(X.allMeshes.every(m=>{const s=m.geometry.attributes.aSkin;return s&&s.itemSize===3&&s.count===m.geometry.attributes.position.count;}),'every mesh got an aSkin attribute with one entry per vertex');
+ const obc=X.allMeshes[0].material.onBeforeCompile;
+ ok(typeof obc==='function'&&X.allMeshes.every(m=>m.material.onBeforeCompile===obc)&&X.allMeshes.every(m=>m.frustumCulled===false),'all body materials share one skinning onBeforeCompile; frustum culling is off while animating');
+ const sh={uniforms:{},vertexShader:'#include <common>\nvoid main(){\n#include <beginnormal_vertex>\n#include <begin_vertex>\n}'};obc(sh);
+ ok(sh.uniforms.uSk===X.skU&&/attribute vec3 aSkin/.test(sh.vertexShader)&&/uniform vec4 uSk\[57\]/.test(sh.vertexShader)&&/vec3 transformed=\(skMat\*vec4\(position,1.0\)\)\.xyz/.test(sh.vertexShader)&&!/#include <begin_vertex>/.test(sh.vertexShader),'the injected vertex shader declares aSkin + uSk[57] and skins position and normal');
+ ok(xq('#animName').textContent==='Bulgarian split squat'&&btn().textContent==='■ Stop movement'&&btn().getAttribute('aria-pressed')==='true'&&xq('#animPP').textContent==='Pause'&&xq('#vp').classList.contains('animating'),'playing: bar shows the exercise, Pause; the card button became "Stop movement"');
+ const vl=X.byKey['vastus lateralis'];
+ ok(vl.every(m=>m.material===X.HM[3])&&X.byKey['gluteus medius'].every(m=>m.material===X.HM[2]),'heat colours stay on while playing (vastus lateralis prime mover, gluteus medius synergist)');
+ ok(X.propGrp.children.length===3,'props: a bench and two dumbbells');
+ const t0=X.anim.t,m0=Array.from(X.skU.value);await sleep(400);
+ ok(X.anim.t>t0&&Array.from(X.skU.value).some((v,i)=>Math.abs(v-m0[i])>1e-6),'segment matrices change over time (t '+t0.toFixed(3)+' -> '+X.anim.t.toFixed(3)+')');
+ // planted feet: the IK end effectors sit on their targets
+ const k0=A['Bulgarian split squat'].keys[0].ik,fl=X.segPos[X.SEGI.footL].toArray(),fr=X.segPos[X.SEGI.footR].toArray(),near=(a,b,e)=>a.every((v,i)=>Math.abs(v-b[i])<e);
+ ok(near(fl,k0.thighL.target,0.002)&&near(fr,k0.thighR.target,0.002),'IK: front ankle stays on the floor target and rear ankle on the bench target while moving');
+ // bones stay rigid: the posed femur keeps its shape (distance between two vertices)
+ const fem=X.boneMeshes.find(m=>m.userData.key==='femur'),fp=X.cpuSkin(fem,new Float32Array(fem.geometry.attributes.position.array.length)),sp0=fem.geometry.attributes.position.array,last=fp.length-3,dd=(a,i,j)=>Math.hypot(a[i]-a[j],a[i+1]-a[j+1],a[i+2]-a[j+2]);
+ ok(Math.abs(dd(fp,0,last)-dd(sp0,0,last))<1e-5&&dd(fp,0,0+3)>0,'bones move rigidly (femur keeps its length in the posed shape)');
+ // picking: none while playing, the posed shape while paused
+ const target=vl.find(m=>m.userData.side==='L'),tp=X.cpuSkin(target,new Float32Array(target.geometry.attributes.position.array.length));
+ let cx=0,cy=0,cz=0;const n=tp.length/3;for(let i=0;i<n;i++){cx+=tp[3*i];cy+=tp[3*i+1];cz+=tp[3*i+2];}
+ const T=x.THREE,rc=new T.Raycaster(new T.Vector3(cx/n+1,cy/n,cz/n),new T.Vector3(-1,0,0)),hits=[];
+ target.raycast(rc,hits);
+ ok(hits.length===0,'no picking while the movement plays');
+ xq('#animPP').click();
+ ok(!X.anim.playing&&xq('#animPP').textContent==='Play'&&/Paused/.test(xq('#animNote').textContent),'Pause: bar says Play and "Paused"');
+ const m1=Array.from(X.skU.value);await sleep(250);
+ ok(Array.from(X.skU.value).every((v,i)=>v===m1[i]),'paused: the matrices stay still');
+ const ps=X.cpuSkin(target,new Float32Array(target.geometry.attributes.position.array.length));let px=0,py=0,pz=0;for(let i=0;i<n;i++){px+=ps[3*i];py+=ps[3*i+1];pz+=ps[3*i+2];}
+ const rc2=new T.Raycaster(new T.Vector3(px/n+1,py/n,pz/n),new T.Vector3(-1,0,0)),h2=[];target.raycast(rc2,h2);
+ ok(h2.length>0,'paused: a ray through the posed muscle hits it (picking uses the posed shape)');
+ xq('#animSpeed [data-sp="1.5"]').click();
+ ok(X.anim.speed===1.5&&xq('#animSpeed [data-sp="1.5"]').getAttribute('aria-pressed')==='true'&&xq('#animSpeed [data-sp="1"]').getAttribute('aria-pressed')==='false','speed 1.5x is applied and pressed');
+ xq('#animPP').click();
+ // the nerves layer is hidden while animating
+ xq('#tNerves').click();await sleep(20);
+ ok(X.nerveMeshes.length>0&&X.nerveMeshes.every(m=>!m.visible),'the (static) nerve paths are hidden during the animation');
+ // Stop: back to the atlas pose
+ xq('#animStop').click();
+ ok(!X.anim&&ident()&&xq('#animBar').hidden&&btn().textContent==='▶ Play movement'&&X.propGrp.children.length===0&&!xq('#vp').classList.contains('animating'),'Stop: identity matrices, bar hidden, props removed, card offers Play again');
+ const back=X.allMeshes.filter((m,i)=>i%25===0).every(m=>{const p=m.geometry.attributes.position.array,c=X.cpuSkin(m,new Float32Array(p.length));for(let i=0;i<p.length;i++) if(Math.abs(c[i]-p[i])>1e-6) return false;return true;});
+ ok(back&&X.allMeshes.every(m=>m.frustumCulled&&!Object.prototype.hasOwnProperty.call(m,'raycast'))&&X.nerveMeshes.every(m=>m.visible),'rest pose: skinned positions equal the static meshes, culling and normal picking restored, nerves visible again');
+ xq('#tNerves').click();
+ // the bench press: supine on the bench, hands on their IK targets
+ exI('Dumbbell bench press').click();btn().click();
+ await waitFor(()=>X.anim&&X.anim.ready,30000,'bench press');
+ ok(x.__fetched.filter(u=>/skin/.test(u)).length===1,'a second animation reuses the loaded skin weights');
+ const kb=A['Dumbbell bench press'].keys[0].ik,head=X.segPos[X.SEGI.head],pel=X.segPos[X.SEGI.pelvis];
+ await sleep(30);
+ ok(Math.abs(head.y-pel.y)<0.15&&head.z<pel.z-0.5,'bench press: the body lies supine (head level with the pelvis, toward -z)');
+ xq('#animPP').click();
+ ok(X.byKey['pectoralis major'].some(m=>m.material===X.HM[3]),'bench press heat: pectoralis major (sternocostal part) is a prime mover');
+ // leaving the exercise stops the animation
+ exI('Barbell bench press').click();
+ ok(!X.anim&&ident()&&xq('#animBar').hidden,'choosing another exercise stops the animation');
+ exI('Bulgarian split squat').click();btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,'replay');
+ xq('#card [data-act="exclose"]').click();
+ ok(!X.anim&&ident()&&xq('#animBar').hidden,'closing the exercise card stops the animation');
+ exI('Bulgarian split squat').click();btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,'replay 2');
+ xq('#card [data-act="anim"]').click();
+ ok(!X.anim&&ident(),'the card button stops it too');
+ btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,'replay 3');
+ xq('[data-lod="low"]').click();
+ ok(!X.anim&&ident(),'changing the mesh quality stops the animation');
+ await waitFor(()=>xq('[data-lod="low"]').getAttribute('aria-pressed')==='true',30000,'Low');
+ btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,'play on Low');
+ ok(x.__fetched.includes('geo/skin-low.bin')&&X.skinLv==='low'&&X.allMeshes.every(m=>m.geometry.attributes.aSkin&&m.geometry.attributes.aSkin.count===m.geometry.attributes.position.count),'after a quality change the next play loads that level\'s skin weights');
+ xq('#animStop').click();
+ // prefers-reduced-motion: starts paused with a note
+ const r=mk({reducedMotion:true}),rd=r.document,rq=s=>rd.querySelector(s);
+ await waitFor(()=>!rd.getElementById('loading'),60000,'reduced-motion instance');
+ rq('[data-tab="ex"]').click();[...rd.querySelectorAll('#exlist .item')].find(b=>b.textContent==='Bulgarian split squat').click();rq('#card [data-act="anim"]').click();
+ await waitFor(()=>r.__an.anim&&r.__an.anim.ready,30000,'reduced-motion play');
+ const rt=r.__an.anim.t;await sleep(250);
+ ok(!r.__an.anim.playing&&r.__an.anim.t===rt&&/Reduced motion/.test(rq('#animNote').textContent)&&rq('#animPP').textContent==='Play','prefers-reduced-motion: the movement starts paused with a note; Play starts it');
+ rq('#animPP').click();await sleep(250);
+ ok(r.__an.anim.playing&&r.__an.anim.t>rt,'reduced motion: pressing Play animates');
+}
 async function boardRun(){
  const ovOpen=()=>{if(q('#ov').hidden)q('#ovOpen').click();};
  const col=dd=>q('#ovBoard .bcol[data-d="'+dd+'"]'),cards=dd=>qa('#ovBoard .bcol[data-d="'+dd+'"] .bcard[data-d]');
@@ -2534,6 +2645,7 @@ async function boardRun(){
  await run('paletteRun',paletteRun);
  await run('camRun',camRun);
  await run('lodRun',lodRun);
+ await run('animRun',animRun);
  await run('nerveRun',nerveRun);
  await run('licenseRun',licenseRun);
  await run('otherRuns',otherRuns);

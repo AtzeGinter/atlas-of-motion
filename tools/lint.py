@@ -195,6 +195,86 @@ if os.path.exists(P('meta3.json')):
             if mk not in db: err.append(f"movement {m['id']!r}: unknown muscle {mk!r}")
     if mv: print(f'INFO: {len(mv)} movements, {len(set(k for m in mv for k in m["k"] + m["s"]))} muscles named as prime mover or assistant')
 else: print('NOTE: meta3.json missing, exercise checks skipped (run meta.py && exercises.py first)')
+# exercise animation (prototype, docs/animation-design.md): rig.json (rig.py), data/animations.json, ../geo/skin-<level>.bin
+nanim = 0
+DOFS = {'spine': ('flex', 'lat', 'rot'), 'clav': ('elev', 'prot'), 'ball': ('flex', 'abd', 'rot'), 'knee': ('flex',), 'elbow': ('flex',), 'ankle': ('flex',), 'wrist': ('flex', 'dev')}
+SEGK = {'lumbar': 'spine', 'chest': 'spine', 'neck': 'spine', 'head': 'spine', 'clav': 'clav', 'arm': 'ball', 'fore': 'elbow', 'hand': 'wrist', 'thigh': 'ball', 'shank': 'knee', 'foot': 'ankle'}
+def segk(n): return SEGK.get(n) if n in SEGK else (SEGK.get(n[:-1]) if n[-1:] in ('L', 'R') else None)
+CHAINS = {'thigh': ('shank', 'foot'), 'arm': ('fore', 'hand')}
+num3 = lambda v: isinstance(v, list) and len(v) == 3 and all(isinstance(x, (int, float)) for x in v)
+rig = None
+if os.path.exists(P('rig.json')):
+    rig = json.loads(rd(P('rig.json')))
+    sg = rig.get('seg', []); sn = [x['n'] for x in sg]
+    if len(set(sn)) != len(sn) or not sn or sn[0] != 'pelvis' or sg[0]['p'] != -1: err.append('rig.json: segment names must be unique, pelvis first (root)')
+    for i, x in enumerate(sg):
+        if i and not 0 <= x['p'] < i: err.append(f"rig.json: segment {x['n']!r} must come after its parent")
+        if i and not segk(x['n']): err.append(f"rig.json: unknown segment {x['n']!r}")
+        j = x['j']
+        if not (num3(j) and -0.35 < j[0] < 0.35 and 0 < j[1] < 1.75 and -0.15 < j[2] < 0.15): err.append(f"rig.json: pivot of {x['n']!r} outside the body box: {j}")
+        if x['n'].endswith('L') and x['n'][:-1] + 'R' in sn:
+            r = sg[sn.index(x['n'][:-1] + 'R')]['j']
+            if abs(j[0] + r[0]) > 0.015 or abs(j[1] - r[1]) > 0.015 or abs(j[2] - r[2]) > 0.015: err.append(f"rig.json: {x['n']!r} and its right twin are not symmetric ({j} vs {r})")
+else: print('NOTE: rig.json missing, animation checks skipped (run rig.py; assemble.py needs it)')
+if rig and os.path.exists(P('data', 'animations.json')):
+    try: AN = json.loads(rd(P('data', 'animations.json')))
+    except ValueError as e: AN = {}; err.append(f'animations.json: not valid JSON ({e})')
+    sn = [x['n'] for x in rig['seg']] if rig else []
+    exn = {e['n'] for e in M['ex']} if nex is not None else None
+    for name, a in AN.items():
+        if name.startswith('_'): continue
+        nanim += 1; w = f'animations.json {name!r}'
+        if exn is not None and name not in exn: err.append(f'{w}: no exercise of that name')
+        if not isinstance(a.get('dur'), (int, float)) or not 0.5 <= a['dur'] <= 10: err.append(f'{w}: dur must be 0.5-10 seconds')
+        c = a.get('camera', {})
+        if not (isinstance(c.get('theta'), (int, float)) and isinstance(c.get('phi'), (int, float)) and 5 <= c['phi'] <= 175 and isinstance(c.get('r'), (int, float)) and 0.3 <= c['r'] <= 2 and num3(c.get('target'))):
+            err.append(f'{w}: camera needs theta, phi (5-175), r (0.3-2, times the default distance), target [x,y,z]')
+        for p in a.get('props', []):
+            if p.get('type') == 'bench':
+                if not (num3(p.get('size')) and isinstance(p.get('top'), (int, float)) and isinstance(p.get('pos'), list) and len(p['pos']) == 2): err.append(f'{w}: bench needs size [w,thickness,length], top, pos [x,z]')
+            elif p.get('type') == 'dumbbell':
+                if p.get('seg') not in ('handL', 'handR') or not isinstance(p.get('len'), (int, float)) or not isinstance(p.get('r'), (int, float)): err.append(f'{w}: dumbbell needs seg handL|handR, len, r')
+            else: err.append(f"{w}: unknown prop type {p.get('type')!r}")
+        ks = a.get('keys', [])
+        if not 3 <= len(ks) <= 8: err.append(f'{w}: needs 3-8 keys')
+        ts = [k.get('t') for k in ks]
+        if not ts or ts[0] != 0 or ts[-1] != 1 or any(not isinstance(t, (int, float)) or not b > t for t, b in zip(ts, ts[1:])): err.append(f'{w}: key times must rise strictly from 0 to 1')
+        chains, ends = set(), set()
+        for ki, k in enumerate(ks):
+            kw = f'{w} key {ki}'
+            if k.get('ease', 'inOut') not in ('linear', 'inOut', 'in', 'out'): err.append(f"{kw}: unknown ease {k.get('ease')!r}")
+            for f in ('pos', 'rot'):
+                if f in k.get('root', {}) and not num3(k['root'][f]): err.append(f'{kw}: root.{f} must be [x,y,z]')
+            for s, ik in k.get('ik', {}).items():
+                if s[:-1] not in CHAINS or s not in sn: err.append(f'{kw}: IK chain {s!r} must be thighL/R or armL/R'); continue
+                if ki == 0:
+                    chains.add(s)
+                    if 'end' in ik: ends.add(s)
+                    if not num3(ik.get('target')) or not num3(ik.get('pole')): err.append(f'{kw}: IK {s} needs target and pole in key 0')
+                elif s not in chains: err.append(f'{kw}: IK chain {s} must be defined in key 0')
+                for f in ('target', 'pole', 'end'):
+                    if f in ik and not num3(ik[f]): err.append(f'{kw}: IK {s}.{f} must be [x,y,z]')
+            for s, dv in k.get('j', {}).items():
+                kd = segk(s) if s in sn else None
+                if not kd: err.append(f'{kw}: unknown joint segment {s!r}'); continue
+                for d, v in dv.items():
+                    if d not in DOFS[kd]: err.append(f'{kw}: {s} has no degree of freedom {d!r} ({"/".join(DOFS[kd])})')
+                    if not isinstance(v, (int, float)) or abs(v) > 180: err.append(f'{kw}: {s}.{d} must be a number of degrees')
+                for c in chains:
+                    sd = c[-1]; mid, end = CHAINS[c[:-1]]
+                    if s in (c, mid + sd) or (s == end + sd and c in ends): err.append(f'{kw}: joint {s!r} is driven by the IK chain {c} (its angles would be ignored)')
+if rig and nex is not None and 'lod' in M and os.path.isdir(os.path.join(D, '..', 'geo')):
+    import gzip
+    for lv, L in M['lod'].items():
+        f = os.path.join(D, '..', 'geo', 'skin-' + lv + '.bin')
+        if not os.path.exists(f): err.append(f'geo/skin-{lv}.bin missing (run rig.py)'); continue
+        b = gzip.decompress(open(f, 'rb').read()); n = sum(c[0] for c in L['counts'])
+        if len(b) != 3 * n: err.append(f'geo/skin-{lv}.bin: {len(b)} bytes, expected {3 * n} (3 x vertices; rerun rig.py after build.py)'); continue
+        p, top = 0, 0
+        for nv, _ in L['counts']:
+            if nv: top = max(top, max(b[p:p + 2 * nv]))
+            p += 3 * nv
+        if rig and top >= len(rig['seg']): err.append(f'geo/skin-{lv}.bin: segment index {top} out of range')
 if err:
     print('\n'.join('LINT: ' + x for x in err)); print(f'{len(err)} problem(s)'); sys.exit(1)
-print(f'lint OK: {len(mus)} muscles, {len(als)} aliases, {len(acts)} activities, {len(mov)} movements, {len(nrv)} nerves, {len(rev)} revoked licences, ' + (f'{nex} exercises checked' if nex is not None else 'exercise checks skipped'))
+print(f'lint OK: {len(mus)} muscles, {len(als)} aliases, {len(acts)} activities, {len(mov)} movements, {len(nrv)} nerves, {len(rev)} revoked licences, {nanim} animations, ' + (f'{nex} exercises checked' if nex is not None else 'exercise checks skipped'))

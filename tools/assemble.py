@@ -8,6 +8,16 @@ root = os.path.join(here, '..')
 md5 = lambda path: hashlib.md5(open(path, 'rb').read()).hexdigest()
 # cache-bust: ?v=<content hash> so browsers never pair a cached old .bin with new mesh counts
 for L in meta['lod'].values(): L['file'] += '?v=' + md5(os.path.join(root, L['file']))[:10]
+# exercise animation (prototype, docs/animation-design.md): rig (tools/rig.json, from rig.py), motions (data/animations.json),
+# per-level skin weights geo/skin-<level>.bin (fetched lazily on first play, content-hashed like the meshes)
+rig = json.load(open(os.path.join(here, 'rig.json'), encoding='utf-8'))
+meta['rig'] = {'seg': [[s['n'], s['p'], s['j']] for s in rig['seg']], 'pt': rig['pt']}
+anim = json.load(open(os.path.join(here, 'data', 'animations.json'), encoding='utf-8'))
+meta['anim'] = {k: v for k, v in anim.items() if not k.startswith('_')}
+meta['skin'] = {}
+for lv in meta['lod']:
+    f = 'geo/skin-' + lv + '.bin'
+    meta['skin'][lv] = {'file': f + '?v=' + md5(os.path.join(root, f))[:10], 'bytes': os.path.getsize(os.path.join(root, f))}
 metaj = json.dumps(meta, separators=(',', ':'), ensure_ascii=False)
 # version shown in the corner: tools/version.txt (bump it for every release) + a build id hashed from the sources (reproducible, no git data)
 version = open(os.path.join(here, 'version.txt'), encoding='utf-8').read().strip()
@@ -24,7 +34,7 @@ SHELL_FILES = ['index.html', 'manifest.webmanifest', 'vendor/three.min.js', 'ico
                'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png',
                'fonts/archivo-latin.woff2', 'fonts/fraunces-latin.woff2', 'fonts/source-serif-4-latin-400.woff2', 'fonts/source-serif-4-latin-italic-400.woff2']
 build = hashlib.md5(''.join(f + md5(os.path.join(root, f)) for f in SHELL_FILES).encode()).hexdigest()[:10]
-geohash = hashlib.md5(''.join(sorted(L['file'] for L in meta['lod'].values())).encode()).hexdigest()[:10]
+geohash = hashlib.md5(''.join(sorted([L['file'] for L in meta['lod'].values()] + [L['file'] for L in meta['skin'].values()])).encode()).hexdigest()[:10]
 sw = open(os.path.join(here, 'sw.template.js'), encoding='utf-8').read()
 sw = sw.replace('__BUILD__', build).replace('__GEOHASH__', geohash).replace('__PRECACHE__', json.dumps(SHELL_FILES, indent=2))
 open(os.path.join(root, 'sw.js'), 'w', encoding='utf-8', newline='\n').write(sw)
