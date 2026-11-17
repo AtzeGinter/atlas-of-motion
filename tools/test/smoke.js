@@ -1300,15 +1300,15 @@ async function variationRun(){
  const tfl=['tensor fasciae latae','adductor magnus'].find(k=>withVar.includes(k))||withVar[0];
  q('#bestM').value=tfl;ev(q('#bestM'),'change');q('[data-sort="eff"]').click();
  const vb=qa('#best [data-ex]').find(b=>/\)$/.test(b.textContent)),label=vb.textContent,mm=label.match(/^(.*) \((.*)\)$/);
- const pcts=bestPct();ok(pcts.length===bestNames().length,'Best-for ('+tfl+'): entry "'+label+'" shows level dots and a percentage');
+ ok(qa('#best small.why').length===bestNames().length&&qa('#best .lv').length===bestNames().length,'Best-for ('+tfl+'): entry "'+label+'" shows level dots and a loading label');
  vb.click();
  ok(q('#card h2').textContent===mm[1].split(' (')[0].trim()||q('#card h2').textContent===mm[1],'Best-for: clicking "'+label+'" opens that exercise');
  const pressed=qa('[data-var][aria-pressed="true"]').map(b=>b.textContent);
  ok(pressed.join(', ').includes(mm[2]),'... with its variation pressed ('+pressed.join(' / ')+')');
  q('[data-sort="eff"]').click();
- // ordering stays level desc, then specificity desc
- const lv=(()=>{q('#bestM').value='adductor magnus';ev(q('#bestM'),'change');return qa('#best li').map(li=>({l:li.querySelectorAll('.lv i[class]').length,s:parseFloat(li.querySelector('small').textContent)}));})();
- ok(lv.every((x,i)=>!i||x.l<lv[i-1].l||(x.l===lv[i-1].l&&x.s<=lv[i-1].s)),'Best-for sort order is still level, then specificity');
+ // "Most effective" ordering: score desc (level first by construction), ties by specificity; the dots match data-l
+ const lv=(()=>{q('#bestM').value='adductor magnus';ev(q('#bestM'),'change');return qa('#best li').map(li=>({d:li.querySelectorAll('.lv i[class]').length,l:+li.dataset.l,e:+li.dataset.e,s:+li.dataset.s}));})();
+ ok(lv.every((x,i)=>x.d===x.l&&(!i||x.e<lv[i-1].e||(x.e===lv[i-1].e&&x.s<=lv[i-1].s))),'Best-for "Most effective" order: score, then specificity; level dots match');
  q('#exClear').click();
 }
 // ---- deep links ----
@@ -2294,18 +2294,30 @@ async function boardRun(){
  q('[data-tab="ex"]').click();
  ok(!q('#paneEx').hidden&&q('#paneAnat').hidden,'Exercises tab is shown');
  ok(q('#bestM').value==='gluteus maximus','best-for muscle defaults to gluteus maximus');
- const eff=bestNames(),effPct=bestPct();
+ const eff=bestNames(),effWhy=qa('#best small.why').map(s=>s.textContent),bwhy=()=>q('#bestWhy').textContent;
  ok(eff.length>0&&eff.length<=8,'best list non-empty (most effective): '+eff.slice(0,3).join(', ')+'...');
+ ok(effWhy.length===eff.length&&effWhy.every(t=>/^(heavy|medium|light)( · stretch)?$/.test(t))&&bestPct().every(isNaN),'"Most effective" rows show a loading / stretch label instead of a percentage ('+effWhy.slice(0,3).join(', ')+')');
+ ok(/loaded heavily/.test(bwhy())&&/stretch/.test(bwhy()),'explanation line describes "Most effective": '+bwhy());
+ ok(eff.slice(0,3).some(n=>/squat|^Hip thrust/i.test(n)),'glutes, most effective: the top 3 contain Hip thrust or a squat variant ('+eff.slice(0,3).join(', ')+')');
  q('[data-sort="spec"]').click();
  const spec=bestNames(),specPct=bestPct();
  ok(q('[data-sort="spec"]').getAttribute('aria-pressed')==='true','"Most specific" sort is active');
- ok(spec.length>0&&specPct.every((p,i)=>!i||p<=specPct[i-1]),'specific list non-empty and sorted by descending specificity');
+ ok(spec.length>0&&specPct.every((p,i)=>!isNaN(p)&&(!i||p<=specPct[i-1])),'specific list non-empty, shows percentages, sorted by descending specificity');
+ ok(/largest share of the work/.test(bwhy()),'explanation line switches with the sort: '+bwhy());
+ ok(spec[0]!==eff[0]&&spec.slice(0,3).includes('Cable glute kickback'),'glutes: the two sorts differ (top: '+eff[0]+' vs '+spec[0]+'); the specific top 3 contains the isolation Cable glute kickback');
  const bestFor=(m,s)=>{q('#bestM').value=m;ev(q('#bestM'),'change');q('[data-sort="'+s+'"]').click();return bestNames().join('|');};
- const diff=qa('#bestM option').map(o=>o.value).find(m=>bestFor(m,'eff')!==bestFor(m,'spec')); // gluteus maximus itself ranks identically in both
- ok(diff,'sorting by specificity changes the list for some muscle (e.g. '+diff+')');
+ // a synergist never ranks above a prime mover in "Most effective" (W[3] x LDF[1] = .6 > W[2] x LDF[3] x 1.15 = .52), the score never rises down the list; and the sorts differ for every muscle with >= 4 candidates
+ const allM=qa('#bestM option').map(o=>o.value),effBad=[],sameM=[];
+ allM.forEach(m=>{bestFor(m,'eff');const ls=qa('#best li[data-l]').map(li=>({l:+li.dataset.l,e:+li.dataset.e}));
+  if(ls.some((x,i)=>i&&(x.l>ls[i-1].l||x.e>ls[i-1].e)))effBad.push(m);
+  const e8=bestNames().join('|');if(e8.split('|').length>=4&&e8===bestFor(m,'spec'))sameM.push(m);});
+ ok(effBad.length===0,'"Most effective": no lower involvement level above a higher one and scores descend, for all '+allM.length+' muscles'+(effBad.length?' (bad: '+effBad.slice(0,4).join(', ')+')':''));
+ ok(sameM.length===0,'the two sorts give different top 8 for every muscle with at least 4 candidates'+(sameM.length?' (same: '+sameM.join(', ')+')':''));
  bestFor('gluteus maximus','eff');
- ok(bestNames().join('|')===eff.join('|'),'switching back restores the original list');
- ok(effPct.length===eff.length,'every best entry shows a percentage');
+ ok(bestNames().join('|')===eff.join('|')&&/loaded heavily/.test(bwhy()),'switching back restores the original list and explanation');
+ // data: every exercise has a loading potential 1..3 and its stretch entries are targets (variation overrides: targets of that option)
+ const ldBad=META.ex.filter(e=>![1,2,3].includes(e.ld)||(e.st||[]).some(s=>!e.t.some(r=>r[0]===s[0]&&r[1]===s[1]))||(e.sv||[]).some(x=>!e.v||!e.v[x[0]]||!e.v[x[0]][1][x[1]]));
+ ok(ldBad.length===0&&META.ex.filter(e=>e.st).length>=15&&META.ex.some(e=>e.ld===1)&&META.ex.some(e=>e.ld===3),'META.ex: ld in 1..3 and st entries are targets for every exercise ('+META.ex.filter(e=>e.st).length+' with stretch)'+(ldBad.length?' bad: '+ldBad.map(e=>e.n).join(', '):''));
  // exercise card + variation
  const sq=exItem('Back squat');if(!ok(sq,'Back squat is listed')) return finish();
  sq.click();

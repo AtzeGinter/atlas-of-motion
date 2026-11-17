@@ -387,6 +387,67 @@ EQ={"Barbell":["Barbell"],"Trap bar":["Barbell"],"Dumbbells":["Dumbbells"],"Dumb
     "Cable":["Cable"],"Cable or dumbbell":["Cable","Dumbbells"],"Machine":["Machine"],"Bodyweight":["Bodyweight"],"Parallel bars":["Bodyweight"],
     "Bar":["Bodyweight"],"Bench":["Bodyweight"],"Resistance band":["Band"],"Weight plate":["Other"],"Neck harness":["Other"],"Ab wheel":["Other"],"Wrist roller":["Other"],"Hand gripper":["Other"],"Towel":["Other"]}
 for e in out: e['eq']=EQ[e['e']]
+# ---------- loading potential and stretch emphasis ("Best exercises for a muscle" > Most effective) ----------
+# LD: loading potential, default 2. 3 = can be loaded heavily and progressed in small steps for many months (barbell and trap-bar lifts,
+# compound machines, cable pulldowns/rows, weighted pull-ups/chin-ups/dips, heavy-stack calf machines, shrugs, farmer's carry);
+# 2 = moderate (dumbbell and cable work, isolation machines, bodyweight compounds that can be weighted); 1 = light or hard to progress
+# (bands, bodyweight-only isolation, isometrics, prehab, mobility, breathing, pelvic floor).
+LD={
+ # 3: heavy and finely progressable
+ "Barbell bench press":3,"Incline barbell bench press":3,"Decline bench press":3,"Close-grip bench press":3,"Chest press machine":3,"Dips":3,
+ "Overhead press":3,"Shoulder press machine":3,
+ "Pull-up":3,"Chin-up":3,"Lat pulldown":3,"Barbell row":3,"Pendlay row":3,"T-bar row":3,"Meadows row":3,"Machine row":3,"Seated cable row":3,"Shrug":3,
+ "Barbell curl":3,
+ "Back squat":3,"Front squat":3,"Zercher squat":3,"Hack squat":3,"Smith machine squat":3,"Leg press":3,
+ "Standing calf raise":3,"Seated calf raise":3,"Leg press calf raise":3,
+ "Romanian deadlift":3,"Conventional deadlift":3,"Sumo deadlift":3,"Trap bar deadlift":3,"Hip thrust":3,"Good morning":3,
+ "Machine crunch":3,"Cable crunch":3,"Farmer's carry":3,
+ # 1: light or limited progression
+ "Bench dip":1,"Scapular push-up":1,"Cuban press":1,"Prone Y-T-W raise":1,"Cable external rotation":1,"Cable internal rotation":1,
+ "Sissy squat":1,"Lateral step-down":1,"Tibialis raise":1,"Banded side walk":1,"Clamshell":1,"Side-lying hip abduction":1,"Side plank with hip abduction":1,
+ "Hip airplane":1,"Copenhagen plank":1,"Seated hip external rotation":1,"Banded ankle eversion":1,"Banded ankle inversion":1,"Short foot":1,"Towel scrunch":1,
+ "Jefferson curl":1,"Plank":1,"Side plank":1,"Dead bug":1,"Bird dog":1,"Crunch":1,"Sit-up":1,"Lying leg raise":1,"Russian twist":1,"Pallof press":1,
+ "Diaphragmatic breathing":1,"Pelvic floor contraction":1,"Forearm pronation and supination":1,"Radial deviation":1,"Band finger extension":1,
+ "Neck lateral flexion":1,"Chin tuck":1,"Prone head lift":1,
+}
+# ST: targets the exercise loads at long muscle length / through a deep stretch under load (clear cases only; entries must be targets of the exercise).
+ST={
+ "Romanian deadlift":"HAMS,gluteus maximus","Single-leg Romanian deadlift":"HAMS,gluteus maximus","Good morning":"HAMS","Seated leg curl":"HAMS",
+ "Jefferson curl":"ERECT",
+ "Overhead triceps extension":"triceps brachii|long head",
+ "Incline dumbbell curl":"biceps brachii|long head,biceps brachii|short head","Preacher curl":"biceps brachii|long head,biceps brachii|short head,brachialis",
+ "Pull-up":"latissimus dorsi","Chin-up":"latissimus dorsi","Lat pulldown":"latissimus dorsi","Assisted pull-up":"latissimus dorsi","Dumbbell pullover":"latissimus dorsi",
+ "Dips":"pectoralis major|sternocostal part,pectoralis major|abdominal part","Cable fly":"pectoralis major|sternocostal part,pectoralis major|clavicular part,pectoralis major|abdominal part",
+ "Front squat":"QUADV","Hack squat":"QUADV","Sissy squat":"QUADV,rectus femoris",
+ "Bulgarian split squat":"gluteus maximus","Cossack squat":"adductor magnus,adductor longus",
+ "Standing calf raise":"gastrocnemius","Single-leg calf raise":"gastrocnemius","Seated calf raise":"soleus",
+ "Ab wheel rollout":"rectus abdominis",
+}
+# STV: stretch entries a variation option adds to the base list {exercise: {option: spec}}
+STV={"Back squat":{"Deep":"gluteus maximus,adductor magnus,QUADV"},"Single-leg calf raise":{"Bent":"soleus"}}
+def stl(spec):
+    res=[]
+    for kk in (x for item in spec.split(',') for x in G.get(item,[item])):
+        key,_,part=kk.partition('|'); res.append([key,part])
+    return res
+for n,v in LD.items(): assert n in idx and v in (1,2,3),(n,v)
+for n,spec in ST.items():
+    assert n in idx,n
+    st=stl(spec); tk={(k,p) for k,p,_ in idx[n]['t']}
+    for k,p in st: assert (k,p) in tk,('stretch entry is not a target',n,k,p)
+    idx[n]['st']=st
+for n,ops in STV.items():
+    e=idx[n]; sv=[]
+    for o,spec in ops.items():
+        hit=[(gi,oi) for gi,(g,opts) in enumerate(e['v']) for oi,(on,_) in enumerate(opts) if on==o and oi>0]
+        assert len(hit)==1,(n,o)
+        gi,oi=hit[0]; ov={(k,p):l for k,p,l in e['v'][gi][1][oi][1]}
+        tk={(k,p) for k,p,_ in e['t'] if ov.get((k,p),ov.get((k,''),1))>0}|{kp for kp,l in ov.items() if l>0}
+        st=stl(spec)
+        for k,p in st: assert (k,p) in tk,('variation stretch entry is not a target',n,o,k,p)
+        sv.append([gi,oi,st])
+    e['sv']=sv
+for e in out: e['ld']=LD.get(e['n'],2)
 M['ex']=out
 json.dump(M,open('meta3.json','w',encoding='utf-8',newline='\n'),separators=(',',':'))
 print('variations on',len(VARS))

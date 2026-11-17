@@ -259,6 +259,10 @@ select.search{appearance:auto;}
 .best li::before{content:counter(b,decimal);width:16px;color:var(--accent);font:500 14px var(--f-disp);}
 .best li .exlink{flex:1;}
 .best li small{color:var(--muted);white-space:nowrap;}
+.best li small.why{font:600 11.5px/1.15 var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.06em;text-align:right;min-width:3.6em;}
+.best li small.why span{display:block;}.best li small.why i{display:none;}
+.bestwhy{margin:0 0 6px!important;}
+.ext small.stm{display:inline-block;margin-right:6px;font:600 11px var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.08em;}
 .banner{margin:0;padding:10px 12px;border-radius:3px;background:var(--accent-soft);border:1px solid var(--accent);font:italic 400 15px/1.4 var(--f-read);display:flex;justify-content:space-between;align-items:center;gap:10px;}
 .banner[hidden]{display:none;}
 .prow{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);}
@@ -1040,6 +1044,7 @@ input.mvdate[hidden]{display:none;}
       <h2>Best exercises for a muscle</h2>
       <select class="search" id="bestM" aria-label="Muscle"></select>
       <div class="seg seg2" role="group" aria-label="Sort by"><button data-sort="eff" aria-pressed="true">Most effective</button><button data-sort="spec" aria-pressed="false">Most specific</button></div>
+      <p class="fine bestwhy" id="bestWhy" aria-live="polite"></p>
       <ol class="best" id="best"></ol>
     </div>
     <div class="sec">
@@ -1507,20 +1512,32 @@ const varText=(i,v)=>(EX[i].v&&v)?EX[i].v.map((g,gi)=>{const o=v[gi]?g[1][v[gi]]
 // persisted variations are option NAMES (""/missing = default); internally index arrays. Unknown names/indices fall back to the default (0)
 const varNames=(i,v)=>(EX[i].v||[]).map((g,gi)=>{const o=(v&&v[gi]>0)?g[1][v[gi]]:null; return o?o[0]:"";});
 const varIdx=(i,nm,legacy)=>(EX[i].v||[]).map((g,gi)=>{const x=nm&&nm[gi]; const ix=legacy?(Number.isInteger(x)&&g[1][x]?x:0):g[1].findIndex(o=>o[0]===x&&x!==""); return ix>0?ix:0;});
+// "Most effective" score per (exercise, muscle) = W[level] x LDF[ld] x (STB if the muscle is in the exercise's stretch list at that level).
+// ld = loading potential 1-3 and st = targets loaded at long muscle length (exercises.py LD / ST / STV; META ex.ld, ex.st, ex.sv = [[group, option, st entries]]).
+// The worst prime mover (1 x .6 = .6) still beats the best synergist (.45 x 1 x 1.15 = .52), so prime movers always come first.
+const LDF={1:0.6,2:0.9,3:1}, STB=1.15;
+const stOf=(i,v)=>{let st=EX[i].st||[]; if(v) (EX[i].sv||[]).forEach(x=>{if(v[x[0]]===x[1]) st=st.concat(x[2]);}); return st;};
+const stAt=(t,st,k,l)=>st.length>0&&t.some(r=>r[0]===k&&r[2]===l&&st.some(x=>x[0]===k&&(!x[1]||!r[1]||x[1]===r[1]))); // stretch entry on one of the muscle's top-level targets
+const effScore=(i,l,str)=>W[l]*LDF[EX[i].ld||2]*(str?STB:1);
 const EXK={};
-EX.forEach((e,i)=>{const r=perOf(e.t); e.per=r.per; e.tot=r.tot;
-  Object.keys(r.per).forEach(k=>(EXK[k]=EXK[k]||[]).push({i:i,v:null,l:r.per[k].l,parts:r.per[k].parts,s:W[r.per[k].l]/r.tot}));});
+EX.forEach((e,i)=>{const r=perOf(e.t), st=stOf(i,null); e.per=r.per; e.tot=r.tot;
+  Object.keys(r.per).forEach(k=>{const l=r.per[k].l, str=stAt(e.t,st,k,l); (EXK[k]=EXK[k]||[]).push({i:i,v:null,l:l,parts:r.per[k].parts,s:W[l]/r.tot,st:str,e:effScore(i,l,str)});});});
 // variations as separate entries: for each single non-default option (other groups left at default), add an entry for every muscle it makes better than the base exercise
-// (higher level, higher specificity, or a visible part emphasis such as "short head" that the base lacks); equal or worse variants are not listed. Combinations across groups are not enumerated.
+// (higher level, higher specificity, a visible part emphasis such as "short head" that the base lacks, or a stretch the base lacks); equal or worse variants are not listed. Combinations across groups are not enumerated.
 EX.forEach((e,i)=>{ if(!e.v) return;
   e.v.forEach((g,gi)=>g[1].forEach((o,oi)=>{ if(!oi) return;
-    const v=e.v.map(()=>0); v[gi]=oi; const t=effTargets(i,v), r=perOf(t);
-    Object.keys(r.per).forEach(k=>{ const p=r.per[k], s=W[p.l]/r.tot, b=e.per[k], bs=b?W[b.l]/e.tot:0;
+    const v=e.v.map(()=>0); v[gi]=oi; const t=effTargets(i,v), r=perOf(t), st=stOf(i,v);
+    Object.keys(r.per).forEach(k=>{ const p=r.per[k], s=W[p.l]/r.tot, b=e.per[k], bs=b?W[b.l]/e.tot:0, str=stAt(t,st,k,p.l), ef=effScore(i,p.l,str), be=b?EXK[k].find(x=>x.i===i&&!x.v).e:0;
       const top=t.filter(x=>x[0]===k&&x[2]===p.l), tp=top.some(x=>!x[1])?[]:[...new Set(top.map(x=>x[1]))], pn=partNote(k,tp); // parts at the muscle's top level only
-      if(!b||p.l>b.l||Math.round(s*100)>Math.round(bs*100)||(pn&&pn!==partNote(k,b.parts)))
-        (EXK[k]=EXK[k]||[]).push({i:i,v:v,l:p.l,parts:tp,s:s}); });
+      if(!b||p.l>b.l||Math.round(s*100)>Math.round(bs*100)||(pn&&pn!==partNote(k,b.parts))||ef>be+1e-9)
+        (EXK[k]=EXK[k]||[]).push({i:i,v:v,l:p.l,parts:tp,s:s,st:str,e:ef}); });
   })); });
-Object.keys(EXK).forEach(k=>EXK[k].sort((a,b)=>b.l-a.l||b.s-a.s));
+Object.keys(EXK).forEach(k=>EXK[k].sort((a,b)=>b.l-a.l||b.s-a.s)); // muscle card table order: level, then specificity
+// "Best exercises for a muscle": eff = effectiveness score (ties: level, specificity); spec = share of the work, prime movers and synergists only
+const bestRank=(xs,sort)=>sort==="spec"?xs.filter(x=>x.l>=2).slice().sort((a,b)=>b.s-a.s||b.l-a.l):xs.slice().sort((a,b)=>b.e-a.e||b.l-a.l||b.s-a.s);
+const LDN={3:"heavy",2:"medium",1:"light"}, LDT={3:"can be loaded heavily and progressed for months",2:"moderate loading",1:"light or hard to progress"};
+const effTag=x=>'<span>'+LDN[EX[x.i].ld||2]+'</span>'+(x.st?'<i> · </i><span>stretch</span>':''); // stacked in the list; textContent "heavy · stretch"
+const effTip=x=>ROLE[x.l]+', '+LDT[EX[x.i].ld||2]+(x.st?', trains this muscle through a stretch':'');
 const exLabel=x=>EX[x.i].n+(x.v?' ('+varText(x.i,x.v)+')':'');
 /* ---------- search: colloquial names + typo tolerance ---------- */
 // ALIAS: lower-case gym name -> [{k:muscle key, p:part or ""}] (data/aliases.txt via META.al; entries "key" or "key:part")
@@ -2346,8 +2363,8 @@ function renderCard0(clicked){
       const xs=(EXK[sel.key]||[]).filter(x=>eqOK(x.i));
       if(xs.length){
         h+='<h3>Exercises that train it ('+xs.length+(eqFiltered()?', filtered by your equipment':'')+')</h3><table class="ext"><thead><tr><th>Exercise</th><th>Involvement</th><th>Specificity</th></tr></thead><tbody>'+
-          xs.map(x=>{const pc=Math.round(x.s*100), pm=planMark(x.i,x.v);return '<tr'+(pm&&pm.on?' class="inplan"':'')+'><td><button class="exlink" '+exAttr(x)+'>'+exLabel(x)+'</button>'+(partNote(sel.key,x.parts)?'<small>'+partNote(sel.key,x.parts)+'</small>':'')+(pm?pm.html:'')+'</td><td>'+lvDots(x.l)+ROLE[x.l].replace("Prime mover","Prime")+'</td><td><span class="bar"><i style="width:'+Math.min(100,pc*2.5)+'%"></i></span>'+pc+'%</td></tr>';}).join("")+
-          '</tbody></table><p class="fine">Involvement: how hard this muscle works in the exercise. Specificity: its estimated share of all the muscular work, so higher means the exercise isolates it more.</p>';
+          xs.map(x=>{const pc=Math.round(x.s*100), pm=planMark(x.i,x.v);return '<tr'+(pm&&pm.on?' class="inplan"':'')+'><td><button class="exlink" '+exAttr(x)+'>'+exLabel(x)+'</button>'+(partNote(sel.key,x.parts)?'<small>'+partNote(sel.key,x.parts)+'</small>':'')+(x.st?'<small class="stm" title="Loads this muscle at long length, through a stretch">stretch</small>':'')+(pm?pm.html:'')+'</td><td>'+lvDots(x.l)+ROLE[x.l].replace("Prime mover","Prime")+'</td><td><span class="bar"><i style="width:'+Math.min(100,pc*2.5)+'%"></i></span>'+pc+'%</td></tr>';}).join("")+
+          '</tbody></table><p class="fine">Involvement: how hard this muscle works in the exercise. Specificity: its estimated share of all the muscular work, so higher means the exercise isolates it more. Stretch: loads the muscle at long length.</p>';
       } else if(EXK[sel.key]) h+='<h3>Exercises that train it</h3><p class="empty">None with your selected equipment.</p>';
       else if(d.t) h+='<h3>Exercises</h3><p>'+d.t+'</p>';
     }
@@ -2530,11 +2547,13 @@ let bestSort="eff";
   MGROUPS.forEach(g=>{const xs=ks.filter(k=>DB[k].g===g).sort(); if(xs.length) h+='<optgroup label="'+g+'">'+xs.map(k=>'<option value="'+k+'">'+cap(k)+'</option>').join("")+'</optgroup>';});
   $("#bestM").innerHTML=h; $("#bestM").value="gluteus maximus";
 })();
+const BESTWHY={eff:"Prime movers that can be loaded heavily and train the muscle through a stretch",spec:"Exercises where this muscle does the largest share of the work (isolation)"};
 function buildBest(){
-  const k=$("#bestM").value; let xs=(EXK[k]||[]).filter(x=>eqOK(x.i));
-  if(bestSort==="spec") xs=xs.filter(x=>x.l>=2).slice().sort((a,b)=>b.s-a.s||b.l-a.l);
-  xs=xs.slice(0,8);
-  $("#best").innerHTML=xs.length?xs.map(x=>{const pm=planMark(x.i,x.v); return '<li'+(pm&&pm.on?' class="inplan"':'')+'><button class="exlink" '+exAttr(x)+'>'+exLabel(x)+'</button>'+(pm&&pm.on?'<span class="ptag" title="'+pm.tip+'">planned</span>':'')+lvDots(x.l)+'<small>'+Math.round(x.s*100)+'%</small></li>';}).join(""):'<li class="empty">No exercises with your equipment.</li>';
+  const k=$("#bestM").value, xs=bestRank((EXK[k]||[]).filter(x=>eqOK(x.i)),bestSort).slice(0,8);
+  $("#bestWhy").textContent=BESTWHY[bestSort];
+  $("#best").innerHTML=xs.length?xs.map(x=>{const pm=planMark(x.i,x.v), pc=Math.round(x.s*100);
+    return '<li'+(pm&&pm.on?' class="inplan"':'')+' data-l="'+x.l+'" data-s="'+pc+'" data-e="'+x.e.toFixed(3)+'"><button class="exlink" '+exAttr(x)+'>'+exLabel(x)+'</button>'+(pm&&pm.on?'<span class="ptag" title="'+pm.tip+'">planned</span>':'')+lvDots(x.l)+
+      (bestSort==="spec"?'<small title="Share of the muscular work in this exercise">'+pc+'%</small>':'<small class="why" title="'+effTip(x)+'">'+effTag(x)+'</small>')+'</li>';}).join(""):'<li class="empty">No exercises with your equipment.</li>';
 }
 $("#bestM").onchange=buildBest;
 document.querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{bestSort=b.dataset.sort; document.querySelectorAll("[data-sort]").forEach(x=>x.setAttribute("aria-pressed",x===b)); buildBest();});

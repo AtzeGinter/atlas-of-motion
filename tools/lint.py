@@ -153,6 +153,18 @@ if os.path.exists(P('meta3.json')):
         for g, opts in e.get('v', []):
             if len(opts) < 2: err.append(f'{w}: variation group {g!r} has {len(opts)} option(s), need >=2')
             for o, t in opts: tg(f'{w} / {g} / {o}', t, True)
+        # loading potential 1-3; stretch entries [key, part] must be targets (of the exercise, or of the variation option for sv)
+        if e.get('ld') not in (1, 2, 3): err.append(f"{w}: ld {e.get('ld')!r} must be 1, 2 or 3")
+        tks = {(k, p) for k, p, _ in e['t']}
+        for k, p in e.get('st', []):
+            if (k, p) not in tks: err.append(f'{w}: stretch entry {k!r}/{p!r} is not a target')
+        for gi, oi, st in e.get('sv', []):
+            vs = e.get('v', [])
+            if not (0 <= gi < len(vs) and 0 < oi < len(vs[gi][1])): err.append(f'{w}: stretch override for unknown variation {gi}/{oi}'); continue
+            ov = {(k, p): l for k, p, l in vs[gi][1][oi][1]}
+            vt = {(k, p) for k, p in tks if ov.get((k, p), ov.get((k, ''), 1)) > 0} | {kp for kp, l in ov.items() if l > 0}
+            for k, p in st:
+                if (k, p) not in vt: err.append(f'{w} / {vs[gi][1][oi][0]}: stretch entry {k!r}/{p!r} is not a target')
     # nerves: anchors reference existing structures; META.nd/nv agree with nerves.txt; every nerve supplies a muscle (directly, or through its branches if its match is "-")
     nd, nv = M.get('nd', []), M.get('nv', {})
     if [d['id'] for d in nd] != nids: err.append('meta3.json: nerve ids differ from nerves.txt (run meta.py && exercises.py)')
