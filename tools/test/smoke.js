@@ -26,7 +26,7 @@ function boot(opts){
  {const [ty,tm,td]=(opts.today||TODAY).split('-').map(Number),RD=w.Date,base=new RD(ty,tm-1,td,12,0,0).getTime(),t0=RD.now(),now=()=>base+(RD.now()-t0);
   class FD extends RD{constructor(...a){if(a.length===0)super(now());else super(...a);}static now(){return now();}}
   w.Date=FD;}
- class FR{constructor(){this.domElement=w.document.createElement('canvas');}setPixelRatio(r){w.__dpr=r;}setClearColor(){}setSize(){}render(s,c){w.__scene=s;w.__cam=c;}}
+ class FR{constructor(){this.domElement=w.document.createElement('canvas');this.capabilities={maxVertexUniforms:opts.maxVU||1024};}setPixelRatio(r){w.__dpr=r;}setClearColor(){}setSize(){}render(s,c){w.__scene=s;w.__cam=c;}}
  w.THREE=Object.assign({},THREE,{WebGLRenderer:FR});w.ResizeObserver=class{observe(){}};
  // geometry is no longer embedded: serve geo/<level>.bin from the repo root, like a web server would
  w.__fetched=[];w.__failFetch=!!opts.failFetch;
@@ -2099,94 +2099,180 @@ async function endRun(){
  clearAll();
 }
 // ---- schedule board in the week overview: view switch, cards, drag and drop (pointer events), keyboard moves, slot picker, steppers, persistence ----
-// ---- exercise animation (prototype): rig, skin weights, motions, playback, controls, rest pose, reduced motion ----
+// ---- exercise animation: rig (spine, forearm rotation, fingers), skin weights, every motion (bar in both hands, planted feet), playback, scrubbing, uniform fallback, rest pose, reduced motion ----
 async function animRun(){
- const R=META.rig,A=META.anim||{},S=META.skin||{},NS=R?R.seg.length:0,nm=R?R.seg.map(s=>s[0]):[];
- ok(R&&NS===19&&nm[0]==='pelvis'&&R.seg[0][1]===-1&&R.seg.every((s,i)=>i===0||(s[1]>=0&&s[1]<i)),'rig: 19 segments, pelvis is the root, every parent comes before its children');
+ const R=META.rig,A=META.anim||{},S=META.skin||{},NS=R?R.seg.length:0,NB=R?R.nbody:0,nm=R?R.seg.map(s=>s[0]):[];
+ ok(R&&NS===52&&NB===22&&nm[0]==='pelvis'&&R.seg[0][1]===-1&&R.seg.every((s,i)=>i===0||(s[1]>=0&&s[1]<i)),'rig: 52 segments (22 body + 30 finger), pelvis is the root, every parent comes before its children');
+ ok(['lumbar','thorax','chest'].every(n=>nm.includes(n))&&R.seg[nm.indexOf('chest')][1]===nm.indexOf('thorax')&&R.seg[nm.indexOf('thorax')][1]===nm.indexOf('lumbar'),'rig: three bendable spine segments lumbar -> thorax (T12/L1) -> chest (T6/T7)');
+ const sg=n=>R.seg[nm.indexOf(n)],unitAx=a=>Array.isArray(a)&&Math.abs(Math.hypot(a[0],a[1],a[2])-1)<1e-3;
+ ok(['L','R'].every(sd=>sg('rad'+sd)[1]===nm.indexOf('fore'+sd)&&sg('hand'+sd)[1]===nm.indexOf('rad'+sd)&&unitAx(sg('rad'+sd)[3])&&Math.abs(sg('rad'+sd)[3][1])>0.9),'rig: a radius segment per arm (child of the ulna segment, parent of the hand) with a unit forearm-rotation axis along the forearm');
+ const fing=nm.slice(NB);
+ ok(fing.length===30&&fing.every(n=>/^(th[mpd]|f[2-5][pmd])[LR]$/.test(n)&&unitAx(sg(n)[3])&&sg(n)[4]>0&&sg(n)[4]<=120&&nm[sg(n)[1]].replace(/[LR]$/,'')!=='fore')&&['L','R'].every(sd=>['thm','f2p','f3p','f4p','f5p'].every(f=>sg(f+sd)[1]===nm.indexOf('hand'+sd))),'rig: 15 finger segments per hand (thumb CMC/MCP/IP, fingers 2-5 MCP/PIP/DIP) hang from the hand, each with a flexion axis and a grip angle');
+ ok(R.dir&&['gaxL','gaxR','gfdL','gfdR'].every(k=>unitAx(R.dir[k]))&&R.pt.gripL&&R.pt.gripR,'rig: grip point, handle axis and finger direction per hand');
  const lo=META.lo,sp=META.span,inBox=p=>p.every((v,c)=>v>=lo[c]-0.01&&v<=lo[c]+sp[c]+0.01);
  ok(R&&R.seg.every(s=>inBox(s[2]))&&Object.keys(R.pt).every(k=>inBox(R.pt[k])),'rig: every joint centre lies inside the body box');
- const J=n=>R.seg[nm.indexOf(n)][2],sym=nm.filter(n=>/L$/.test(n)).every(n=>{const a=J(n),b=J(n.slice(0,-1)+'R');return Math.abs(a[0]+b[0])<0.015&&Math.abs(a[1]-b[1])<0.015&&Math.abs(a[2]-b[2])<0.015&&a[0]>0;});
+ const J=n=>sg(n)[2],sym=nm.filter(n=>/L$/.test(n)).every(n=>{const a=J(n),b=J(n.slice(0,-1)+'R');return Math.abs(a[0]+b[0])<0.015&&Math.abs(a[1]-b[1])<0.015&&Math.abs(a[2]-b[2])<0.015&&a[0]>0;});
  ok(sym,'rig: left and right joint centres are mirror images within 1.5 cm (left = +x)');
  const y=n=>J(n)[1];
- ok(y('footL')<y('shankL')&&y('shankL')<y('thighL')&&y('thighL')<y('lumbar')&&y('lumbar')<y('chest')&&y('chest')<y('neck')&&y('neck')<y('head')&&y('handL')<y('foreL')&&y('foreL')<y('armL')&&Math.abs(y('thighL')-0.88)<0.05&&Math.abs(y('armL')-1.39)<0.05,'rig: joint heights are anatomically ordered (ankle < knee < hip < L5/S1 < T12/L1 < C7/T1 < occiput; wrist < elbow < shoulder)');
+ ok(y('footL')<y('shankL')&&y('shankL')<y('thighL')&&y('thighL')<y('lumbar')&&y('lumbar')<y('thorax')&&y('thorax')<y('chest')&&y('chest')<y('neck')&&y('neck')<y('head')&&y('handL')<y('foreL')&&y('foreL')<y('armL')&&y('f3dL')<y('f3mL')&&y('f3mL')<y('f3pL')&&y('f3pL')<y('handL')&&Math.abs(y('thighL')-0.88)<0.05&&Math.abs(y('armL')-1.39)<0.05,'rig: joint heights are anatomically ordered (ankle < knee < hip < L5/S1 < T12/L1 < T6/T7 < C7/T1 < occiput; fingertip joints < MCP < wrist < elbow < shoulder)');
+ ok(NS*2+24<=128&&NB*2+24<=128,'uniform budget: '+NS+' segments x 2 vec4 = '+NS*2+' (+24 for three.js) fits the WebGL1 minimum of 128 vertex uniform vectors; the 22 body segments alone need '+NB*2);
  ok(['low','medium','high'].every(l=>S[l]&&S[l].file.startsWith('geo/skin-'+l+'.bin?v=')&&S[l].bytes>0&&S[l].bytes<META.lod[l].bytes/4),'META.skin: one content-hashed skin file per level, each under a quarter of its mesh file ('+['low','medium','high'].map(l=>Math.round(S[l].bytes/1e3)+' kB').join(', ')+')');
  const zl=require('zlib');
  ['low','medium','high'].forEach(l=>{
-  const b=zl.gunzipSync(fs.readFileSync(path.join(ROOT,'geo','skin-'+l+'.bin'))),cs=META.lod[l].counts;let p=0,good=b.length===3*cs.reduce((a,c)=>a+c[0],0),rigid=true,range=true;
-  if(good) cs.forEach((c,i)=>{const nv=c[0];for(let k=0;k<nv;k++){const a=b[p+k],bb=b[p+nv+k],wt=b[p+2*nv+k];if(a>=NS||bb>=NS) range=false;if(META.meshes[i][0]==='b'&&(a!==b[p]||bb!==a||wt!==255)) rigid=false;}p+=3*nv;});
-  ok(good&&range&&rigid,'skin-'+l+'.bin: 3 bytes per vertex of every mesh, segment indices < '+NS+', every bone mesh rigid to one segment');
+  const b=zl.gunzipSync(fs.readFileSync(path.join(ROOT,'geo','skin-'+l+'.bin'))),cs=META.lod[l].counts;let p=0,good=b.length===5*cs.reduce((a,c)=>a+c[0],0),rigid=true,range=true,wsum=true,three=0;
+  if(good) cs.forEach((c,i)=>{const nv=c[0];for(let k=0;k<nv;k++){const a=b[p+k],bb=b[p+nv+k],cc=b[p+2*nv+k],wa=b[p+3*nv+k],wb=b[p+4*nv+k];if(a>=NS||bb>=NS||cc>=NS) range=false;if(wa+wb>255) wsum=false;if(255-wa-wb>0) three++;if(META.meshes[i][0]==='b'&&(a!==b[p]||bb!==a||cc!==a||wa!==255)) rigid=false;}p+=5*nv;});
+  ok(good&&range&&rigid&&wsum&&three>0,'skin-'+l+'.bin: 5 bytes per vertex (3 segments, 2 weights; '+three+' vertices use a third influence), indices < '+NS+', every bone mesh rigid to one segment');
  });
- ok(Object.keys(A).length>=2&&Object.keys(A).every(n=>META.ex.some(e=>e.n===n)&&A[n].keys[0].t===0&&A[n].keys[A[n].keys.length-1].t===1),'META.anim: '+Object.keys(A).join(', ')+' (exercises that exist, keys from t=0 to 1)');
- const exp='window.__an={get anim(){return anim},skU,segPos,SEGI,cpuSkin,allMeshes,boneMeshes,muscleMeshes,byKey,HM,propGrp,nerveMeshes,get skinLv(){return skinLv}};';
+ const names=Object.keys(A),ANIMS=['Back squat','Conventional deadlift','Romanian deadlift','Barbell bench press','Barbell row','Pull-up','Lat pulldown','Overhead press','Barbell curl','Hip thrust','Lateral raise','Bulgarian split squat','Dumbbell bench press'];
+ ok(ANIMS.every(n=>A[n])&&names.every(n=>META.ex.some(e=>e.n===n)&&A[n].keys[0].t===0&&A[n].keys[A[n].keys.length-1].t===1),'META.anim: '+names.length+' animations, all existing exercises, keys from t=0 to 1 ('+names.join(', ')+')');
+ ok(names.every(n=>A[n].keys.every(k=>!('use' in k)))&&A['Back squat'].keys[0].ik.thighR&&A['Back squat'].keys[0].ik.thighR.target[0]===-A['Back squat'].keys[0].ik.thighL.target[0]&&A['Back squat'].keys[0].ik.armR.bar==='over','presets are resolved at build time and left entries are mirrored to the right (Back squat: right foot = mirrored left foot, both hands overhand on the bar)');
+ const exp='window.__an={get anim(){return anim},skU,segPos,segQ,SEGI,SEGJ,RIG,cpuSkin,allMeshes,boneMeshes,muscleMeshes,byKey,HM,propGrp,nerveMeshes,solvePose,poseAt,prepKeys,barC,barA,get barW(){return barW},get heldBar(){return heldBar},get skN(){return skN},get skinLv(){return skinLv}};';
  const mk=o=>boot(Object.assign({store:{}},o,{js:js.replace('//@licexport',exp)}));
  const x=mk({}),xd=x.document,xq=s=>xd.querySelector(s),xqa=s=>[...xd.querySelectorAll(s)];
  await waitFor(()=>!xd.getElementById('loading'),60000,'animation test instance');
- const X=x.__an,exI=n=>xqa('#exlist .item').find(b=>b.textContent===n),btn=()=>xq('#card [data-act="anim"]'),ident=()=>{const a=X.skU.value;for(let s=0;s<NS;s++){const e=[1,0,0,0,0,1,0,0,0,0,1,0];for(let k=0;k<12;k++) if(Math.abs(a[s*12+k]-e[k])>1e-9) return false;}return true;};
+ const X=x.__an,T=x.THREE,exI=n=>xqa('#exlist .item').find(b=>b.textContent===n),btn=()=>xq('#card [data-act="anim"]'),ident=()=>{const a=X.skU.value;for(let s=0;s<a.length/8;s++){const e=[0,0,0,1,0,0,0,0];for(let k=0;k<8;k++) if(Math.abs(a[s*8+k]-e[k])>1e-9) return false;}return true;};
  xq('[data-tab="ex"]').click();
- exI('Barbell bench press').click();
- ok(xq('#card h2').textContent==='Barbell bench press'&&!btn(),'no animation: the exercise card has no "Play movement" button');
+ exI('Cable fly').click();
+ ok(xq('#card h2').textContent==='Cable fly'&&!btn(),'no animation: the exercise card has no "Play movement" button');
  exI('Bulgarian split squat').click();
  ok(btn()&&btn().textContent==='▶ Play movement'&&btn().getAttribute('aria-pressed')==='false'&&xq('#animBar').hidden,'animated exercise: "▶ Play movement" on the card, the movement bar is hidden');
- ok(!x.__fetched.some(u=>/skin/.test(u))&&ident(),'skin weights are not fetched before the first play; all segment matrices are the identity');
+ ok(!x.__fetched.some(u=>/skin/.test(u))&&ident(),'skin weights are not fetched before the first play; every segment transform is the identity');
  btn().click();
  ok(!xq('#animBar').hidden&&/Loading the movement data/.test(xq('#animNote').textContent),'Play: the bar appears and reports loading');
  await waitFor(()=>X.anim&&X.anim.ready,30000,'skin weights');
- ok(x.__fetched.filter(u=>/skin/.test(u)).join()==='geo/skin-medium.bin'&&X.skinLv==='medium','Play fetches geo/skin-medium.bin once (the current level)');
- ok(X.allMeshes.every(m=>{const s=m.geometry.attributes.aSkin;return s&&s.itemSize===3&&s.count===m.geometry.attributes.position.count;}),'every mesh got an aSkin attribute with one entry per vertex');
+ ok(x.__fetched.filter(u=>/skin/.test(u)).join()==='geo/skin-medium.bin'&&X.skinLv==='medium'&&X.skN===52,'Play fetches geo/skin-medium.bin once (the current level); all 52 segments are skinned (enough vertex uniforms)');
+ ok(X.allMeshes.every(m=>{const i=m.geometry.attributes.aSkI,w=m.geometry.attributes.aSkW,n=m.geometry.attributes.position.count;return i&&w&&i.itemSize===3&&w.itemSize===2&&i.count===n&&w.count===n;}),'every mesh got aSkI (3 segments) and aSkW (2 weights) with one entry per vertex');
  const obc=X.allMeshes[0].material.onBeforeCompile;
  ok(typeof obc==='function'&&X.allMeshes.every(m=>m.material.onBeforeCompile===obc)&&X.allMeshes.every(m=>m.frustumCulled===false),'all body materials share one skinning onBeforeCompile; frustum culling is off while animating');
  const sh={uniforms:{},vertexShader:'#include <common>\nvoid main(){\n#include <beginnormal_vertex>\n#include <begin_vertex>\n}'};obc(sh);
- ok(sh.uniforms.uSk===X.skU&&/attribute vec3 aSkin/.test(sh.vertexShader)&&/uniform vec4 uSk\[57\]/.test(sh.vertexShader)&&/vec3 transformed=\(skMat\*vec4\(position,1.0\)\)\.xyz/.test(sh.vertexShader)&&!/#include <begin_vertex>/.test(sh.vertexShader),'the injected vertex shader declares aSkin + uSk[57] and skins position and normal');
+ ok(sh.uniforms.uSk===X.skU&&/attribute vec3 aSkI/.test(sh.vertexShader)&&/attribute vec2 aSkW/.test(sh.vertexShader)&&/uniform vec4 uSk\[104\]/.test(sh.vertexShader)&&/dot\(skR0,skR1\)<0\.0/.test(sh.vertexShader)&&/vec3 transformed=vec3\(position\)/.test(sh.vertexShader)&&!/#include <begin_vertex>/.test(sh.vertexShader),'the injected vertex shader declares aSkI, aSkW and uSk[104] (a dual quaternion per segment) and blends three influences with sign alignment');
  ok(xq('#animName').textContent==='Bulgarian split squat'&&btn().textContent==='■ Stop movement'&&btn().getAttribute('aria-pressed')==='true'&&xq('#animPP').textContent==='Pause'&&xq('#vp').classList.contains('animating'),'playing: bar shows the exercise, Pause; the card button became "Stop movement"');
  const vl=X.byKey['vastus lateralis'];
  ok(vl.every(m=>m.material===X.HM[3])&&X.byKey['gluteus medius'].every(m=>m.material===X.HM[2]),'heat colours stay on while playing (vastus lateralis prime mover, gluteus medius synergist)');
  ok(X.propGrp.children.length===3,'props: a bench and two dumbbells');
  const t0=X.anim.t,m0=Array.from(X.skU.value);await sleep(400);
- ok(X.anim.t>t0&&Array.from(X.skU.value).some((v,i)=>Math.abs(v-m0[i])>1e-6),'segment matrices change over time (t '+t0.toFixed(3)+' -> '+X.anim.t.toFixed(3)+')');
- // planted feet: the IK end effectors sit on their targets
+ ok(X.anim.t>t0&&Array.from(X.skU.value).some((v,i)=>Math.abs(v-m0[i])>1e-6),'segment transforms change over time (t '+t0.toFixed(3)+' -> '+X.anim.t.toFixed(3)+')');
  const k0=A['Bulgarian split squat'].keys[0].ik,fl=X.segPos[X.SEGI.footL].toArray(),fr=X.segPos[X.SEGI.footR].toArray(),near=(a,b,e)=>a.every((v,i)=>Math.abs(v-b[i])<e);
  ok(near(fl,k0.thighL.target,0.002)&&near(fr,k0.thighR.target,0.002),'IK: front ankle stays on the floor target and rear ankle on the bench target while moving');
- // bones stay rigid: the posed femur keeps its shape (distance between two vertices)
- const fem=X.boneMeshes.find(m=>m.userData.key==='femur'),fp=X.cpuSkin(fem,new Float32Array(fem.geometry.attributes.position.array.length)),sp0=fem.geometry.attributes.position.array,last=fp.length-3,dd=(a,i,j)=>Math.hypot(a[i]-a[j],a[i+1]-a[j+1],a[i+2]-a[j+2]);
+ const posed=m=>X.cpuSkin(m,new Float32Array(m.geometry.attributes.position.array.length)),dd=(a,i,j)=>Math.hypot(a[i]-a[j],a[i+1]-a[j+1],a[i+2]-a[j+2]);
+ const fem=X.boneMeshes.find(m=>m.userData.key==='femur'),fp=posed(fem),sp0=fem.geometry.attributes.position.array,last=fp.length-3;
  ok(Math.abs(dd(fp,0,last)-dd(sp0,0,last))<1e-5&&dd(fp,0,0+3)>0,'bones move rigidly (femur keeps its length in the posed shape)');
+ // the split squat's hands grip the dumbbells (grip 1, neutral forearm)
+ const gpt=sd=>{const h=X.SEGI['hand'+sd];return new T.Vector3().fromArray(R.pt['grip'+sd]).sub(X.SEGJ[h]).applyQuaternion(X.segQ[h]).add(X.segPos[h]);};
+ const tipOf=sd=>{const s=X.SEGI['f3d'+sd];return new T.Vector3().fromArray(J('f3d'+sd)).add(new T.Vector3(0,-0.02,0.01)).sub(X.SEGJ[s]).applyQuaternion(X.segQ[s]).add(X.segPos[s]);};
+ ok(['L','R'].every(sd=>tipOf(sd).distanceTo(gpt(sd))<0.04),'grip: the middle fingertips wrap around the dumbbell handle (within 4 cm of the grip point: '+['L','R'].map(sd=>(tipOf(sd).distanceTo(gpt(sd))*100).toFixed(1)+' cm').join(', ')+')');
  // picking: none while playing, the posed shape while paused
- const target=vl.find(m=>m.userData.side==='L'),tp=X.cpuSkin(target,new Float32Array(target.geometry.attributes.position.array.length));
+ const target=vl.find(m=>m.userData.side==='L'),tp=posed(target);
  let cx=0,cy=0,cz=0;const n=tp.length/3;for(let i=0;i<n;i++){cx+=tp[3*i];cy+=tp[3*i+1];cz+=tp[3*i+2];}
- const T=x.THREE,rc=new T.Raycaster(new T.Vector3(cx/n+1,cy/n,cz/n),new T.Vector3(-1,0,0)),hits=[];
+ const rc=new T.Raycaster(new T.Vector3(cx/n+1,cy/n,cz/n),new T.Vector3(-1,0,0)),hits=[];
  target.raycast(rc,hits);
  ok(hits.length===0,'no picking while the movement plays');
  xq('#animPP').click();
  ok(!X.anim.playing&&xq('#animPP').textContent==='Play'&&/Paused/.test(xq('#animNote').textContent),'Pause: bar says Play and "Paused"');
  const m1=Array.from(X.skU.value);await sleep(250);
- ok(Array.from(X.skU.value).every((v,i)=>v===m1[i]),'paused: the matrices stay still');
- const ps=X.cpuSkin(target,new Float32Array(target.geometry.attributes.position.array.length));let px=0,py=0,pz=0;for(let i=0;i<n;i++){px+=ps[3*i];py+=ps[3*i+1];pz+=ps[3*i+2];}
+ ok(Array.from(X.skU.value).every((v,i)=>v===m1[i]),'paused: the transforms stay still');
+ const ps=posed(target);let px=0,py=0,pz=0;for(let i=0;i<n;i++){px+=ps[3*i];py+=ps[3*i+1];pz+=ps[3*i+2];}
  const rc2=new T.Raycaster(new T.Vector3(px/n+1,py/n,pz/n),new T.Vector3(-1,0,0)),h2=[];target.raycast(rc2,h2);
  ok(h2.length>0,'paused: a ray through the posed muscle hits it (picking uses the posed shape)');
+ // scrubbing
+ const sl=xq('#animT');sl.value='680';sl.dispatchEvent(new x.Event('input',{bubbles:true}));
+ ok(Math.abs(X.anim.t-0.68)<1e-9&&!X.anim.playing&&X.segPos[X.SEGI.pelvis].y<0.55,'the position slider scrubs to a moment of the repetition (t 0.68 = the bottom: pelvis at '+X.segPos[X.SEGI.pelvis].y.toFixed(2)+' m)');
  xq('#animSpeed [data-sp="1.5"]').click();
  ok(X.anim.speed===1.5&&xq('#animSpeed [data-sp="1.5"]').getAttribute('aria-pressed')==='true'&&xq('#animSpeed [data-sp="1"]').getAttribute('aria-pressed')==='false','speed 1.5x is applied and pressed');
  xq('#animPP').click();
- // the nerves layer is hidden while animating
+ ok(X.anim.playing,'Play resumes after scrubbing');
  xq('#tNerves').click();await sleep(20);
  ok(X.nerveMeshes.length>0&&X.nerveMeshes.every(m=>!m.visible),'the (static) nerve paths are hidden during the animation');
+ // the rig's new degrees of freedom, on a hand-made pose (paused)
+ xq('#animPP').click();
+ const base={pos:J('pelvis'),rot:[0,0,0],j:{},ik:{},bar:{}},pose=o=>{X.solvePose(Object.assign({},base,o));};
+ const rad=X.boneMeshes.find(m=>m.userData.key==='radius'&&m.userData.side==='L'),uln=X.boneMeshes.find(m=>m.userData.key==='ulna'&&m.userData.side==='L');
+ pose({});const u0=posed(uln),r0=posed(rad);
+ ok(u0.every((v,i)=>Math.abs(v-uln.geometry.attributes.position.array[i])<1e-6),'rest pose: an explicit empty pose gives back the atlas shape');
+ pose({j:{foreL:{pron:150}}});const u1=posed(uln),r1=posed(rad);
+ const maxd=(a,b)=>{let m=0;for(let i=0;i<a.length;i++) m=Math.max(m,Math.abs(a[i]-b[i]));return m;};
+ const rh=J('radL'),rax=sg('radL')[3],offAx=(p,i)=>{const v=[p[i]-rh[0],p[i+1]-rh[1],p[i+2]-rh[2]],t=v[0]*rax[0]+v[1]*rax[1]+v[2]*rax[2];return Math.hypot(v[0]-t*rax[0],v[1]-t*rax[1],v[2]-t*rax[2]);};
+ let rig=true;for(let i=0;i<r1.length;i+=30) if(Math.abs(offAx(r1,i)-offAx(r0,i))>1e-5) rig=false;
+ ok(maxd(u1,u0)<1e-6&&maxd(r1,r0)>0.02&&rig,'forearm rotation (pron 150): the ulna stays exactly where it was, the radius turns rigidly about the radial head - ulnar head axis (moved up to '+(maxd(r1,r0)*100).toFixed(1)+' cm)');
+ const fds=X.muscleMeshes.find(m=>m.userData.key==='flexor digitorum superficialis'&&m.userData.side==='L'),el=J('foreL'),wr=J('handL');
+ const ring=(p,lo,hi)=>{let s=0,c=0;const d=[wr[0]-el[0],wr[1]-el[1],wr[2]-el[2]],L2=d[0]*d[0]+d[1]*d[1]+d[2]*d[2];for(let i=0;i<p.length;i+=3){const v=[p[i]-el[0],p[i+1]-el[1],p[i+2]-el[2]],u=(v[0]*d[0]+v[1]*d[1]+v[2]*d[2])/L2;if(u<lo||u>hi) continue;s+=Math.hypot(v[0]-u*d[0],v[1]-u*d[1],v[2]-u*d[2]);c++;}return c?s/c:0;};
+ pose({});const f0=posed(fds),rr0=ring(f0,0.4,0.6),tw0=(()=>{let s=0;for(let i=0;i<f0.length;i++) s+=f0[i];return s;})();pose({j:{foreL:{pron:150}}});const f1=posed(fds),rr1=ring(f1,0.4,0.6);
+ ok(rr0>0&&rr1/rr0>0.93&&maxd(f1,f0)>0.005,'the twist is spread along the forearm without collapsing it (mid-forearm radius of flexor digitorum superficialis kept at '+Math.round(rr1/rr0*100)+'%)');
+ pose({j:{handL:{grip:0}}});const op=tipOf('L').distanceTo(gpt('L'));pose({j:{handL:{grip:1}}});const cl=tipOf('L').distanceTo(gpt('L'));
+ const fb=X.boneMeshes.find(m=>m.userData.key==='distal phalanx of middle finger'&&m.userData.side==='L');pose({j:{handL:{grip:1}}});const fbp=posed(fb);pose({});
+ ok(op>cl+0.02&&cl<0.035&&maxd(fbp,fb.geometry.attributes.position.array)>0.03,'grip 0 -> 1 closes the fingers around the grip point (middle fingertip '+(op*100).toFixed(1)+' cm -> '+(cl*100).toFixed(1)+' cm)');
+ pose({j:{thorax:{flex:30}}});const thx=X.segPos[X.SEGI.chest].clone();pose({j:{chest:{flex:30}}});const chs=X.segPos[X.SEGI.neck].clone();pose({});
+ ok(thx.distanceTo(new T.Vector3().fromArray(J('chest')))>0.05&&chs.distanceTo(new T.Vector3().fromArray(J('neck')))>0.04&&X.segPos[X.SEGI.chest].distanceTo(new T.Vector3().fromArray(J('chest')))<1e-9,'the thoracic spine bends at T12/L1 (thorax) and at T6/T7 (chest)');
+ xq('#animPP').click();
  // Stop: back to the atlas pose
  xq('#animStop').click();
- ok(!X.anim&&ident()&&xq('#animBar').hidden&&btn().textContent==='▶ Play movement'&&X.propGrp.children.length===0&&!xq('#vp').classList.contains('animating'),'Stop: identity matrices, bar hidden, props removed, card offers Play again');
+ ok(!X.anim&&ident()&&xq('#animBar').hidden&&btn().textContent==='▶ Play movement'&&X.propGrp.children.length===0&&!xq('#vp').classList.contains('animating'),'Stop: identity transforms, bar hidden, props removed, card offers Play again');
  const back=X.allMeshes.filter((m,i)=>i%25===0).every(m=>{const p=m.geometry.attributes.position.array,c=X.cpuSkin(m,new Float32Array(p.length));for(let i=0;i<p.length;i++) if(Math.abs(c[i]-p[i])>1e-6) return false;return true;});
  ok(back&&X.allMeshes.every(m=>m.frustumCulled&&!Object.prototype.hasOwnProperty.call(m,'raycast'))&&X.nerveMeshes.every(m=>m.visible),'rest pose: skinned positions equal the static meshes, culling and normal picking restored, nerves visible again');
  xq('#tNerves').click();
- // the bench press: supine on the bench, hands on their IK targets
- exI('Dumbbell bench press').click();btn().click();
- await waitFor(()=>X.anim&&X.anim.ready,30000,'bench press');
- ok(x.__fetched.filter(u=>/skin/.test(u)).length===1,'a second animation reuses the loaded skin weights');
- const kb=A['Dumbbell bench press'].keys[0].ik,head=X.segPos[X.SEGI.head],pel=X.segPos[X.SEGI.pelvis];
- await sleep(30);
- ok(Math.abs(head.y-pel.y)<0.15&&head.z<pel.z-0.5,'bench press: the body lies supine (head level with the pelvis, toward -z)');
- xq('#animPP').click();
+ // every animation plays; held bars stay in both hands, planted feet stay planted, nothing goes through the floor
+ const barNames=[],ftNames=[];let allOk=true,barOk=true,feetOk=true,floorOk=true,worst=0,why='';
+ for(const nmx of names){
+  if(!btn()||xq('#card h2').textContent!==nmx) exI(nmx).click();
+  btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,nmx);
+  xq('#animPP').click();
+  const def=A[nmx],k0=def.keys[0],fixed=['thighL','thighR'].filter(c=>k0.ik[c]&&def.keys.every(k=>!k.ik||!k.ik[c]||!k.ik[c].target||k.ik[c].target.join()===k0.ik[c].target.join()));
+  if(X.heldBar) barNames.push(nmx); if(fixed.length) ftNames.push(nmx);
+  for(let s=0;s<=24;s++){
+   sl.value=String(Math.round(s/24*999));sl.dispatchEvent(new x.Event('input',{bubbles:true}));
+   if(Array.from(X.skU.value).some(v=>!isFinite(v))) {allOk=false;why=nmx;}
+   if(X.heldBar&&k0.ik.armL&&k0.ik.armL.bar) ['L','R'].forEach(sd=>{const e=gpt(sd).distanceTo(X.barC.clone().addScaledVector(X.barA,(sd==='L'?1:-1)*X.barW/2));worst=Math.max(worst,e);if(e>0.005){barOk=false;why=nmx+' t='+X.anim.t.toFixed(2)+' '+sd+' '+(e*1000).toFixed(1)+' mm';}});
+   fixed.forEach(c=>{if(!near(X.segPos[X.SEGI['foot'+c.slice(-1)]].toArray(),k0.ik[c].target,0.002)){feetOk=false;why=nmx+' '+c;}});
+   ['footL','footR','handL','handR'].forEach(sn=>{if(X.segPos[X.SEGI[sn]].y<0.03){floorOk=false;why=nmx+' '+sn;}});
+   if(X.heldBar&&X.barC.y<0.2){floorOk=false;why=nmx+' bar';}
+  }
+  xq('#animStop').click();
+ }
+ ok(allOk,'all '+names.length+' animations play through 25 sampled moments with finite transforms'+(allOk?'':' ('+why+')'));
+ ok(barOk&&barNames.length>=9,'two-hand bar constraint: both grip points stay on the bar at grip width in every sampled frame of '+barNames.length+' bar exercises (worst '+(worst*1000).toFixed(1)+' mm)'+(barOk?'':' ('+why+')'));
+ ok(feetOk&&ftNames.length>=10,'planted feet stay on their targets in every sampled frame ('+ftNames.length+' exercises)'+(feetOk?'':' ('+why+')'));
+ ok(floorOk,'no ankle, wrist or bar centre goes below the floor (plates sit on it at most)'+(floorOk?'':' ('+why+')'));
+ // variations that change the motion: the movement follows the chosen option (and still keeps both hands on the bar)
+ let vN=0,vOk=true,vWhy='';
+ for(const nmx of names.filter(n=>A[n].vars)){
+  if(!btn()||xq('#card h2').textContent!==nmx) exI(nmx).click();
+  btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,nmx);xq('#animPP').click();
+  const e=META.ex.find(z=>z.n===nmx);
+  for(const [gi,g] of e.v.entries()) for(const [oi,o] of g[1].entries()){
+   if(!oi||!(A[nmx].vars[g[0]]||{})[o[0]]) continue;
+   xq('#card [data-var="'+gi+':'+oi+'"]').click();vN++;
+   if(!X.anim||X.anim.n!==nmx){vOk=false;vWhy=nmx+' stopped';continue;}
+   for(let s=0;s<=12;s++){sl.value=String(Math.round(s/12*999));sl.dispatchEvent(new x.Event('input',{bubbles:true}));
+    if(X.heldBar&&A[nmx].keys[0].ik.armL&&A[nmx].keys[0].ik.armL.bar) ['L','R'].forEach(sd=>{const er=gpt(sd).distanceTo(X.barC.clone().addScaledVector(X.barA,(sd==='L'?1:-1)*X.barW/2));if(er>0.005){vOk=false;vWhy=nmx+'/'+o[0]+' '+(er*1000).toFixed(1)+' mm';}});}
+   xq('#card [data-var="'+gi+':0"]').click();
+  }
+  xq('#animStop').click();
+ }
+ ok(vOk&&vN>=12,'variation keys: '+vN+' variation options re-pose the movement while it plays and keep both hands on the bar'+(vOk?'':' ('+vWhy+')'));
+ if(!btn()||xq('#card h2').textContent!=='Back squat') exI('Back squat').click();
+ btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,'squat depth');xq('#animPP').click();
+ sl.value='540';sl.dispatchEvent(new x.Event('input',{bubbles:true}));const yPar=X.segPos[0].y;
+ const dg=META.ex.find(z=>z.n==='Back squat').v.findIndex(g=>g[0]==='Depth'),deep=META.ex.find(z=>z.n==='Back squat').v[dg][1].findIndex(o=>o[0]==='Deep');
+ xq('#card [data-var="'+dg+':'+deep+'"]').click();sl.dispatchEvent(new x.Event('input',{bubbles:true}));const yDeep=X.segPos[0].y;
+ ok(X.anim&&yDeep<yPar-0.05,'Back squat: choosing Depth "Deep" while it plays lowers the bottom position (pelvis '+yPar.toFixed(2)+' -> '+yDeep.toFixed(2)+' m)');
+ xq('#card [data-var="'+dg+':0"]').click();xq('#animStop').click();
+ // the back squat bar rides on the upper back; the hip thrust bar on the hips
+ if(!btn()||xq('#card h2').textContent!=='Back squat') exI('Back squat').click();
+ btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,'squat');xq('#animPP').click();
+ const c7=()=>new T.Vector3().fromArray(J('neck')).sub(X.SEGJ[X.SEGI.chest]).applyQuaternion(X.segQ[X.SEGI.chest]).add(X.segPos[X.SEGI.chest]);
+ sl.value='0';sl.dispatchEvent(new x.Event('input',{bubbles:true}));const dTop=X.barC.distanceTo(c7());sl.value='540';sl.dispatchEvent(new x.Event('input',{bubbles:true}));const dBot=X.barC.distanceTo(c7()),bz=X.barC.z;
+ ok(Math.abs(dTop-dBot)<1e-6&&dTop<0.12&&bz>-0.06&&bz<0.08,'back squat: the bar rides with the upper back ('+(dTop*100).toFixed(1)+' cm from C7/T1 at the top and the bottom) and stays over the mid-foot at the bottom (z '+bz.toFixed(2)+')');
+ xq('#animStop').click();
+ // the bench press: supine on the bench, bar over the chest
+ exI('Barbell bench press').click();btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,'bench');xq('#animPP').click();
+ const head=X.segPos[X.SEGI.head],pel=X.segPos[X.SEGI.pelvis];
+ ok(Math.abs(head.y-pel.y)<0.15&&head.z<pel.z-0.5&&X.propGrp.children.length===2,'bench press: the body lies supine (head level with the pelvis, toward -z); a bench and a barbell');
  ok(X.byKey['pectoralis major'].some(m=>m.material===X.HM[3]),'bench press heat: pectoralis major (sternocostal part) is a prime mover');
  // leaving the exercise stops the animation
- exI('Barbell bench press').click();
+ exI('Cable fly').click();
  ok(!X.anim&&ident()&&xq('#animBar').hidden,'choosing another exercise stops the animation');
  exI('Bulgarian split squat').click();btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,'replay');
+ ok(x.__fetched.filter(u=>/skin/.test(u)).length===1,'later animations reuse the loaded skin weights');
  xq('#card [data-act="exclose"]').click();
  ok(!X.anim&&ident()&&xq('#animBar').hidden,'closing the exercise card stops the animation');
  exI('Bulgarian split squat').click();btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,'replay 2');
@@ -2197,8 +2283,16 @@ async function animRun(){
  ok(!X.anim&&ident(),'changing the mesh quality stops the animation');
  await waitFor(()=>xq('[data-lod="low"]').getAttribute('aria-pressed')==='true',30000,'Low');
  btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,'play on Low');
- ok(x.__fetched.includes('geo/skin-low.bin')&&X.skinLv==='low'&&X.allMeshes.every(m=>m.geometry.attributes.aSkin&&m.geometry.attributes.aSkin.count===m.geometry.attributes.position.count),'after a quality change the next play loads that level\'s skin weights');
+ ok(x.__fetched.includes('geo/skin-low.bin')&&X.skinLv==='low'&&X.allMeshes.every(m=>m.geometry.attributes.aSkI&&m.geometry.attributes.aSkI.count===m.geometry.attributes.position.count),'after a quality change the next play loads that level\'s skin weights');
  xq('#animStop').click();
+ // a device with few vertex uniforms: fingers fall back to the hand
+ const f=mk({maxVU:96}),fdoc=f.document,fq=s=>fdoc.querySelector(s);
+ await waitFor(()=>!fdoc.getElementById('loading'),60000,'small-uniform instance');
+ fq('[data-tab="ex"]').click();[...fdoc.querySelectorAll('#exlist .item')].find(b=>b.textContent==='Conventional deadlift').click();fq('#card [data-act="anim"]').click();
+ await waitFor(()=>f.__an.anim&&f.__an.anim.ready,30000,'fallback play');
+ const F=f.__an,fsh={uniforms:{},vertexShader:'#include <common>\n#include <beginnormal_vertex>\n#include <begin_vertex>'};F.allMeshes[0].material.onBeforeCompile(fsh);
+ const fm=F.allMeshes.find(m=>m.userData.key==='flexor digitorum profundus'),fI=fm.geometry.attributes.aSkI.array;
+ ok(F.skN===22&&F.skU.value.length===22*8&&/uniform vec4 uSk\[44\]/.test(fsh.vertexShader)&&F.allMeshes.every(m=>Math.max(...m.geometry.attributes.aSkI.array.slice(0,3000))<22)&&fI.some(v=>v===F.SEGI.handL||v===F.SEGI.handR),'maxVertexUniforms 96: only the 22 body segments are skinned (uSk[44]); finger vertices follow their hand');
  // prefers-reduced-motion: starts paused with a note
  const r=mk({reducedMotion:true}),rd=r.document,rq=s=>rd.querySelector(s);
  await waitFor(()=>!rd.getElementById('loading'),60000,'reduced-motion instance');

@@ -8,12 +8,14 @@ root = os.path.join(here, '..')
 md5 = lambda path: hashlib.md5(open(path, 'rb').read()).hexdigest()
 # cache-bust: ?v=<content hash> so browsers never pair a cached old .bin with new mesh counts
 for L in meta['lod'].values(): L['file'] += '?v=' + md5(os.path.join(root, L['file']))[:10]
-# exercise animation (prototype, docs/animation-design.md): rig (tools/rig.json, from rig.py), motions (data/animations.json),
+# exercise animation (docs/animation-design.md): rig (tools/rig.json, from rig.py), motions (data/animations.json),
 # per-level skin weights geo/skin-<level>.bin (fetched lazily on first play, content-hashed like the meshes)
 rig = json.load(open(os.path.join(here, 'rig.json'), encoding='utf-8'))
-meta['rig'] = {'seg': [[s['n'], s['p'], s['j']] for s in rig['seg']], 'pt': rig['pt']}
-anim = json.load(open(os.path.join(here, 'data', 'animations.json'), encoding='utf-8'))
-meta['anim'] = {k: v for k, v in anim.items() if not k.startswith('_')}
+meta['rig'] = {'seg': [[s['n'], s['p'], s['j']] + ([s.get('ax'), s.get('g', 0)] if 'ax' in s else []) for s in rig['seg']],
+               'nbody': rig['nbody'], 'pt': rig['pt'], 'dir': rig['dir']}
+from animlib import resolve   # pose presets + left/right mirroring (tools/animlib.py; lint.py reports the errors)
+meta['anim'], aerr = resolve(json.load(open(os.path.join(here, 'data', 'animations.json'), encoding='utf-8')))
+assert not aerr, aerr
 meta['skin'] = {}
 for lv in meta['lod']:
     f = 'geo/skin-' + lv + '.bin'
