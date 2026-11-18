@@ -27,6 +27,7 @@
    {"type": "dumbbell", "seg": "handL", "len": 0.27, "r": 0.05},
    {"type": "dumbbell", "seg": "handR", "len": 0.27, "r": 0.05}
   ],
+  "vars": {"Torso": {"Forward lean": {"2": {"root": {"pos": [0, 0.5, 0.06], "rot": [27, 0, 0]}, "j": {"thorax": {"flex": 6}, "neck": {"flex": -16}, "armL": {"flex": 26}}}}}},
   "keys": [
    {"t": 0, "use": "grip-db-neutral", "root": {"pos": [0, 0.79, 0.02], "rot": [5, 0, 0]}, "j": {"lumbar": {"flex": 0}, "thorax": {"flex": 2}, "chest": {"flex": 1}, "neck": {"flex": -4}, "head": {"flex": -2}, "clavL": {"elev": -3}, "armL": {"flex": 6, "abd": 8, "rot": 8}, "foreL": {"flex": 6}}, "ik": {"thighL": {"target": [0.1, 0.075, 0.38], "pole": [0, 0.1, 1], "end": [0, 0, 0]}, "thighR": {"target": [-0.1, 0.445, -0.36], "pole": [0, -1, 0.5], "end": [164, 0, 0]}}},
    {"t": 0.1},
@@ -37,7 +38,7 @@
  },
  "Dumbbell bench press": {
   "dur": 3.2,
-  "camera": {"theta": 60, "phi": 64, "r": 1.02, "target": [0, 0.58, 0.06]},
+  "camera": {"theta": 48, "phi": 62, "r": 1.3, "target": [0, 0.68, -0.05]},
   "props": [
    {"type": "bench", "size": [0.3, 0.07, 1.12], "top": 0.43, "pos": [0, -0.14]},
    {"type": "dumbbell", "seg": "handL", "len": 0.3, "r": 0.055},
@@ -68,7 +69,7 @@
  },
  "Conventional deadlift": {
   "dur": 4.4,
-  "camera": {"theta": 70, "phi": 84, "r": 1.25, "target": [0, 0.7, 0]},
+  "camera": {"theta": 38, "phi": 78, "r": 1.25, "target": [0, 0.7, 0]},
   "props": [
    {"type": "barbell", "w": 0.5, "plates": [[0.225, 0.055], [0.225, 0.055]]}
   ],
@@ -89,7 +90,7 @@
  },
  "Romanian deadlift": {
   "dur": 4.0,
-  "camera": {"theta": 72, "phi": 84, "r": 1.25, "target": [0, 0.75, 0]},
+  "camera": {"theta": 38, "phi": 78, "r": 1.25, "target": [0, 0.75, 0]},
   "props": [
    {"type": "barbell", "w": 0.48, "plates": [[0.225, 0.055]]}
   ],
@@ -105,7 +106,7 @@
  },
  "Barbell bench press": {
   "dur": 3.4,
-  "camera": {"theta": 60, "phi": 64, "r": 1.1, "target": [0, 0.62, 0.0]},
+  "camera": {"theta": 48, "phi": 62, "r": 1.35, "target": [0, 0.7, -0.05]},
   "props": [
    {"type": "bench", "size": [0.3, 0.07, 1.12], "top": 0.43, "pos": [0, -0.14]},
    {"type": "barbell", "w": 0.76, "plates": [[0.225, 0.055]]}
@@ -121,7 +122,7 @@
  },
  "Barbell row": {
   "dur": 3.0,
-  "camera": {"theta": 75, "phi": 84, "r": 1.2, "target": [0, 0.8, 0]},
+  "camera": {"theta": 42, "phi": 78, "r": 1.2, "target": [0, 0.8, 0]},
   "props": [
    {"type": "barbell", "w": 0.56, "plates": [[0.225, 0.055]]}
   ],
@@ -169,7 +170,7 @@
  },
  "Overhead press": {
   "dur": 3.2,
-  "camera": {"theta": 60, "phi": 84, "r": 1.2, "target": [0, 1.2, 0]},
+  "camera": {"theta": 42, "phi": 86, "r": 1.5, "target": [0, 1.3, 0]},
   "props": [
    {"type": "barbell", "w": 0.52, "plates": [[0.225, 0.055]]}
   ],
@@ -185,7 +186,7 @@
  },
  "Barbell curl": {
   "dur": 3.0,
-  "camera": {"theta": 70, "phi": 86, "r": 1.0, "target": [0, 1.0, 0.05]},
+  "camera": {"theta": 45, "phi": 84, "r": 1.0, "target": [0, 1.0, 0.05]},
   "props": [
    {"type": "barbell", "len": 1.5, "w": 0.4, "plates": [[0.16, 0.04]]}
   ],
@@ -204,7 +205,7 @@
  },
  "Hip thrust": {
   "dur": 3.0,
-  "camera": {"theta": 70, "phi": 76, "r": 1.25, "target": [0, 0.45, 0.1]},
+  "camera": {"theta": 35, "phi": 66, "r": 1.4, "target": [0, 0.45, 0.1]},
   "props": [
    {"type": "bench", "size": [0.32, 0.06, 1.2], "top": 0.42, "pos": [0, -0.45], "yaw": 90},
    {"type": "barbell", "seg": "pelvis", "at": [0, 0.92, 0.13], "w": 0.5, "plates": [[0.225, 0.055]]}
@@ -219,7 +220,7 @@
  },
  "Lateral raise": {
   "dur": 3.0,
-  "camera": {"theta": 20, "phi": 86, "r": 1.15, "target": [0, 1.15, 0]},
+  "camera": {"theta": 20, "phi": 86, "r": 1.5, "target": [0, 1.15, 0]},
   "props": [
    {"type": "dumbbell", "seg": "handL", "len": 0.26, "r": 0.045},
    {"type": "dumbbell", "seg": "handR", "len": 0.26, "r": 0.045}
