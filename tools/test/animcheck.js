@@ -12,12 +12,13 @@
 //   db      the same for each dumbbell (handle and heads), outside the holding hand
 //   floor   the lowest body vertex (m) and its structure (< 0 = below the floor)
 //   bench   per bench: the body vertex nearest to (or deepest in) the pad's top surface (mm; < 0 = sinking in, > 0 = floating)
+//   pads    the same per machine pad (parts with pad: true; rollers: distance to the cylinder surface)
 // Usage (from tools/test):  node animcheck.js ["Exercise name" ...] [--var Group=Option] [--frames 24] [--lod low|medium|high] [--summary] [--fast]
 //   no names = every animated exercise; --summary prints one line per exercise (worst values); --fast skips the clearances and the floor
 // As a module: const {bootAnim} = require('./animcheck.js'); const A = await bootAnim({lod:'low'}); A.play(name, vars); A.at(t); A.measure();
 const fs=require('fs'),path=require('path'),cp=require('child_process');const {JSDOM,VirtualConsole}=require('jsdom');
 const ROOT=path.join(__dirname,'..','..');
-const EXPORT='window.__an={get anim(){return anim},animStart,animStop,animPose,animKeys,prepKeys,EX,exVars,skU,segPos,segQ,SEGI,SEGJ,RIG,cpuSkin,allMeshes,barC,barA,get barW(){return barW},get heldBar(){return heldBar},get props(){return props},ANIM};';
+const EXPORT='window.__an={get anim(){return anim},animStart,animStop,animPose,animKeys,prepKeys,EX,exVars,skU,segPos,segQ,SEGI,SEGJ,RIG,cpuSkin,allMeshes,barC,barA,get barW(){return barW},get heldBar(){return heldBar},get props(){return props},ANIM,propGrp,solvePose,poseAt,frameQ};';
 function freshAnim(){   // tools/data/animations.json resolved exactly like assemble.py does
   const r=cp.spawnSync('python',['-c','import json,sys,animlib;a,e=animlib.resolve(json.load(open("data/animations.json",encoding="utf-8")));sys.stderr.write("\\n".join(e));print(json.dumps(a))'],{cwd:path.join(ROOT,'tools'),encoding:'utf8',maxBuffer:64<<20});
   if(r.status!==0) throw new Error('animlib failed: '+r.stderr);
@@ -79,7 +80,7 @@ async function bootAnim(opts){
         if(k0.ik.armL&&k0.ik.armL.bar){ r.grip=['L','R'].map(sd=>A.gripPt(sd).distanceTo(e(sd))*1000); r.reach=['L','R'].map(sd=>e(sd).distanceTo(X.segPos[X.SEGI['arm'+sd]])/(reachOf(sd)+V(X.RIG.pt['grip'+sd]).distanceTo(J('hand'+sd)))*100); }
         r.barP=[X.barC.y,X.barC.z];const half=Math.max(gw+0.06,0.3);if(!fast) r.bar=A.clear(X.barC.clone().addScaledVector(X.barA,-half),X.barC.clone().addScaledVector(X.barA,half),()=>0.014,hand,[A.gripPt('L'),A.gripPt('R')]);
       }
-      r.db=fast?[]:X.props.filter(p=>p.loc&&!p.bar).map((p,k)=>{
+      r.db=fast?[]:X.props.filter(p=>p.db).map((p,k)=>{
         const def=X.anim.def.props.filter(q=>q.type==='dumbbell')[k]||{len:0.3,r:0.05},m=p.obj.matrix,c=new T.Vector3().setFromMatrixPosition(m),ay=new T.Vector3().setFromMatrixColumn(m,1).normalize(),h=def.len/2;
         return A.clear(c.clone().addScaledVector(ay,-h),c.clone().addScaledVector(ay,h),u=>Math.abs(u-0.5)*def.len>h-0.05?def.r:0.0145,hand,[c]);
       });
@@ -96,6 +97,16 @@ async function bootAnim(opts){
           if(inc){const u=(y-top)*Math.sin(inc)-(z-hz)*Math.cos(inc);if(u>=0&&u<=Lb){const d=(y-top)*Math.cos(inc)+(z-hz)*Math.sin(inc);if(d>-0.08&&d<bb){bb=d;bw=m.userData.key;}}}}});
         return inc&&bb<best?{d:bb,who:'back: '+bw,seat:{d:best,who}}:{d:best,who:(inc?'seat: ':'')+who,back:inc?{d:bb,who:bw}:null};
       });
+      // machine pads (parts with pad: true): boxes = signed distance of body vertices over the pad's footprint to its top face (local +y),
+      // rollers = distance to the cylinder surface; the smallest value above minus the pad thickness (roller radius), so what lies behind a pad does not count
+      r.pads=[];const P2=P;X.propGrp.updateMatrixWorld(true);
+      X.propGrp.traverse(o=>{const pd=o.userData&&o.userData.pad;if(!pd) return;const inv=new T.Matrix4().copy(o.matrixWorld).invert(),e=inv.elements;let best=1e9,who='';const lim=Math.min(0.08,pd.box?pd.box[1]:pd.cyl[0]);
+        X.allMeshes.forEach((m,mi)=>{const p=P2[mi];for(let k=0;k<p.length;k+=3){const x=p[k],y=p[k+1],z=p[k+2];
+          const lx=e[0]*x+e[4]*y+e[8]*z+e[12],ly=e[1]*x+e[5]*y+e[9]*z+e[13],lz=e[2]*x+e[6]*y+e[10]*z+e[14];let d;
+          if(pd.box){const b=pd.box;if(Math.abs(lx)>b[0]/2||Math.abs(lz)>b[2]/2) continue;d=ly-b[1]/2;}
+          else{if(Math.abs(ly)>pd.cyl[1]/2) continue;d=Math.hypot(lx,lz)-pd.cyl[0];}
+          if(d>-lim&&d<best){best=d;who=m.userData.key;}}});
+        r.pads.push({d:best,who:pd.name+': '+who});});
       return r;
     }};
   return A;
@@ -109,16 +120,16 @@ if(require.main===module)(async()=>{
   const list=names.length?names:Object.keys(A.X.ANIM);
   const f1=x=>x.toFixed(1),f0=x=>Math.round(x),mm=c=>c.d>=1e8?'-':f0(c.d*1000)+' '+c.who;
   for(const n of list){
-    await A.play(n,vars);const W={grip:0,reach:0,elbow:0,bar:1e9,db:1e9,floor:1e9,bench:1e9};let wb='',wd='',wf='',wbe='';
+    await A.play(n,vars);const W={grip:0,reach:0,elbow:0,bar:1e9,db:1e9,floor:1e9,bench:1e9,pad:1e9};let wb='',wd='',wf='',wbe='',wpd='';
     if(!sum) console.log('\n'+n+(Object.keys(vars).length?' '+JSON.stringify(vars):'')+'\n    t   grip mm L/R   reach % L/R   elbow L/R   pron L/R    knee L/R   bar y,z  clearance mm             dumbbells mm            floor');
     for(let s=0;s<=frames;s++){
       A.at(Math.min(0.999,s/frames));const r=A.measure(fast);
       if(r.grip){W.grip=Math.max(W.grip,...r.grip);W.reach=Math.max(W.reach,...r.reach);}
       W.elbow=Math.max(W.elbow,...r.elbow);if(r.bar&&r.bar.d<W.bar){W.bar=r.bar.d;wb=r.bar.who+' @'+r.t.toFixed(2);}
-      r.db.forEach(c=>{if(c.d<W.db){W.db=c.d;wd=c.who+' @'+r.t.toFixed(2);}});if(!fast&&r.floor.y<W.floor){W.floor=r.floor.y;wf=r.floor.who+' @'+r.t.toFixed(2);}(r.bench||[]).forEach(c=>{if(c.d<W.bench){W.bench=c.d;wbe=c.who+' @'+r.t.toFixed(2);}});
-      if(!sum) console.log(r.t.toFixed(3).padStart(6)+'   '+(r.grip?r.grip.map(f1).join(' / '):'-').padEnd(12)+'  '+(r.reach?r.reach.map(f1).join(' / '):'-').padEnd(12)+'  '+r.elbow.map(f0).join(' / ').padEnd(10)+'  '+r.pron.map(f0).join(' / ').padEnd(10)+'  '+r.knee.map(f0).join(' / ').padEnd(9)+'  '+(r.barP?r.barP.map(v=>v.toFixed(3)).join(',')+' '+(r.bar?mm(r.bar):''):'-').padEnd(34)+'  '+(r.db.map(mm).join(', ')||'-').padEnd(22)+'  '+r.floor.y.toFixed(3)+' '+r.floor.who+(r.bench&&r.bench.length?'   bench '+r.bench.map(c=>mm(c)+(c.seat?' / seat '+mm(c.seat):c.back?' / back '+mm(c.back):'')).join(', '):''));
+      r.db.forEach(c=>{if(c.d<W.db){W.db=c.d;wd=c.who+' @'+r.t.toFixed(2);}});if(!fast&&r.floor.y<W.floor){W.floor=r.floor.y;wf=r.floor.who+' @'+r.t.toFixed(2);}(r.bench||[]).forEach(c=>{if(c.d<W.bench){W.bench=c.d;wbe=c.who+' @'+r.t.toFixed(2);}});(r.pads||[]).forEach(c=>{if(c.d<W.pad){W.pad=c.d;wpd=c.who+' @'+r.t.toFixed(2);}});
+      if(!sum) console.log(r.t.toFixed(3).padStart(6)+'   '+(r.grip?r.grip.map(f1).join(' / '):'-').padEnd(12)+'  '+(r.reach?r.reach.map(f1).join(' / '):'-').padEnd(12)+'  '+r.elbow.map(f0).join(' / ').padEnd(10)+'  '+r.pron.map(f0).join(' / ').padEnd(10)+'  '+r.knee.map(f0).join(' / ').padEnd(9)+'  '+(r.barP?r.barP.map(v=>v.toFixed(3)).join(',')+' '+(r.bar?mm(r.bar):''):'-').padEnd(34)+'  '+(r.db.map(mm).join(', ')||'-').padEnd(22)+'  '+r.floor.y.toFixed(3)+' '+r.floor.who+(r.bench&&r.bench.length?'   bench '+r.bench.map(c=>mm(c)+(c.seat?' / seat '+mm(c.seat):c.back?' / back '+mm(c.back):'')).join(', '):'')+(r.pads&&r.pads.length?'   pads '+r.pads.map(mm).join(', '):''));
     }
-    console.log((sum?n.padEnd(30):'worst: ')+' grip '+f1(W.grip)+' mm, reach '+f1(W.reach)+' %, elbow max '+f0(W.elbow)+', bar clearance '+(W.bar<1e8?f0(W.bar*1000)+' mm ('+wb+')':'-')+', dumbbells '+(W.db<1e8?f0(W.db*1000)+' mm ('+wd+')':'-')+', lowest '+W.floor.toFixed(3)+' m ('+wf+')'+(W.bench<1e8?', bench '+f0(W.bench*1000)+' mm ('+wbe+')':''));
+    console.log((sum?n.padEnd(30):'worst: ')+' grip '+f1(W.grip)+' mm, reach '+f1(W.reach)+' %, elbow max '+f0(W.elbow)+', bar clearance '+(W.bar<1e8?f0(W.bar*1000)+' mm ('+wb+')':'-')+', dumbbells '+(W.db<1e8?f0(W.db*1000)+' mm ('+wd+')':'-')+', lowest '+W.floor.toFixed(3)+' m ('+wf+')'+(W.bench<1e8?', bench '+f0(W.bench*1000)+' mm ('+wbe+')':'')+(W.pad<1e8?', pads '+f0(W.pad*1000)+' mm ('+wpd+')':''));
     A.X.animStop(true);
   }
   if(A.errs.length) console.log('page errors:\n'+A.errs.join('\n'));

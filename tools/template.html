@@ -2202,7 +2202,7 @@ function poseAt(K,t){
   const A=K[i], B=K[i+1]||A, span=B.t-A.t, s=span>0?(EASE[B.ease]||EASE.inOut)(Math.min(1,Math.max(0,(t-A.t)/span))):0;
   const P={pos:lerpA(A.pos,B.pos,s),rot:lerpA(A.rot,B.rot,s),j:{},ik:{},bar:{pos:lerpO(A.bar.pos,B.bar.pos,s),rot:lerpO(A.bar.rot,B.bar.rot,s),hang:lerpO(A.bar.hang,B.bar.hang,s),w:A.bar.w!==undefined?A.bar.w+((B.bar.w!==undefined?B.bar.w:A.bar.w)-A.bar.w)*s:null}};
   new Set(Object.keys(A.j).concat(Object.keys(B.j))).forEach(n=>{ const a=A.j[n]||{}, b=B.j[n]||{}, o=P.j[n]={}; new Set(Object.keys(a).concat(Object.keys(b))).forEach(d=>{ o[d]=(a[d]||0)+((b[d]||0)-(a[d]||0))*s; }); });
-  Object.keys(A.ik).forEach(n=>{ const a=A.ik[n], b=B.ik[n]||a; P.ik[n]={target:lerpO(a.target,b.target,s),pole:lerpA(a.pole,b.pole,s),end:lerpO(a.end,b.end,s),bar:a.bar||null,wext:(a.wext||0)+((b.wext||0)-(a.wext||0))*s}; });
+  Object.keys(A.ik).forEach(n=>{ const a=A.ik[n], b=B.ik[n]||a; P.ik[n]={target:lerpO(a.target,b.target,s),pole:lerpA(a.pole,b.pole,s),end:lerpO(a.end,b.end,s),hax:lerpO(a.hax,b.hax,s),hfd:lerpO(a.hfd,b.hfd,s),bar:a.bar||null,wext:(a.wext||0)+((b.wext||0)-(a.wext||0))*s}; });
   return P;
 }
 const k_H=new THREE.Vector3(), k_T=new THREE.Vector3(), k_K=new THREE.Vector3(), k_u=new THREE.Vector3(), k_v=new THREE.Vector3(), k_hn=new THREE.Vector3(), k_hb=new THREE.Vector3(),
@@ -2273,7 +2273,9 @@ function wrapPron(q,r){   // twist of the hand relative to the ulna about the fo
   return Math.min(190,Math.max(-20,a));
 }
 // arm: two-bone IK shoulder -> wrist. The forearm rotation (pronation) comes from fore.pron, or - when the hand's orientation is given
-// (ik.end, or a bar grip) - from the twist between hand and ulna, iterated because the wrist sits off the rotation axis.
+// (ik.end, a handle (ik.hax + ik.hfd) or a bar grip) - from the twist between hand and ulna, iterated because the wrist sits off the
+// rotation axis. With a handle, ik.target is the grip point (the centre of the handle) instead of the wrist: hax = world direction of the
+// handle toward the thumb, hfd = finger direction (from the wrist along the hand), so a machine handle path is authored where the handle is.
 function solveArm(s,ik,P){
   const side=RIG.seg[s][0].slice(-1), m=SEGI["fore"+side], r=SEGI["rad"+side], e=SEGI["hand"+side];
   let pron=pronOf(P,side), Qh=null;
@@ -2284,7 +2286,9 @@ function solveArm(s,ik,P){
     else k_Tw.copy(barA).multiplyScalar((ik.bar==="under")===(side==="L")?1:-1);
     k_f.subVectors(k_G,segPos[s]).normalize(); Qh=k_qh;
   } else if(ik.end){ Qh=eulerQ(ik.end,k_qh); }
+  else if(ik.hax){ Qh=frameQ(k_Fw.fromArray(ik.hfd).normalize(),k_Tw.fromArray(ik.hax).normalize(),gfdB[side],gaxB[side],k_qh); }
   if(!bar) k_W.fromArray(ik.target);
+  if(ik.hax&&!bar&&!ik.end) k_W.fromArray(gripB(side)).sub(SEGJ[e]).applyQuaternion(Qh).negate().add(k_G.fromArray(ik.target));   // wrist = grip point - hand offset
   const its=Qh?4:1;
   for(let it=0;it<=its;it++){
     if(bar&&it<its){
@@ -2376,14 +2380,46 @@ function animRaycast(rc,hits){   // installed on the body meshes while an animat
   if(anim.playing||!this.geometry.attributes.aSkI) return;
   const g=this.geometry; this.geometry=posedGeo(this); try{ THREE.Mesh.prototype.raycast.call(this,rc,hits); } finally { this.geometry=g; }
 }
-// props: benches (flat or inclined), rollers, dumbbells (follow a hand), the held bar (barbell / pull-up bar / lat bar; both hands follow it)
-// and a cable (tower, pulley and a cable to the held bar)
+// props: benches (flat or inclined), rollers, dumbbells (follow a hand), the held bar (barbell / pull-up bar / lat bar / V-handle / cable
+// bar / rope; both hands follow it), cables (tower, pulley and a cable to the held bar or to any anchor), machines (static frames, seats and
+// pads built from boxes, cylinders and rods, or a group that follows a body segment: rollers on the shin, handles in the hand, a sled under
+// the feet) and links (a rod between two anchors that is updated every frame: lever arms, rope strands)
 const propGrp=new THREE.Group(); scene.add(propGrp);
 const P_PAD=stdMat(lin(0x3a302b),{roughness:0.8}), P_FRAME=stdMat(lin(0x8d8a86),{roughness:0.4,metalness:0.5}), P_IRON=stdMat(lin(0x34322f),{roughness:0.45,metalness:0.4}), P_GRIP=stdMat(lin(0xa7a49f),{roughness:0.35,metalness:0.6}), P_CABLE=stdMat(lin(0x1f1d1b),{roughness:0.5});
-const BAR_TYPES={barbell:1,pullbar:1,latbar:1,vhandle:1};
+const PMAT={pad:P_PAD,frame:P_FRAME,iron:P_IRON,grip:P_GRIP,cable:P_CABLE};
+const BAR_TYPES={barbell:1,pullbar:1,latbar:1,vhandle:1,straightbar:1,rope:1};
 let props=[];
-const k_y=new THREE.Vector3(0,1,0), k_pv=new THREE.Vector3();
+const k_y=new THREE.Vector3(0,1,0), k_pv=new THREE.Vector3(), k_one=new THREE.Vector3(1,1,1), k_sc=new THREE.Vector3(), k_a0=new THREE.Vector3(), k_a1=new THREE.Vector3();
 function cyl(r,h,mt,seg){ return new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg||14),mt); }
+// an anchor = a point that props can attach to: [x,y,z] (fixed, world), {seg, at} (bind-pose point carried by a segment), {seg: "handL",
+// grip: d} (the hand's grip point moved d metres along the handle axis toward the thumb), {bar: [x,y,z]} (a point in the held bar's frame),
+// {bar: "L"|"R"} (that hand's grip point on the held bar) or {bar: "ring"} (the ring of a rope). anchorFn returns a function that writes its current world position.
+function anchorFn(a){
+  if(Array.isArray(a)){ const v=new THREE.Vector3().fromArray(a); return out=>out.copy(v); }
+  if(a.bar!==undefined){
+    if(a.bar==="L"||a.bar==="R"){ const sg=a.bar==="L"?1:-1; return out=>out.copy(barC).addScaledVector(barA,sg*barW/2); }
+    if(a.bar==="ring") return out=>heldBar&&heldBar.rope?ropeRing(heldBar.rope,out).applyQuaternion(barQ).add(barC):out.copy(barC);   // the rope's ring
+    const v=new THREE.Vector3().fromArray(Array.isArray(a.bar)?a.bar:[0,0,0]); return out=>out.copy(v).applyQuaternion(barQ).add(barC);
+  }
+  const s=SEGI[a.seg], sd=a.seg.slice(-1), b=a.grip!==undefined?new THREE.Vector3().fromArray(RIG.pt["grip"+sd]).addScaledVector(gaxB[sd],a.grip):new THREE.Vector3().fromArray(a.at||SEGJ[s].toArray());
+  return out=>out.copy(b).sub(SEGJ[s]).applyQuaternion(segQ[s]).add(segPos[s]);
+}
+function setRod(m,a,b){   // a unit-height cylinder (local y) stretched from a to b (in its parent's frame)
+  k_pv.subVectors(b,a); const L=k_pv.length(); k_pq.setFromUnitVectors(k_y,L>1e-9?k_pv.divideScalar(L):k_y);
+  m.matrix.compose(k_ps.copy(a).add(b).multiplyScalar(0.5),k_pq,k_sc.set(1,Math.max(L,1e-4),1)); m.matrixWorldNeedsUpdate=true;
+}
+function rodMesh(r,mt,seg){ const m=cyl(r,1,mt,seg||10); m.matrixAutoUpdate=false; return m; }
+// a machine part: {box: [sx,sy,sz]} | {cyl: [r, length]} (along local y) | {rod: [[x,y,z],[x,y,z]], r}; pos, rot (Euler degrees), mat
+// (pad | frame | iron | grip | cable); pad: true marks a contact pad (the dev helper animcheck.js measures how deep the body sinks into it)
+function partMesh(q){
+  const mt=PMAT[q.mat||"frame"]||P_FRAME; let m;
+  if(q.rod){ const a=new THREE.Vector3().fromArray(q.rod[0]), b=new THREE.Vector3().fromArray(q.rod[1]); m=cyl(q.r||0.02,Math.max(a.distanceTo(b),1e-4),mt);
+    m.position.copy(a).add(b).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(k_y,b.clone().sub(a).normalize()); return m; }
+  if(q.box) m=new THREE.Mesh(new THREE.BoxGeometry(q.box[0],q.box[1],q.box[2]),mt); else m=cyl(q.cyl[0],q.cyl[1],mt,q.cyl[0]>0.03?24:14);
+  if(q.pos) m.position.fromArray(q.pos); if(q.rot) eulerQ(q.rot,m.quaternion);
+  if(q.pad) m.userData.pad=q.box?{box:q.box.slice(),name:q.name||"pad"}:{cyl:q.cyl.slice(),name:q.name||"roller"};
+  return m;
+}
 function buildProps(def,list){
   clearProps(); heldBar=null;
   (list||def.props||[]).forEach(p=>{
@@ -2413,7 +2449,7 @@ function buildProps(def,list){
         if(p.off) gp.add(new THREE.Vector3().fromArray(p.off).multiply(new THREE.Vector3(side==="R"?-1:1,1,1)));
         loc=new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(k_y,gaxB[side])).setPosition(gp);   // the handle (cylinder y) lies across the palm, inside the curled fingers
       } else loc=new THREE.Matrix4().makeRotationFromQuaternion(eulerQ(p.rot||[0,0,0],new THREE.Quaternion())).setPosition(new THREE.Vector3().fromArray(p.at));   // held against the body (goblet): bind position at, handle vertical unless rot
-      propGrp.add(g); props.push({obj:g,seg:s,loc:loc});
+      propGrp.add(g); props.push({obj:g,seg:s,loc:loc,db:1});
     } else if(BAR_TYPES[p.type]){
       const g=new THREE.Group(), L=p.len||(p.type==="barbell"?2.2:1.2), add=(o,x,rz)=>{ o.position.x=x; o.rotation.z=rz===undefined?Math.PI/2:rz; g.add(o); return o; };
       if(p.type==="barbell"){
@@ -2433,28 +2469,54 @@ function buildProps(def,list){
           [-1,1].forEach(e=>{ const r=cyl(0.009,Math.hypot(hw,0.07),P_FRAME); r.position.set(sg*hw/2,0.035,e*hl/2); r.rotation.z=sg*Math.atan2(hw,0.07); g.add(r); }); });
         const top=cyl(0.01,hl+0.02,P_FRAME); top.position.set(0,0.07,0); top.rotation.x=Math.PI/2; g.add(top);
         const ring=cyl(0.02,0.012,P_FRAME,16); ring.position.set(0,0.085,0); ring.rotation.x=Math.PI/2; g.add(ring);
+      } else if(p.type==="straightbar"){   // straight cable bar (pushdown, cable curl): knurled shaft, end caps and a swivel sleeve in the middle
+        add(cyl(0.014,L,P_GRIP),0); [-1,1].forEach(sg=>{ add(cyl(0.018,0.02,P_FRAME),sg*L/2); });
+        add(cyl(0.022,0.06,P_FRAME,16),0);
+      } else if(p.type==="rope"){   // rope: from a ring toward "toward" (the pulley), two strands of length len to the fists, through them along the bar's z (neutral grip) to a knob; rebuilt every frame
+        const rp={toward:new THREE.Vector3().fromArray(p.toward||[0,1,1]),len:p.len||0.27,ring:new THREE.Vector3(),rods:[],knobs:[]};
+        const rc=cyl(0.02,0.035,P_FRAME,16); rc.matrixAutoUpdate=false; g.add(rc); rp.rc=rc;
+        for(let k=0;k<4;k++){ const m=rodMesh(0.011,P_CABLE,8); g.add(m); rp.rods.push(m); }
+        [-1,1].forEach(()=>{ const kn=cyl(0.02,0.03,P_IRON,14); kn.rotation.x=Math.PI/2; g.add(kn); rp.knobs.push(kn); });
+        g.userData.rope=rp;
       } else {   // lat bar: straight centre, ends angled down
         add(cyl(0.014,L*0.7,P_GRIP),0);
         [-1,1].forEach(sg=>{ const e=cyl(0.014,L*0.17,P_GRIP); e.position.set(sg*(L*0.35+L*0.08),-L*0.03,0); e.rotation.z=Math.PI/2-sg*0.35; g.add(e); });
       }
       g.matrixAutoUpdate=false; propGrp.add(g);
-      const hb={obj:g,bar:1,w:p.w||0.6,pos:p.pos||[0,1,0.3]};
+      const hb={obj:g,bar:1,w:p.w||0.6,pos:p.pos||[0,1,0.3],rope:g.userData.rope||null};
       if(p.seg){ hb.seg=SEGI[p.seg]; hb.at=new THREE.Vector3().fromArray(p.at); hb.q0=eulerQ(p.rot||[0,0,0],new THREE.Quaternion()); }
       if(p.type==="pullbar"&&p.posts){   // uprights to the floor (static, at the bar's key-0 position)
         const k0=(def.keys[0].bar||{}).pos||hb.pos;
         [-1,1].forEach(sg=>{ const u=cyl(0.03,k0[1],P_FRAME); u.position.set(k0[0]+sg*(L/2+0.18),k0[1]/2,k0[2]); propGrp.add(u); props.push({obj:u}); const t=cyl(0.03,0.2,P_FRAME); t.rotation.z=Math.PI/2; t.position.set(k0[0]+sg*(L/2+0.09),k0[1],k0[2]); propGrp.add(t); props.push({obj:t}); });
       }
       heldBar=hb; props.push(hb);
-    } else if(p.type==="cable"){
-      const g=new THREE.Group(), pu=p.pulley, st=p.stack||[pu[0],pu[2]-0.25];
+    } else if(p.type==="cable"){   // tower (two posts at the stack, a beam, an arm to the pulley, the weight stack) and a cable from the pulley to "to" (default: the held bar)
+      const g=new THREE.Group(), pu=p.pulley, st=p.stack||[pu[0],pu[2]-0.25], top=Math.max(pu[1],p.top||0)+0.08;
       const post=(x,z,h)=>{ const c=cyl(0.03,h,P_FRAME); c.position.set(x,h/2,z); g.add(c); };
-      post(st[0]-0.2,st[1],pu[1]+0.08); post(st[0]+0.2,st[1],pu[1]+0.08);
-      const beam=cyl(0.03,0.44,P_FRAME); beam.rotation.z=Math.PI/2; beam.position.set(st[0],pu[1]+0.08,st[1]); g.add(beam);
-      const arm=cyl(0.025,Math.abs(pu[2]-st[1])+0.05,P_FRAME); arm.rotation.x=Math.PI/2; arm.position.set(pu[0],pu[1]+0.08,(pu[2]+st[1])/2); g.add(arm);
+      post(st[0]-0.2,st[1],top); post(st[0]+0.2,st[1],top);
+      const beam=cyl(0.03,0.44,P_FRAME); beam.rotation.z=Math.PI/2; beam.position.set(st[0],top,st[1]); g.add(beam);
+      if(Math.abs(pu[2]-st[1])>0.04||Math.abs(pu[0]-st[0])>0.04){ const arm=rodMesh(0.025,P_FRAME); arm.matrixAutoUpdate=true; arm.position.set((pu[0]+st[0])/2,pu[1]+0.06,(pu[2]+st[1])/2); const d=new THREE.Vector3(pu[0]-st[0],0,pu[2]-st[1]); arm.scale.set(1,d.length()+0.05,1); arm.quaternion.setFromUnitVectors(k_y,d.normalize()); g.add(arm); }
       const wh=cyl(0.045,0.025,P_GRIP,20); wh.rotation.z=Math.PI/2; wh.position.fromArray(pu); g.add(wh);
       const stack=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.5,0.14),P_IRON); stack.position.set(st[0],0.3,st[1]); g.add(stack);
-      const line=cyl(0.004,1,P_CABLE,6); line.matrixAutoUpdate=false; propGrp.add(line);
-      propGrp.add(g); props.push({obj:g}); props.push({obj:line,cable:new THREE.Vector3().fromArray(pu)});
+      const line=rodMesh(0.004,P_CABLE,6); propGrp.add(line);
+      propGrp.add(g); props.push({obj:g}); props.push({obj:line,link:[anchorFn(pu),anchorFn(p.to||{bar:[0,0,0]})]});
+    } else if(p.type==="machine"){   // static frame / seat / pads, or a group that follows a segment (rigid, or "follow": "move" = position only) or the held bar ("seg": "bar")
+      const g=new THREE.Group(); (p.parts||[]).forEach(q=>g.add(partMesh(q)));
+      propGrp.add(g);
+      if(p.seg===undefined){ if(p.pos) g.position.fromArray(p.pos); if(p.yaw) g.rotation.y=p.yaw*D2R; props.push({obj:g}); }
+      else {
+        g.matrixAutoUpdate=false; let q0=eulerQ(p.rot||[0,0,0],new THREE.Quaternion()), at;
+        if(p.seg==="bar"){ props.push({obj:g,onBar:new THREE.Matrix4().compose(new THREE.Vector3().fromArray(p.at||[0,0,0]),q0,k_one)}); }
+        else {
+          const s=SEGI[p.seg], sd=p.seg.slice(-1);
+          if(p.at==="grip"){ at=new THREE.Vector3().fromArray(RIG.pt["grip"+sd]); q0=new THREE.Quaternion().setFromUnitVectors(k_y,gaxB[sd]).multiply(q0); }   // local y = the handle axis (toward the thumb), origin = the grip point
+          else at=new THREE.Vector3().fromArray(p.at||SEGJ[s].toArray());
+          if(p.follow==="move") props.push({obj:g,move:anchorFn({seg:p.seg,at:at.toArray()}),q0:q0,axis:p.axis?new THREE.Vector3().fromArray(p.axis).normalize():null,base:new THREE.Vector3().fromArray(p.base||[0,0,0])});   // move: position only; with axis (+ base) only along that line (a sled on its rails)
+          else props.push({obj:g,seg:s,loc:new THREE.Matrix4().compose(at,q0,k_one)});
+        }
+      }
+    } else if(p.type==="link"){   // a rod between two anchors (lever arm, strap), updated every frame
+      const m=rodMesh(p.r||0.015,PMAT[p.mat||"frame"]||P_FRAME,12); propGrp.add(m); props.push({obj:m,link:[anchorFn(p.from),anchorFn(p.to)]});
     }
   });
   syncProps();
@@ -2463,9 +2525,23 @@ const k_pm=new THREE.Matrix4(), k_pq=new THREE.Quaternion(), k_ps=new THREE.Vect
 function syncProps(){
   props.forEach(p=>{
     if(p.seg!==undefined&&!p.bar){ p.obj.matrix.multiplyMatrices(segMatrix(p.seg,k_pm),p.loc); p.obj.matrixWorldNeedsUpdate=true; }
-    else if(p.bar){ p.obj.matrix.compose(barC,barQ,k_ps.set(1,1,1)); p.obj.matrixWorldNeedsUpdate=true; }
-    else if(p.cable){ k_pv.subVectors(barC,p.cable); const L=k_pv.length(); k_pq.setFromUnitVectors(k_y,k_pv.divideScalar(L||1)); p.obj.matrix.compose(k_ps.copy(p.cable).add(barC).multiplyScalar(0.5),k_pq,new THREE.Vector3(1,L,1)); p.obj.matrixWorldNeedsUpdate=true; }
+    else if(p.bar){ p.obj.matrix.compose(barC,barQ,k_one); p.obj.matrixWorldNeedsUpdate=true; if(p.rope) syncRope(p.rope); }
+    else if(p.onBar){ p.obj.matrix.compose(barC,barQ,k_one).multiply(p.onBar); p.obj.matrixWorldNeedsUpdate=true; }
+    else if(p.move){ p.move(k_a0); if(p.axis) k_a0.sub(p.base).projectOnVector(p.axis).add(p.base); p.obj.matrix.compose(k_a0,p.q0,k_one); p.obj.matrixWorldNeedsUpdate=true; }
+    else if(p.link) setRod(p.obj,p.link[0](k_a0),p.link[1](k_a1));
   });
+}
+const k_r0=new THREE.Vector3(), k_r1=new THREE.Vector3();
+const k_rq2=new THREE.Quaternion();
+function ropeRing(rp,out){   // the rope's ring in the bar frame: len from the middle of the two little-finger ends, toward rp.toward
+  const hw=Math.min(barW/2,rp.len*0.98), h=Math.sqrt(rp.len*rp.len-hw*hw);
+  k_r0.copy(rp.toward).sub(barC).applyQuaternion(k_rq2.copy(barQ).invert()); k_r0.x=0; k_r0.z-=0.05; if(k_r0.lengthSq()<1e-8) k_r0.set(0,0,1); k_r0.normalize();
+  return out.set(0,0,0.05).addScaledVector(k_r0,h);
+}
+function syncRope(rp){   // in the bar frame: the grips sit at x = +-barW/2; each strand runs ring -> little-finger side (+z) -> through the fist -> knob (thumb side, -z)
+  ropeRing(rp,rp.ring); rp.rc.matrix.makeTranslation(rp.ring.x,rp.ring.y,rp.ring.z); rp.rc.matrixWorldNeedsUpdate=true;
+  [1,-1].forEach((sg,k)=>{ const x=sg*barW/2;
+    setRod(rp.rods[2*k],rp.ring,k_r0.set(x,0,0.05)); setRod(rp.rods[2*k+1],k_r0,k_r1.set(x,0,-0.065)); rp.knobs[k].position.set(x,0,-0.08); });
 }
 function clearProps(){ props.forEach(p=>{ if(p.obj.parent) p.obj.parent.remove(p.obj); p.obj.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); }); props=[]; heldBar=null; }
 // playback state: anim = null (static atlas) or {i, n, def, K, t (0..1 of a repetition), speed, playing, ready, pv (pose version), note}

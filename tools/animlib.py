@@ -7,7 +7,7 @@ META.anim) and lint.py (checks it). Format: docs/animation-design.md, section "M
   exercise "vars": {group: {option: {key index: partial key, "props"?: [...]}}}  variation overrides (merged into that key when the
                                  option is chosen; resolved and mirrored like keys); "props" replaces the exercise's props for that option
   exercise "sym": true (default) after merging, every left entry of j / ik (armL, foreL, thighL ...) without a right counterpart in the
-                                 same key gets its mirror image: j copied (the runtime mirrors the axes), ik target / pole x negated,
+                                 same key gets its mirror image: j copied (the runtime mirrors the axes), ik target / pole / hax / hfd x negated,
                                  ik end Euler [a, b, c] -> [a, -b, -c]; "sym": false turns this off
 """
 import copy
@@ -26,7 +26,7 @@ def merge(a, b):
 
 def mirror_ik(v):
     m = copy.deepcopy(v)
-    for f in ('target', 'pole'):
+    for f in ('target', 'pole', 'hax', 'hfd'):
         if isinstance(m.get(f), list) and len(m[f]) == 3: m[f] = [-m[f][0], m[f][1], m[f][2]]
     if isinstance(m.get('end'), list) and len(m['end']) == 3: m['end'] = [m['end'][0], -m['end'][1], -m['end'][2]]
     return m
