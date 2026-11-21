@@ -4,8 +4,8 @@ META.anim) and lint.py (checks it). Format: docs/animation-design.md, section "M
   "_presets": {name: fragment}   a fragment is a partial key: any of root, j, ik, bar, and "use" (other presets, applied first)
   key "use": "name" | [names]    the presets are merged in order (dicts merge recursively, numbers and lists replace), then the key's own
                                  fields on top
-  exercise "vars": {group: {option: {key index: partial key}}}  variation overrides (merged into that key when the option is chosen;
-                                 resolved and mirrored like keys)
+  exercise "vars": {group: {option: {key index: partial key, "props"?: [...]}}}  variation overrides (merged into that key when the
+                                 option is chosen; resolved and mirrored like keys); "props" replaces the exercise's props for that option
   exercise "sym": true (default) after merging, every left entry of j / ik (armL, foreL, thighL ...) without a right counterpart in the
                                  same key gets its mirror image: j copied (the runtime mirrors the axes), ik target / pole x negated,
                                  ik end Euler [a, b, c] -> [a, -b, -c]; "sym": false turns this off
@@ -90,7 +90,11 @@ def resolve(AN):
                 for o, patch in (opts or {}).items():
                     if not isinstance(patch, dict): err.append(f'animations.json {name!r} vars {g}/{o}: must be an object of key index -> partial key'); continue
                     rp = {}
+                    if 'props' in patch:   # an option may replace the exercise's props (e.g. a V-handle instead of the lat bar)
+                        if not isinstance(patch['props'], list): err.append(f'animations.json {name!r} vars {g}/{o}: props must be a list')
+                        else: rp['props'] = copy.deepcopy(patch['props'])
                     for idx, k in patch.items():
+                        if idx == 'props': continue
                         w = f'animations.json {name!r} vars {g}/{o} key {idx}'
                         if not (str(idx).isdigit() and int(idx) < len(keys)) or not isinstance(k, dict): err.append(f'{w}: needs a key index below {len(keys)} and a partial key'); continue
                         bad = [f for f in k if f not in KEY_FIELDS or f == 't']

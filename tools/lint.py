@@ -209,7 +209,7 @@ def segk(n):
         if re.fullmatch(r'(th[mpd]|f[2-5][pmd])', b): return 'finger'
     return None
 CHAINS = {'thigh': ('shank', 'foot'), 'arm': ('fore', 'hand')}
-BARS = ('barbell', 'pullbar', 'latbar')
+BARS = ('barbell', 'pullbar', 'latbar', 'vhandle')
 num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool)
 num3 = lambda v: isinstance(v, list) and len(v) == 3 and all(num(x) for x in v)
 rig = None
@@ -266,12 +266,14 @@ if rig and os.path.exists(P('data', 'animations.json')):
                 elif ty == 'roller':
                     if not num3(p.get('pos')): err.append(f'{w}: roller needs pos [x,y,z]')
                 elif ty == 'dumbbell':
-                    if p.get('seg') not in ('handL', 'handR') or not num(p.get('len')) or not num(p.get('r')): err.append(f'{w}: dumbbell needs seg handL|handR, len, r')
+                    if p.get('seg') not in sn or segk(p['seg']) == 'finger' or not num(p.get('len')) or not num(p.get('r')): err.append(f'{w}: dumbbell needs seg (handL|handR, or a body segment with at), len, r')
+                    elif p['seg'] not in ('handL', 'handR') and (not num3(p.get('at')) or ('rot' in p and not num3(p['rot']))): err.append(f'{w}: a dumbbell on {p["seg"]} needs at [x,y,z] (bind pose) and optionally rot [x,y,z] degrees')
                 elif ty in BARS:
                     if held: err.append(f'{w}: only one held bar per animation')
                     held = p
                     if 'w' in p and not (num(p['w']) and 0.15 <= p['w'] <= 1.6): err.append(f'{w}: bar grip width w must be 0.15-1.6 m')
                     if 'seg' in p and (p['seg'] not in sn or segk(p['seg']) == 'finger' or not num3(p.get('at'))): err.append(f'{w}: a bar attached to a segment needs seg (a body segment) and at [x,y,z] (bind pose)')
+                    if 'handles' in p and not (ty == 'pullbar' and isinstance(p['handles'], list) and len(p['handles']) == 2 and all(num(v) for v in p['handles']) and 0.2 <= p['handles'][0] <= 1 and 0.05 <= p['handles'][1] <= 0.3): err.append(f'{w}: handles (pullbar only) are [distance 0.2-1 m, length 0.05-0.3 m]')
                     for pl in p.get('plates', []):
                         if not (isinstance(pl, list) and len(pl) == 2 and all(num(v) for v in pl) and 0.05 <= pl[0] <= 0.25 and 0.01 <= pl[1] <= 0.1): err.append(f'{w}: plates are [radius 0.05-0.25, thickness 0.01-0.1]')
                 elif ty == 'cable':
@@ -282,7 +284,9 @@ if rig and os.path.exists(P('data', 'animations.json')):
             if not 3 <= len(ks) <= 12: err.append(f'{w}: needs 3-12 keys')
             ts = [k.get('t') for k in ks]
             if not ts or ts[0] != 0 or ts[-1] != 1 or any(not num(t) or not b > t for t, b in zip(ts, ts[1:])): err.append(f'{w}: key times must rise strictly from 0 to 1')
-            if held and 'seg' not in held and not num3((ks[0].get('bar') or {}).get('pos') if ks else None) and not num3(held.get('pos')): err.append(f'{w}: the held bar needs bar.pos in key 0 (or seg + at on the prop)')
+            b0 = (ks[0].get('bar') or {}) if ks else {}
+            if held and 'seg' not in held and not num3(b0.get('pos')) and 'hang' not in b0 and not num3(held.get('pos')): err.append(f'{w}: the held bar needs bar.pos or bar.hang in key 0 (or seg + at on the prop)')
+            if any('hang' in (k.get('bar') or {}) for k in ks) and 'hang' not in b0: err.append(f'{w}: bar.hang must start in key 0 (a hanging bar cannot switch to bar.pos)')
             chains, ends, bars = set(), set(), set()
             for ki, k in enumerate(ks):
                 kw = f'{w} key {ki}'
@@ -295,7 +299,11 @@ if rig and os.path.exists(P('data', 'animations.json')):
                     for f in ('pos', 'rot'):
                         if f in b and not num3(b[f]): err.append(f'{kw}: bar.{f} must be [x,y,z]')
                     if 'w' in b and not (num(b['w']) and 0.15 <= b['w'] <= 1.6): err.append(f'{kw}: bar.w must be 0.15-1.6 m')
-                    if [f for f in b if f not in ('pos', 'rot', 'w')]: err.append(f'{kw}: bar takes pos, rot, w')
+                    if 'hang' in b:
+                        hg = b['hang']
+                        if not (isinstance(hg, list) and len(hg) == 2 and all(num(v) for v in hg) and 0.8 <= hg[0] <= 1 and -45 <= hg[1] <= 45): err.append(f'{kw}: bar.hang is [reach fraction 0.8-1, tilt -45..45 degrees]')
+                        if 'pos' in b: err.append(f'{kw}: bar takes pos or hang, not both')
+                    if [f for f in b if f not in ('pos', 'rot', 'w', 'hang')]: err.append(f'{kw}: bar takes pos, rot, w, hang')
                 for s, ik in k.get('ik', {}).items():
                     if s[:-1] not in CHAINS or s not in sn: err.append(f'{kw}: IK chain {s!r} must be thighL/R or armL/R'); continue
                     if ki == 0:
@@ -306,10 +314,10 @@ if rig and os.path.exists(P('data', 'animations.json')):
                     elif s not in chains: err.append(f'{kw}: IK chain {s} must be defined in key 0')
                     elif ('bar' in ik) != (s in bars) and 'bar' in ik: err.append(f'{kw}: IK {s} cannot switch to a bar grip after key 0')
                     if 'bar' in ik:
-                        if s[:-1] != 'arm' or ik['bar'] not in ('over', 'under'): err.append(f'{kw}: IK {s}.bar must be "over" or "under" (arms only)')
+                        if s[:-1] != 'arm' or ik['bar'] not in ('over', 'under', 'neutral'): err.append(f'{kw}: IK {s}.bar must be "over", "under" or "neutral" (arms only)')
                         if not held: err.append(f'{kw}: IK {s} grips a bar but there is no barbell / pullbar / latbar prop')
                         if 'target' in ik or 'end' in ik: err.append(f'{kw}: IK {s} on a bar takes no target / end (the bar sets both)')
-                    if 'wext' in ik and not (num(ik['wext']) and -60 <= ik['wext'] <= 60): err.append(f'{kw}: IK {s}.wext must be -60..60 degrees')
+                    if 'wext' in ik and not (num(ik['wext']) and -60 <= ik['wext'] <= 90): err.append(f'{kw}: IK {s}.wext must be -60..90 degrees')
                     for f in ('target', 'pole', 'end'):
                         if f in ik and not num3(ik[f]): err.append(f'{kw}: IK {s}.{f} must be [x,y,z]')
                     if [f for f in ik if f not in ('target', 'pole', 'end', 'bar', 'wext')]: err.append(f'{kw}: IK {s} takes target, pole, end, bar, wext')
@@ -337,7 +345,7 @@ if rig and os.path.exists(P('data', 'animations.json')):
             for o, patch in opts.items():
                 if exn is not None and o not in groups[g]: err.append(f'{w}: vars {g}/{o}: no such option ({", ".join(groups[g])})'); continue
                 if o == (groups.get(g) or [None])[0]: err.append(f'{w}: vars {g}/{o} is the default option (put it in keys instead)')
-                check_anim(f'{w} [{g}: {o}]', dict(a, keys=[animlib.merge(k, patch.get(str(i), {})) for i, k in enumerate(a['keys'])]))
+                check_anim(f'{w} [{g}: {o}]', dict(a, props=patch.get('props', a.get('props', [])), keys=[animlib.merge(k, patch.get(str(i), {})) for i, k in enumerate(a['keys'])]))
 if rig and nex is not None and 'lod' in M and os.path.isdir(os.path.join(D, '..', 'geo')):
     import gzip
     for lv, L in M['lod'].items():

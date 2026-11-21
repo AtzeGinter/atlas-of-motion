@@ -2174,8 +2174,13 @@ function mergeKey(a,b){ const o=Object.assign({},a); Object.keys(b).forEach(k=>{
 function animKeys(i,def){   // the keys of the chosen variation: def.vars = {group: {option: {key index: partial key}}} merged into the base keys
   if(!def.vars||!EX[i].v) return def.keys;
   const v=exVars[i]||[]; let ks=def.keys.slice();
-  EX[i].v.forEach((g,gi)=>{ const o=g[1][v[gi]||0], p=o&&def.vars[g[0]]&&def.vars[g[0]][o[0]]; if(p) Object.keys(p).forEach(ix=>{ ks[+ix]=mergeKey(ks[+ix],p[ix]); }); });
+  EX[i].v.forEach((g,gi)=>{ const o=g[1][v[gi]||0], p=o&&def.vars[g[0]]&&def.vars[g[0]][o[0]]; if(p) Object.keys(p).forEach(ix=>{ if(ix!=="props") ks[+ix]=mergeKey(ks[+ix],p[ix]); }); });
   return ks;
+}
+function animProps(i,def){   // the props of the chosen variation: an option may replace the exercise's props ("props" next to its key patches)
+  let ps=def.props||[]; const v=exVars[i]||[];
+  if(def.vars&&EX[i].v) EX[i].v.forEach((g,gi)=>{ const o=g[1][v[gi]||0], p=o&&def.vars[g[0]]&&def.vars[g[0]][o[0]]; if(p&&p.props) ps=p.props; });
+  return ps;
 }
 function prepKeys(keys){
   const cp=o=>JSON.parse(JSON.stringify(o));
@@ -2195,7 +2200,7 @@ const lerpO=(a,b,s)=>a?lerpA(a,b||a,s):null;
 function poseAt(K,t){
   let i=0; while(i<K.length-2&&t>K[i+1].t) i++;
   const A=K[i], B=K[i+1]||A, span=B.t-A.t, s=span>0?(EASE[B.ease]||EASE.inOut)(Math.min(1,Math.max(0,(t-A.t)/span))):0;
-  const P={pos:lerpA(A.pos,B.pos,s),rot:lerpA(A.rot,B.rot,s),j:{},ik:{},bar:{pos:lerpO(A.bar.pos,B.bar.pos,s),rot:lerpO(A.bar.rot,B.bar.rot,s),w:A.bar.w!==undefined?A.bar.w+((B.bar.w!==undefined?B.bar.w:A.bar.w)-A.bar.w)*s:null}};
+  const P={pos:lerpA(A.pos,B.pos,s),rot:lerpA(A.rot,B.rot,s),j:{},ik:{},bar:{pos:lerpO(A.bar.pos,B.bar.pos,s),rot:lerpO(A.bar.rot,B.bar.rot,s),hang:lerpO(A.bar.hang,B.bar.hang,s),w:A.bar.w!==undefined?A.bar.w+((B.bar.w!==undefined?B.bar.w:A.bar.w)-A.bar.w)*s:null}};
   new Set(Object.keys(A.j).concat(Object.keys(B.j))).forEach(n=>{ const a=A.j[n]||{}, b=B.j[n]||{}, o=P.j[n]={}; new Set(Object.keys(a).concat(Object.keys(b))).forEach(d=>{ o[d]=(a[d]||0)+((b[d]||0)-(a[d]||0))*s; }); });
   Object.keys(A.ik).forEach(n=>{ const a=A.ik[n], b=B.ik[n]||a; P.ik[n]={target:lerpO(a.target,b.target,s),pole:lerpA(a.pole,b.pole,s),end:lerpO(a.end,b.end,s),bar:a.bar||null,wext:(a.wext||0)+((b.wext||0)-(a.wext||0))*s}; });
   return P;
@@ -2243,6 +2248,23 @@ function solveBar(P){
   else { barC.fromArray(P.bar.pos||hb.pos); eulerQ(P.bar.rot||[0,0,0],barQ); }
   barA.set(1,0,0).applyQuaternion(barQ); barW=P.bar.w!==null&&P.bar.w!==undefined?P.bar.w:hb.w;
 }
+// bar.hang = [f, tilt]: the bar hangs from straight arms (deadlifts, shrugs): both grip points at f x the straight reach (shoulder ->
+// elbow -> wrist -> grip point in the atlas pose) from their shoulders, the bar below the shoulder midpoint, tilted by tilt degrees
+// (+ = in front of the shoulders, - = behind). Placed once the chest and both clavicles are known, before the arms solve.
+const k_s0=new THREE.Vector3(), k_s1=new THREE.Vector3(), k_pc=new THREE.Vector3(), k_qc=new THREE.Quaternion(), k_qc2=new THREE.Quaternion();
+let HREACH=0;
+function shoulderAt(sd,P,out){
+  const c=SEGI.chest, cl=SEGI["clav"+sd], a=SEGI["arm"+sd];
+  k_pc.copy(SEGJ[cl]).sub(SEGJ[c]).applyQuaternion(segQ[c]).add(segPos[c]); k_qc.copy(segQ[c]).multiply(localQ("clav"+sd,P.j["clav"+sd],k_qc2));
+  return out.copy(SEGJ[a]).sub(SEGJ[cl]).applyQuaternion(k_qc).add(k_pc);
+}
+function hangBar(P){
+  const h=P.bar.hang; eulerQ(P.bar.rot||[0,0,0],barQ); barA.set(1,0,0).applyQuaternion(barQ); barW=P.bar.w!==null&&P.bar.w!==undefined?P.bar.w:heldBar.w;
+  if(!HREACH){ const sd="L", a=SEGI["arm"+sd], f=SEGI["fore"+sd], hd=SEGI["hand"+sd]; HREACH=SEGJ[f].distanceTo(SEGJ[a])+SEGJ[hd].distanceTo(SEGJ[f])+new THREE.Vector3().fromArray(RIG.pt["grip"+sd]).distanceTo(SEGJ[hd]); }
+  shoulderAt("L",P,k_s0); shoulderAt("R",P,k_s1);
+  const lat=barW/2-k_s0.clone().sub(k_s1).dot(barA)/2, D=h[0]*HREACH, hh=Math.sqrt(Math.max(0,D*D-lat*lat)), t=h[1]*D2R;
+  barC.copy(k_s0).add(k_s1).multiplyScalar(0.5).add(new THREE.Vector3(0,-Math.cos(t),Math.sin(t)).multiplyScalar(hh));
+}
 const gripB=sd=>RIG.pt["grip"+sd], gaxB={}, gfdB={};
 ["L","R"].forEach(sd=>{ if(RIG&&RIG.dir){ gaxB[sd]=new THREE.Vector3().fromArray(RIG.dir["gax"+sd]); gfdB[sd]=new THREE.Vector3().fromArray(RIG.dir["gfd"+sd]); } });
 function wrapPron(q,r){   // twist of the hand relative to the ulna about the forearm-rotation axis -> pronation angle (degrees, -20..190)
@@ -2258,7 +2280,8 @@ function solveArm(s,ik,P){
   const bar=ik.bar&&heldBar;
   if(bar){   // grip point on the bar; thumbs toward the centre (overhand) or outward (underhand)
     k_G.copy(barC).addScaledVector(barA,(side==="L"?1:-1)*barW/2);
-    k_Tw.copy(barA).multiplyScalar((ik.bar==="under")===(side==="L")?1:-1);
+    if(ik.bar==="neutral") k_Tw.set(0,0,-1).applyQuaternion(barQ);   // parallel handles across the bar: palms face each other, thumbs toward -z of the bar
+    else k_Tw.copy(barA).multiplyScalar((ik.bar==="under")===(side==="L")?1:-1);
     k_f.subVectors(k_G,segPos[s]).normalize(); Qh=k_qh;
   } else if(ik.end){ Qh=eulerQ(ik.end,k_qh); }
   if(!bar) k_W.fromArray(ik.target);
@@ -2285,7 +2308,8 @@ const k_tv=new THREE.Vector3();
 function segMatrix(s,out){ out.makeRotationFromQuaternion(segQ[s]); k_tv.copy(SEGJ[s]).applyQuaternion(segQ[s]); out.setPosition(segPos[s].x-k_tv.x,segPos[s].y-k_tv.y,segPos[s].z-k_tv.z); return out; }
 function solvePose(P){
   segPos[0].fromArray(P.pos); eulerQ(P.rot,segQ[0]);
-  if(heldBar&&heldBar.seg===undefined) solveBar(P);
+  const hang=heldBar&&heldBar.seg===undefined&&P.bar.hang;
+  if(heldBar&&heldBar.seg===undefined&&!hang) solveBar(P);
   const done=new Uint8Array(NSEG); done[0]=1;
   if(heldBar&&heldBar.seg===0) solveBar(P);
   for(let s=1;s<NSEG;s++){
@@ -2296,6 +2320,7 @@ function solvePose(P){
     if(SEGAX[s]) segQ[s].copy(segQ[p]).multiply(axQ(s,s>=NBODY?SEGG[s]*gripOf(P,n.slice(-1)):pronOf(P,n.slice(-1)),k_q2));
     else segQ[s].copy(segQ[p]).multiply(localQ(n,P.j[n],k_q2));
     if(heldBar&&heldBar.seg===s) solveBar(P);
+    if(hang&&s===SEGI.chest) hangBar(P);
   }
   // unit dual quaternion per segment: real = rotation, dual = 0.5 * (t, 0) * real, t = pos - R * pivot
   const A=skU.value;
@@ -2355,13 +2380,13 @@ function animRaycast(rc,hits){   // installed on the body meshes while an animat
 // and a cable (tower, pulley and a cable to the held bar)
 const propGrp=new THREE.Group(); scene.add(propGrp);
 const P_PAD=stdMat(lin(0x3a302b),{roughness:0.8}), P_FRAME=stdMat(lin(0x8d8a86),{roughness:0.4,metalness:0.5}), P_IRON=stdMat(lin(0x34322f),{roughness:0.45,metalness:0.4}), P_GRIP=stdMat(lin(0xa7a49f),{roughness:0.35,metalness:0.6}), P_CABLE=stdMat(lin(0x1f1d1b),{roughness:0.5});
-const BAR_TYPES={barbell:1,pullbar:1,latbar:1};
+const BAR_TYPES={barbell:1,pullbar:1,latbar:1,vhandle:1};
 let props=[];
 const k_y=new THREE.Vector3(0,1,0), k_pv=new THREE.Vector3();
 function cyl(r,h,mt,seg){ return new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg||14),mt); }
-function buildProps(def){
+function buildProps(def,list){
   clearProps(); heldBar=null;
-  (def.props||[]).forEach(p=>{
+  (list||def.props||[]).forEach(p=>{
     if(p.type==="bench"){
       const g=new THREE.Group(), w=p.size[0], th=p.size[1], L=p.size[2], top=p.top, x=p.pos[0], z=p.pos[1], box=(sx,sy,sz,px,py,pz,mt,rx)=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mt); b.position.set(px,py,pz); if(rx) b.rotation.x=rx; g.add(b); return b; };
       const inc=(p.incline||0)*D2R, seat=p.incline?Math.min(L-0.2,p.seat||0.42):L, lh=top-th, z1=z+L/2;
@@ -2383,9 +2408,11 @@ function buildProps(def){
       const g=new THREE.Group(), L=p.len, r=p.r, hw=0.05;
       g.add(cyl(0.0145,L-0.02,P_GRIP,12));
       [-1,1].forEach(sg=>{ const d=cyl(r,hw,P_IRON,20); d.position.y=sg*(L/2-hw/2); g.add(d); });
-      g.matrixAutoUpdate=false; const s=SEGI[p.seg], side=p.seg.slice(-1), gp=new THREE.Vector3().fromArray(RIG.pt["grip"+side]);
-      if(p.off) gp.add(new THREE.Vector3().fromArray(p.off).multiply(new THREE.Vector3(side==="R"?-1:1,1,1)));
-      const loc=new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(k_y,gaxB[side])).setPosition(gp);   // the handle (cylinder y) lies across the palm, inside the curled fingers
+      g.matrixAutoUpdate=false; const s=SEGI[p.seg]; let loc;
+      if(/^hand[LR]$/.test(p.seg)){ const side=p.seg.slice(-1), gp=new THREE.Vector3().fromArray(RIG.pt["grip"+side]);
+        if(p.off) gp.add(new THREE.Vector3().fromArray(p.off).multiply(new THREE.Vector3(side==="R"?-1:1,1,1)));
+        loc=new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(k_y,gaxB[side])).setPosition(gp);   // the handle (cylinder y) lies across the palm, inside the curled fingers
+      } else loc=new THREE.Matrix4().makeRotationFromQuaternion(eulerQ(p.rot||[0,0,0],new THREE.Quaternion())).setPosition(new THREE.Vector3().fromArray(p.at));   // held against the body (goblet): bind position at, handle vertical unless rot
       propGrp.add(g); props.push({obj:g,seg:s,loc:loc});
     } else if(BAR_TYPES[p.type]){
       const g=new THREE.Group(), L=p.len||(p.type==="barbell"?2.2:1.2), add=(o,x,rz)=>{ o.position.x=x; o.rotation.z=rz===undefined?Math.PI/2:rz; g.add(o); return o; };
@@ -2396,6 +2423,16 @@ function buildProps(def){
       } else if(p.type==="pullbar"){
         add(cyl(0.016,L,P_GRIP),0);
         [-1,1].forEach(sg=>{ add(cyl(0.025,0.18,P_FRAME),sg*(L/2+0.09)); });
+        if(p.handles){   // parallel (neutral-grip) handles across the bar, centred on it: [distance between them, length]
+          const hw=p.handles[0]/2, hl=p.handles[1];
+          [-1,1].forEach(sg=>{ const hd=cyl(0.016,hl,P_GRIP); hd.position.set(sg*hw,0,0); hd.rotation.x=Math.PI/2; g.add(hd); [-1,1].forEach(e=>{ const st=cyl(0.012,0.06,P_FRAME); st.position.set(sg*hw,0.03,e*hl/2); g.add(st); }); });
+        }
+      } else if(p.type==="vhandle"){   // V-handle (close neutral grip): two parallel grips along z, joined by a frame rising to the cable ring
+        const hw=(p.w||0.17)/2, hl=0.13;
+        [-1,1].forEach(sg=>{ const hd=cyl(0.015,hl,P_GRIP); hd.position.set(sg*hw,0,0); hd.rotation.x=Math.PI/2; g.add(hd);
+          [-1,1].forEach(e=>{ const r=cyl(0.009,Math.hypot(hw,0.07),P_FRAME); r.position.set(sg*hw/2,0.035,e*hl/2); r.rotation.z=sg*Math.atan2(hw,0.07); g.add(r); }); });
+        const top=cyl(0.01,hl+0.02,P_FRAME); top.position.set(0,0.07,0); top.rotation.x=Math.PI/2; g.add(top);
+        const ring=cyl(0.02,0.012,P_FRAME,16); ring.position.set(0,0.085,0); ring.rotation.x=Math.PI/2; g.add(ring);
       } else {   // lat bar: straight centre, ends angled down
         add(cyl(0.014,L*0.7,P_GRIP),0);
         [-1,1].forEach(sg=>{ const e=cyl(0.014,L*0.17,P_GRIP); e.position.set(sg*(L*0.35+L*0.08),-L*0.03,0); e.rotation.z=Math.PI/2-sg*0.35; g.add(e); });
@@ -2455,7 +2492,7 @@ async function animStart(i){
   if(anim!==A) return;
   A.loadNote=""; skinMats();
   allMeshes.forEach(m=>{ m.frustumCulled=false; m.raycast=animRaycast; });   // bounding spheres are those of the atlas pose
-  buildProps(def); animCam(def); A.ready=true; animPose(); applyVisuals(); syncAnimUI(); hideTip();
+  A.ps=animProps(i,def); buildProps(def,A.ps); animCam(def); A.ready=true; animPose(); applyVisuals(); syncAnimUI(); hideTip();
 }
 function animStop(quiet){
   if(!anim) return;
@@ -2801,7 +2838,7 @@ card.addEventListener("click",e=>{
   if(act==="cmp"){cmpPick=true; syncBanner(); openTab("ex"); cardAway=true; peekToHalf(); return renderCard();}
   if(act==="add"){addToPlan(selEx,exVars[selEx]); return renderCard();}
   if(act==="back"){sel=null;view=mode==="cmp"?"cmp":"ex";applyVisuals();renderCard();syncList();return;}
-  if(t.dataset.var){const a=t.dataset.var.split(":"); const v=(exVars[selEx]=(exVars[selEx]||[]).slice()); v[+a[0]]=+a[1]; setMode("ex"); if(anim&&anim.i===selEx&&anim.ready){ anim.K=prepKeys(animKeys(selEx,anim.def)); animPose(); } return renderCard();}   // the movement follows the chosen variation
+  if(t.dataset.var){const a=t.dataset.var.split(":"); const v=(exVars[selEx]=(exVars[selEx]||[]).slice()); v[+a[0]]=+a[1]; setMode("ex"); if(anim&&anim.i===selEx&&anim.ready){ const ps=animProps(selEx,anim.def); if(ps!==anim.ps){ anim.ps=ps; buildProps(anim.def,ps); } anim.K=prepKeys(animKeys(selEx,anim.def)); animPose(); } return renderCard();}   // the movement follows the chosen variation
   if(t.dataset.ex!==undefined) return openEx(t.dataset);
   if(t.dataset.nerve) return select("nerve",t.dataset.nerve,true);
   if(t.dataset.key) return select("muscle",t.dataset.key,true);
