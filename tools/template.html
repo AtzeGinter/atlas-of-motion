@@ -2425,7 +2425,7 @@ function buildProps(def,list){
         [-1,1].forEach(sg=>{ add(cyl(0.025,0.18,P_FRAME),sg*(L/2+0.09)); });
         if(p.handles){   // parallel (neutral-grip) handles across the bar, centred on it: [distance between them, length]
           const hw=p.handles[0]/2, hl=p.handles[1];
-          [-1,1].forEach(sg=>{ const hd=cyl(0.016,hl,P_GRIP); hd.position.set(sg*hw,0,0); hd.rotation.x=Math.PI/2; g.add(hd); [-1,1].forEach(e=>{ const st=cyl(0.012,0.06,P_FRAME); st.position.set(sg*hw,0.03,e*hl/2); g.add(st); }); });
+          [-1,1].forEach(sg=>{ const hd=cyl(0.016,hl,P_GRIP); hd.position.set(sg*hw,0,0); hd.rotation.x=Math.PI/2; g.add(hd); const hub=cyl(0.024,0.05,P_FRAME); hub.position.set(sg*hw,0,0); hub.rotation.z=Math.PI/2; g.add(hub); });   // welded across the bar
         }
       } else if(p.type==="vhandle"){   // V-handle (close neutral grip): two parallel grips along z, joined by a frame rising to the cable ring
         const hw=(p.w||0.17)/2, hl=0.13;

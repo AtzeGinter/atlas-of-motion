@@ -2123,9 +2123,11 @@ async function animRun(){
   if(good) cs.forEach((c,i)=>{const nv=c[0];for(let k=0;k<nv;k++){const a=b[p+k],bb=b[p+nv+k],cc=b[p+2*nv+k],wa=b[p+3*nv+k],wb=b[p+4*nv+k];if(a>=NS||bb>=NS||cc>=NS) range=false;if(wa+wb>255) wsum=false;if(255-wa-wb>0) three++;if(META.meshes[i][0]==='b'&&(a!==b[p]||bb!==a||cc!==a||wa!==255)) rigid=false;}p+=5*nv;});
   ok(good&&range&&rigid&&wsum&&three>0,'skin-'+l+'.bin: 5 bytes per vertex (3 segments, 2 weights; '+three+' vertices use a third influence), indices < '+NS+', every bone mesh rigid to one segment');
  });
- const names=Object.keys(A),ANIMS=['Back squat','Conventional deadlift','Romanian deadlift','Barbell bench press','Barbell row','Pull-up','Lat pulldown','Overhead press','Barbell curl','Hip thrust','Lateral raise','Bulgarian split squat','Dumbbell bench press'];
+ const names=Object.keys(A),ANIMS=['Back squat','Conventional deadlift','Romanian deadlift','Barbell bench press','Barbell row','Pull-up','Lat pulldown','Overhead press','Barbell curl','Hip thrust','Lateral raise','Bulgarian split squat','Dumbbell bench press',
+  'Front squat','Zercher squat','Goblet squat','Chin-up','Incline barbell bench press','Decline bench press','Close-grip bench press','Incline dumbbell press','Seated dumbbell press','Pendlay row','Good morning','Sumo deadlift','Shrug','Hammer curl','Upright row','Front raise','Skull crusher','Reverse lunge','Walking lunge','Glute bridge'];
  ok(ANIMS.every(n=>A[n])&&names.every(n=>META.ex.some(e=>e.n===n)&&A[n].keys[0].t===0&&A[n].keys[A[n].keys.length-1].t===1),'META.anim: '+names.length+' animations, all existing exercises, keys from t=0 to 1 ('+names.join(', ')+')');
  ok(names.every(n=>A[n].keys.every(k=>!('use' in k)))&&A['Back squat'].keys[0].ik.thighR&&A['Back squat'].keys[0].ik.thighR.target[0]===-A['Back squat'].keys[0].ik.thighL.target[0]&&A['Back squat'].keys[0].ik.armR.bar==='over','presets are resolved at build time and left entries are mirrored to the right (Back squat: right foot = mirrored left foot, both hands overhand on the bar)');
+ ok(names.length>=33,'META.anim: at least 33 animated exercises ('+names.length+')');
  const exp='window.__an={get anim(){return anim},skU,segPos,segQ,SEGI,SEGJ,RIG,cpuSkin,allMeshes,boneMeshes,muscleMeshes,byKey,HM,propGrp,nerveMeshes,solvePose,poseAt,prepKeys,barC,barA,get barW(){return barW},get heldBar(){return heldBar},get skN(){return skN},get skinLv(){return skinLv}};';
  const mk=o=>boot(Object.assign({store:{}},o,{js:js.replace('//@licexport',exp)}));
  const x=mk({}),xd=x.document,xq=s=>xd.querySelector(s),xqa=s=>[...xd.querySelectorAll(s)];
@@ -2212,6 +2214,10 @@ async function animRun(){
  xq('#tNerves').click();
  // every animation plays; held bars stay in both hands, planted feet stay planted, nothing goes through the floor
  const barNames=[],ftNames=[];let allOk=true,barOk=true,feetOk=true,floorOk=true,worst=0,why='';
+ // elbow flexion = 3D angle shoulder - elbow - wrist (0 = straight; the atlas pose has ~12); forearm rotation = twist of the radius segment about its axis
+ const elbowAt=sd=>{const S=X.segPos[X.SEGI['arm'+sd]],E=X.segPos[X.SEGI['fore'+sd]],W=X.segPos[X.SEGI['hand'+sd]],u=S.clone().sub(E).normalize(),v=W.clone().sub(E).normalize();return 180-Math.acos(Math.max(-1,Math.min(1,u.dot(v))))*180/Math.PI;};
+ const pronAt=sd=>{const r=X.SEGI['rad'+sd],q=X.segQ[X.SEGI['fore'+sd]].clone().invert().multiply(X.segQ[r]),a=R.seg[r][3];let d=2*Math.atan2(q.x*a[0]+q.y*a[1]+q.z*a[2],q.w)*180/Math.PI;while(d>180)d-=360;while(d<=-180)d+=360;if(d<-60)d+=360;return d;};
+ const STRAIGHT=['Conventional deadlift','Romanian deadlift','Sumo deadlift','Shrug'],elbowMax={};
  for(const nmx of names){
   if(!btn()||xq('#card h2').textContent!==nmx) exI(nmx).click();
   btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,nmx);
@@ -2223,17 +2229,21 @@ async function animRun(){
    if(Array.from(X.skU.value).some(v=>!isFinite(v))) {allOk=false;why=nmx;}
    if(X.heldBar&&k0.ik.armL&&k0.ik.armL.bar) ['L','R'].forEach(sd=>{const e=gpt(sd).distanceTo(X.barC.clone().addScaledVector(X.barA,(sd==='L'?1:-1)*X.barW/2));worst=Math.max(worst,e);if(e>0.005){barOk=false;why=nmx+' t='+X.anim.t.toFixed(2)+' '+sd+' '+(e*1000).toFixed(1)+' mm';}});
    fixed.forEach(c=>{if(!near(X.segPos[X.SEGI['foot'+c.slice(-1)]].toArray(),k0.ik[c].target,0.002)){feetOk=false;why=nmx+' '+c;}});
+   if(STRAIGHT.includes(nmx)) elbowMax[nmx]=Math.max(elbowMax[nmx]||0,elbowAt('L'),elbowAt('R'));
+   if(s===0&&/deadlift/.test(nmx)&&nmx!=='Romanian deadlift') elbowMax[nmx+' floor']=X.barC.y;
    ['footL','footR','handL','handR'].forEach(sn=>{if(X.segPos[X.SEGI[sn]].y<0.03){floorOk=false;why=nmx+' '+sn;}});
    if(X.heldBar&&X.barC.y<0.2){floorOk=false;why=nmx+' bar';}
   }
   xq('#animStop').click();
  }
  ok(allOk,'all '+names.length+' animations play through 25 sampled moments with finite transforms'+(allOk?'':' ('+why+')'));
- ok(barOk&&barNames.length>=9,'two-hand bar constraint: both grip points stay on the bar at grip width in every sampled frame of '+barNames.length+' bar exercises (worst '+(worst*1000).toFixed(1)+' mm)'+(barOk?'':' ('+why+')'));
+ ok(STRAIGHT.every(n=>elbowMax[n]<10),'straight arms: the elbows stay locked (< 10 degrees of flexion) in every sampled frame of '+STRAIGHT.map(n=>n+' '+elbowMax[n].toFixed(1)).join(', '));
+ ok(['Conventional deadlift','Sumo deadlift'].every(n=>Math.abs(elbowMax[n+' floor']-0.225)<0.004),'deadlifts start from the floor: bar centre at plate radius ('+['Conventional deadlift','Sumo deadlift'].map(n=>(elbowMax[n+' floor']*1000).toFixed(0)+' mm').join(', ')+') with straight arms (bar.hang)');
+ ok(barOk&&barNames.length>=18,'two-hand bar constraint: both grip points stay on the bar at grip width in every sampled frame of '+barNames.length+' bar exercises (worst '+(worst*1000).toFixed(1)+' mm)'+(barOk?'':' ('+why+')'));
  ok(feetOk&&ftNames.length>=10,'planted feet stay on their targets in every sampled frame ('+ftNames.length+' exercises)'+(feetOk?'':' ('+why+')'));
  ok(floorOk,'no ankle, wrist or bar centre goes below the floor (plates sit on it at most)'+(floorOk?'':' ('+why+')'));
  // variations that change the motion: the movement follows the chosen option (and still keeps both hands on the bar)
- let vN=0,vOk=true,vWhy='';
+ let vN=0,vOk=true,vWhy='',nN=0,pMin=999,pMax=-999;
  for(const nmx of names.filter(n=>A[n].vars)){
   if(!btn()||xq('#card h2').textContent!==nmx) exI(nmx).click();
   btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,nmx);xq('#animPP').click();
@@ -2242,13 +2252,17 @@ async function animRun(){
    if(!oi||!(A[nmx].vars[g[0]]||{})[o[0]]) continue;
    xq('#card [data-var="'+gi+':'+oi+'"]').click();vN++;
    if(!X.anim||X.anim.n!==nmx){vOk=false;vWhy=nmx+' stopped';continue;}
+   const neutral=/neutral/i.test(o[0]);if(neutral) nN++;
+   if(neutral&&!(X.heldBar&&(nmx==='Pull-up'?(A[nmx].props.find(pp=>pp.type==='pullbar')||{}).handles:(X.anim.ps||[]).some(pp=>pp.type==='vhandle')))){vOk=false;vWhy=nmx+'/'+o[0]+' no handles';}
    for(let s=0;s<=12;s++){sl.value=String(Math.round(s/12*999));sl.dispatchEvent(new x.Event('input',{bubbles:true}));
+    if(neutral) ['L','R'].forEach(sd=>{const pr=pronAt(sd);pMin=Math.min(pMin,pr);pMax=Math.max(pMax,pr);if(pr<55||pr>125){vOk=false;vWhy=nmx+'/'+o[0]+' forearm '+pr.toFixed(0);}});
     if(X.heldBar&&A[nmx].keys[0].ik.armL&&A[nmx].keys[0].ik.armL.bar) ['L','R'].forEach(sd=>{const er=gpt(sd).distanceTo(X.barC.clone().addScaledVector(X.barA,(sd==='L'?1:-1)*X.barW/2));if(er>0.005){vOk=false;vWhy=nmx+'/'+o[0]+' '+(er*1000).toFixed(1)+' mm';}});}
    xq('#card [data-var="'+gi+':0"]').click();
   }
   xq('#animStop').click();
  }
- ok(vOk&&vN>=12,'variation keys: '+vN+' variation options re-pose the movement while it plays and keep both hands on the bar'+(vOk?'':' ('+vWhy+')'));
+ ok(vOk&&vN>=18,'variation keys: '+vN+' variation options re-pose the movement while it plays and keep both hands on the bar'+(vOk?'':' ('+vWhy+')'));
+ ok(vOk&&nN===2&&pMin>=55&&pMax<=125,'neutral grips (Pull-up Neutral on parallel handles, Lat pulldown Close neutral on a V-handle): both hands on the handles, forearms near neutral in every sampled frame ('+pMin.toFixed(0)+'-'+pMax.toFixed(0)+' degrees, 90 = neutral)');
  if(!btn()||xq('#card h2').textContent!=='Back squat') exI('Back squat').click();
  btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,'squat depth');xq('#animPP').click();
  sl.value='540';sl.dispatchEvent(new x.Event('input',{bubbles:true}));const yPar=X.segPos[0].y;

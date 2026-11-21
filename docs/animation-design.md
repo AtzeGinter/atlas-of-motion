@@ -3,7 +3,9 @@
 Goal: animate the existing atlas body (the real BodyParts3D / Z-Anatomy meshes, nothing replaced) through an exercise, with the
 muscles bending at the joints and the exercise heat colours (prime mover / synergist / stabiliser) visible while it moves.
 v2.5 shipped a beta with two exercises; rig v2 adds forearm rotation, gripping hands, a three-part thoracolumbar spine, held bars
-and other props, pose presets and 13 animated exercises (list at the end).
+and other props, pose presets and 13 animated exercises; the next round added straight-arm hanging bars (`bar.hang`), neutral
+grips on parallel handles and a V-handle, per-variation props, body-held dumbbells, two dev helpers and 20 more exercises (33 in
+all, list at the end).
 
 ## Overview
 
@@ -17,6 +19,8 @@ tools/animlib.py              resolves presets, left -> right mirroring and vari
 tools/assemble.py             embeds META.rig, META.anim (resolved) and META.skin {level: {file?v=<md5>, bytes}}
 tools/template.html           "exercise animation" section (after the camera code): skin loading, dual-quaternion shader
                               skinning, pose solver (FK, two-bone IK, auto forearm rotation, held bar), props, the bar #animBar
+tools/test/animcheck.js       dev helper: per-frame numbers of a motion (grip error, reach, elbow, forearm, knee, clearances)
+tools/test/animshot.js        dev helper: screenshots of a motion in headless Edge / Chrome (see "Checking a motion")
 ```
 
 Pipeline: `python meta.py && python rig.py && python exercises.py && python lint.py && python assemble.py` (rig.py only after
@@ -98,17 +102,32 @@ for single-axis joints, an axis. The segment transform is a rotation `q` about t
   `thigh*` (`solveLeg`) and `arm*` (`solveArm`). The arm IK targets the wrist *after* the forearm rotation (the wrist is off the
   rotation axis). When the hand orientation is given (`ik.end`, or a bar grip) the pronation is computed from the twist between
   hand and ulna about the rotation axis (`wrapPron`, -20..190 degrees) and the solve is iterated four times.
-* **Held bar** (barbell, pull-up bar, lat bar; at most one): centre and axis come from the key field `bar` (`pos`, `rot`, `w` =
-  grip width, interpolated) or, with `seg` + `at` on the prop, from a segment (the back squat bar rides on `chest`, the hip-thrust
-  bar on `pelvis`). An arm with `"bar": "over" | "under"` puts its grip point at centre +- w/2 along the bar; the thumb points
-  to the bar centre (overhand) or away (underhand); the finger direction is the forearm direction projected off the bar, tipped
-  by `wext` (wrist extension, degrees). The hand frame (`frameQ` from `dir.gfd`/`dir.gax`) then fixes the wrist target
+* **Held bar** (barbell, pull-up bar, lat bar, V-handle; at most one): centre and axis come from the key field `bar` (`pos`, `rot`,
+  `w` = grip width, interpolated) or, with `seg` + `at` on the prop, from a segment (the back and front squat, good morning and
+  Zercher bars ride on `chest`, the hip-thrust bar on `pelvis`). An arm with `"bar": "over" | "under"` puts its grip point at
+  centre +- w/2 along the bar; the thumb points to the bar centre (overhand) or away (underhand); `"neutral"` keeps the grip
+  points but turns the handle across the bar (thumbs toward -z of the bar frame, palms facing each other: parallel pull-up
+  handles, V-handle); the finger direction is the forearm direction projected off the handle, tipped by `wext` (wrist
+  extension, degrees; up to 90 for a front rack).
+* **Hanging bar** (`bar.hang: [f, tilt]`, deadlifts): instead of a position the bar hangs from straight arms. Once the chest and
+  both clavicles are posed (`hangBar`, before the arm IK), both grip points are placed at `f` x the straight reach (shoulder ->
+  elbow -> wrist -> grip point of the atlas pose, `HREACH`) from their shoulders, the bar centre below the shoulder midpoint,
+  tilted by `tilt` degrees in the sagittal plane (+ = in front of the shoulders, - = behind). The body motion then drives the bar
+  and the elbows can never bend: `f` 0.995 gives ~4 degrees of elbow flexion (locked), and the bar path follows the shoulders
+  even between keys (a bar authored by position moves on a straight line while the shoulders move on an arc, so the arms bend
+  or overreach between keys). Keys interpolate `f` and `tilt`; key 0 must set `hang` when any key does. The hand frame (`frameQ` from `dir.gfd`/`dir.gax`) then fixes the wrist target
   `grip point - hand offset`, so both hands sit exactly on the bar whenever it is within reach (the smoke test samples every bar
   exercise: worst error 2.8 mm).
-* **Props**: `bench` (`size [w, thickness, length]`, `top`, `pos [x, z]`, optional `incline` 0-85 with `seat`, `yaw`),
-  `roller` (pad on a post), `dumbbell` (follows a hand at `pt.grip`, handle along `dir.gax`), `barbell` (`len`, `plates
-  [[radius, thickness], ...]`, `w`, optional `seg` + `at`), `pullbar` (`len`, `posts`), `latbar`, `cable` (`pulley`, `stack`:
-  a tower and a cable from the pulley to the held bar, updated every frame).
+* **Props**: `bench` (`size [w, thickness, length]`, `top`, `pos [x, z]`, optional `incline` 0-85 with `seat`, `yaw`; a decline
+  bench is an inclined one turned by `yaw: 180`, so the pad falls toward the head), `roller` (pad on a post), `dumbbell` (follows a
+  hand at `pt.grip`, handle along `dir.gax`; or, with `seg` = a body segment and `at` (bind pose) + optional `rot`, held against
+  the body: the goblet squat's dumbbell rides on `chest`, handle vertical), `barbell` (`len`, `plates` `[[radius, thickness], ...]`,
+  `w`, optional `seg` + `at`), `pullbar` (`len`, `posts`, optional `handles: [distance, length]` = two parallel neutral-grip
+  handles across the bar), `latbar`, `vhandle` (close neutral grip: two parallel grips `w` apart joined to a cable ring), `cable`
+  (`pulley`, `stack`: a tower and a cable from the pulley to the held bar, updated every frame).
+* **Variation props**: a variation option may replace the exercise's props (`vars[group][option].props`, next to its key
+  patches); `animProps(i, def)` picks them and a variation change while playing rebuilds the props (Lat pulldown Close neutral
+  swaps the lat bar for a V-handle).
 * `#animT` (range 0..1000 in the bar) scrubs: it pauses and shows that moment of the repetition.
 * **Variations**: `animKeys(i, def)` merges `def.vars[group][option]` into the base keys for the options chosen on the card; changing
   a variation while the movement plays re-keys it at once (`anim.K = prepKeys(...)`).
@@ -126,17 +145,18 @@ Per exercise name (must exist in `exercises.py`):
   * `j`: `{segment: {dof: degrees}}`, local to the parent. DOFs: `lumbar thorax chest neck head` `flex lat rot`; `clav` `elev prot`;
     `arm`/`thigh` `flex abd rot` (rot = internal rotation); `fore` `flex pron`; `shank` `flex`; `foot` `flex`; `hand` `flex dev grip`.
   * `ik`: `{thighL|thighR|armL|armR: {target, pole, end?, bar?, wext?}}`: `target` = world position of the ankle / wrist, `pole` =
-    direction the knee / elbow points to, `end` = world Euler of the foot / hand, `bar` = "over" | "under" (arms only, instead of
-    target and end). Chains are declared in key 0. Joints a chain drives cannot also get `j` angles (lint); exceptions:
+    direction the knee / elbow points to (world space: rotate it with the torso when the torso leans a lot), `end` = world Euler
+    of the foot / hand, `bar` = "over" | "under" | "neutral" (arms only, instead of target and end), `wext` -60..90. Chains are declared in key 0. Joints a chain drives cannot also get `j` angles (lint); exceptions:
     `fore.pron` when the hand orientation is free, `hand.grip` always.
-  * `bar`: `{pos, rot, w}` for a held bar that is not attached to a segment (attached ones take only `w`).
+  * `bar`: `{pos | hang, rot, w}` for a held bar that is not attached to a segment (attached ones take only `w`); `hang: [f, tilt]`
+    = hanging from straight arms (above).
 * `_presets`: `{name: fragment}`; a fragment is a partial key (`root`, `j`, `ik`, `bar`, and `use` for other presets). A key's
   `use` (name or list) merges the presets in order (dicts recursively, numbers and lists replace), then the key's own fields.
 * Mirroring (`sym`, default true): after merging, every left entry of `j` / `ik` without a right entry in the same key gets one
   (`j` copied, the runtime mirrors the axes; `ik` target / pole x negated, `end` Euler `[a, -b, -c]`). Write the right side
   explicitly when a key changes both sides differently (the split squat's legs).
-* `vars`: `{group: {option: {key index: partial key}}}` (group and option names from `VARS` in exercises.py, not the default
-  option); resolved and mirrored like keys; `t` cannot change.
+* `vars`: `{group: {option: {key index: partial key, props?: [...]}}}` (group and option names from `VARS` in exercises.py, not the
+  default option); resolved and mirrored like keys; `t` cannot change; `props` replaces the exercise's props for that option.
 
 ### Presets
 
@@ -186,13 +206,29 @@ Per exercise name (must exist in `exercises.py`):
 5. `python lint.py && python assemble.py`, serve the repo (`python -m http.server`), play it, scrub with the slider to the top
    and the bottom and orbit around hands, elbows, shoulders, knees and spine. The two numbers that need tuning are the bar
    positions: the hands only reach a bar within arm's length (upper arm + forearm ~0.53 m shoulder to wrist; ~0.59 m to the
-   grip point), and the bar must not sink into the body. The smoke test reports both (`both grip points stay on the bar ...
-   (worst N mm)`); in a dev build a small helper that prints, per sampled frame, the distance between each grip point and its
-   bar end and the clearance between the bar and the nearest body vertex makes this a two-iteration job. A path that rotates the
-   trunk (deadlifts) needs a key in the middle, because a straight line between two keys of the bar does not follow the arc of
-   the shoulders.
+   grip point), and the bar must not sink into the body. `node animcheck.js "Barbell row"` (tools/test, below) prints both per
+   frame. A path that rotates the trunk needs a key in the middle, because a straight line between two keys of the bar does not
+   follow the arc of the shoulders; when the arms must stay straight (deadlifts) use `bar.hang` instead of positions.
 6. Nothing else: `animRun` plays every entry, checks that held bars stay in both hands, planted feet stay planted and nothing goes
    below the floor. Add an assertion only for something special.
+
+## Checking a motion (dev helpers in tools/test, not part of the app or CI)
+
+* `node animcheck.js ["Exercise" ...] [--var Group=Option] [--frames 24] [--lod low|medium|high] [--summary] [--fast]` boots
+  index.html in jsdom (Low meshes by default) with the motions read FRESH from `data/animations.json` through animlib.py (no
+  assemble.py needed while tuning keys; template changes still need it), plays the exercise and prints per sampled frame: grip
+  error per hand (mm; > 5 fails the smoke test), reach (shoulder -> grip point / straight reach, %; ~99.5 = elbow locked),
+  elbow flexion L/R (3D angle shoulder-elbow-wrist; the atlas pose has ~12), forearm rotation L/R (90 = neutral), knee flexion,
+  bar centre height / depth and its clearance to the nearest body vertex outside the hands (mm, negative = inside a muscle or
+  bone, with that structure), the same for dumbbells, the lowest body vertex (floor) and, per bench, how deep the body sinks
+  into the seat / backrest (< 0) or floats above it (> 0). `--summary` = one line per exercise with the worst values; no names
+  = every animated exercise. As a module (`bootAnim()`) it also serves quick tuning scripts: solve a key's root position for a
+  wanted bar position, grid-search a pole, fit FK arm angles to a point.
+* `node animshot.js "Exercise" --t 0,0.5 [--var Group=Option] [--turn px] [--zoom n] [--out dir] [--url http://127.0.0.1:8799/]`
+  takes screenshots in headless Edge / Chrome (Node >= 22; `$BROWSER` overrides the browser path) through the page's UI only
+  (deep link, Play, variation buttons, the position slider; `--turn` orbits by dragging, `--zoom` wheels in). Serve the repo
+  first (`python -m http.server 8799`). Use it when no visible browser is at hand: the app waits for an animation frame before
+  loading, so a hidden browser pane never finishes loading.
 
 ## Animated exercises
 
@@ -211,6 +247,31 @@ Per exercise name (must exist in `exercises.py`):
 | Lateral raise | dumbbells with a neutral grip to shoulder height, slight elbow bend; variation Arm path In the scapular plane |
 | Bulgarian split squat | rear instep on a bench, dumbbells in a neutral grip (fore.pron 90); variation Torso Forward lean |
 | Dumbbell bench press | dumbbells in line like a barbell (hand orientation given, forearm rotation automatic) |
+| Front squat | bar on the front delts (`seg: chest`), front rack (grip 0.52, wrists extended 80, elbows forward and up, the elbow pole rotated with the torso), upright torso (17 degrees at the bottom), bar over the mid-foot, below parallel |
+| Zercher squat | bar in the elbow crooks (`seg: chest`, FK arms fixed to the chest), deep, upright |
+| Goblet squat | dumbbell held vertically against the chest (`seg: chest`), hands cupping the top head, deep with the elbows inside the knees |
+| Chin-up | underhand, shoulder-width grip, elbows forward |
+| Incline barbell bench press | 38-degree bench (seat + backrest), from above the shoulders to the upper chest |
+| Decline bench press | 20-degree decline (inclined bench turned by yaw 180), knees over the end, ankles under a roller, bar to the lower chest |
+| Close-grip bench press | grip 0.44, elbows tucked, bar to the lower sternum |
+| Incline dumbbell press | same bench and body as the incline press, dumbbells from the sides of the upper chest to above the shoulders |
+| Seated dumbbell press | upright backrest (80 degrees), dumbbells from ear height to overhead, palms forward |
+| Pendlay row | torso about parallel to the floor, the bar starts on the floor (straight arms) every rep, pulled to the upper abdomen; variation Grip Underhand |
+| Good morning | bar on the upper back, hinge to ~70 degrees with soft knees |
+| Sumo deadlift | wide stance (ankles at x 0.31, toes out 38, knees out), narrow grip inside the knees, straight arms (`bar.hang`), more upright torso |
+| Shrug | dumbbells at the sides, straight arms; the clavicles elevate 26 degrees while the arms are counter-rotated so they keep hanging vertically |
+| Hammer curl | neutral grip, elbows at the sides drifting slightly forward |
+| Upright row | overhand 0.40 grip, bar close along the body to chest height, elbows lead high and wide, wrists flex |
+| Front raise | palms down, nearly straight arms to shoulder height |
+| Skull crusher | supine, upper arms fixed 15 degrees past vertical (elbow kept in place: bar positions fitted on an arc around it), bar to just above the forehead |
+| Reverse lunge | right leg steps back (foot lifted on the way), rear knee close to the floor on the toes, return (`sym: false`) |
+| Walking lunge | done in place as a forward lunge: left leg steps forward, rear heel rises, push back (`sym: false`) |
+| Glute bridge | supine on the floor, feet flat, hips up until knees-hips-shoulders line up, upper back and head stay on the floor (upper spine flexes to stay flat) |
+
+Conventional deadlift, Romanian deadlift and Sumo deadlift use `bar.hang` (elbows ~4 degrees all the way; before, the bar
+positions left the deadlift elbows bent up to 46 degrees and the RDL up to 32). New variation motions: Romanian deadlift
+Knees Straight (stiff-leg), Pendlay row Grip Underhand, Pull-up Grip Neutral (parallel handles on the frame, `"bar": "neutral"`,
+elbows forward, forearms ~90), Lat pulldown Grip Close neutral (V-handle via variation props).
 
 ## Known artefacts and limits
 
@@ -222,8 +283,11 @@ Per exercise name (must exist in `exercises.py`):
 * No toe bending, no scapulothoracic gliding beyond the clavicle rotation, three thoracolumbar spine segments (no individual
   vertebrae), the wrist is a single segment.
 * Bar positions are authored in world space, so a key change of the body can leave the bar out of reach; the test catches it.
-* Variations without a different motion (e.g. Lat pulldown Close neutral, which needs a V-handle; Pull-up Neutral) play the base
-  motion. Left and right share one heat colour per muscle.
+* Variations without a different motion play the base motion. Left and right share one heat colour per muscle.
+* No toe joints: a heel-up rear foot (lunges) pivots as one rigid piece, so it is lifted only ~30 degrees and the toes rest on the
+  floor instead of bending. The goblet dumbbell sits a little high (top head near the chin) so the forearms clear its heads.
+* Bench contact is measured on muscles and bones (there is no skin): bodies rest a few millimetres into the pad, thighs on a
+  seat up to ~1 cm. The front-rack elbow (~138 degrees) and the Zercher bar resting on the biceps are at the limit of the skinning.
 
 ## Performance (desktop GPU, built-in browser, 860x800 canvas; beta measurements, rig v2 adds the dual-quaternion blend)
 
