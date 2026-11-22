@@ -2160,10 +2160,16 @@ const SEGK={lumbar:"spine",thorax:"spine",chest:"spine",neck:"spine",head:"spine
 const segKind=n=>SEGK[n]||SEGK[n.slice(0,-1)];
 const CHAIN={thigh:["shank","foot",[0,0,1]],arm:["fore","hand",[0,0,-1]]};   // IK chains: middle, end, direction the middle joint points to in the atlas pose (knee forward, elbow back)
 const k_aq=new THREE.Quaternion(), k_ax=new THREE.Vector3(), k_ae=new THREE.Euler();
+// twist (arm, thigh): rotation about the bone's own long axis in the bind pose (pivot -> next joint: shoulder -> elbow, hip -> knee),
+// + = internal rotation on both sides, applied first. Unlike rot (about the vertical), it keeps the elbow / knee where it is: the upper arm
+// of the atlas hangs ~10 degrees off vertical, so rot alone swings the elbow on a circle (external / internal rotation at the side).
+const TWAX={};
+function twistAx(n){ if(TWAX[n]) return TWAX[n]; const s=SEGI[n], c=SEGI[(n.startsWith("arm")?"fore":"shank")+n.slice(-1)], v=new THREE.Vector3().subVectors(SEGJ[c],SEGJ[s]).normalize(); if(/R$/.test(n)) v.negate(); return TWAX[n]=v; }   // the mirror image of the left axis (a rotation axis) is minus the right bone direction
 function localQ(n,a,out){
   out.identity(); if(!a) return out;
   const D=DOF[segKind(n)], mir=/R$/.test(n)&&segKind(n)!=="spine";
   for(const k in D){ const v=a[k]; if(!v) continue; const d=D[k]; k_ax.set(d[0],mir?-d[1]:d[1],mir?-d[2]:d[2]); out.multiply(k_aq.setFromAxisAngle(k_ax,v*D2R)); }
+  if(a.twist&&segKind(n)==="ball") out.multiply(k_aq.setFromAxisAngle(twistAx(n),a.twist*D2R));
   return out;
 }
 const axQ=(s,deg,out)=>out.setFromAxisAngle(SEGAX[s],deg*D2R);
@@ -2500,10 +2506,11 @@ function buildProps(def,list){
       const stack=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.5,0.14),P_IRON); stack.position.set(st[0],0.3,st[1]); g.add(stack);
       const line=rodMesh(0.004,P_CABLE,6); propGrp.add(line);
       propGrp.add(g); props.push({obj:g}); props.push({obj:line,link:[anchorFn(pu),anchorFn(p.to||{bar:[0,0,0]})]});
-    } else if(p.type==="machine"){   // static frame / seat / pads, or a group that follows a segment (rigid, or "follow": "move" = position only) or the held bar ("seg": "bar")
+    } else if(p.type==="machine"){   // static frame / seat / pads (or, with aim, pivoting at pos toward an anchor), or a group that follows a segment (rigid, or "follow": "move" = position only) or the held bar ("seg": "bar")
       const g=new THREE.Group(); (p.parts||[]).forEach(q=>g.add(partMesh(q)));
       propGrp.add(g);
-      if(p.seg===undefined){ if(p.pos) g.position.fromArray(p.pos); if(p.yaw) g.rotation.y=p.yaw*D2R; props.push({obj:g}); }
+      if(p.seg===undefined&&p.aim){ g.matrixAutoUpdate=false; props.push({obj:g,aim:anchorFn(p.aim),pivot:new THREE.Vector3().fromArray(p.pos||[0,0,0])}); }   // aim: a lever / landmine bar pivoting at pos, local +y pointing at the anchor every frame
+      else if(p.seg===undefined){ if(p.pos) g.position.fromArray(p.pos); if(p.yaw) g.rotation.y=p.yaw*D2R; props.push({obj:g}); }
       else {
         g.matrixAutoUpdate=false; let q0=eulerQ(p.rot||[0,0,0],new THREE.Quaternion()), at;
         if(p.seg==="bar"){ props.push({obj:g,onBar:new THREE.Matrix4().compose(new THREE.Vector3().fromArray(p.at||[0,0,0]),q0,k_one)}); }
@@ -2529,6 +2536,7 @@ function syncProps(){
     else if(p.onBar){ p.obj.matrix.compose(barC,barQ,k_one).multiply(p.onBar); p.obj.matrixWorldNeedsUpdate=true; }
     else if(p.move){ p.move(k_a0); if(p.axis){ k_a0.sub(p.base); const s=p.normal?k_a0.dot(p.normal)/(p.axis.dot(p.normal)||1):k_a0.dot(p.axis); k_a0.copy(p.base).addScaledVector(p.axis,s); } p.obj.matrix.compose(k_a0,p.q0,k_one); p.obj.matrixWorldNeedsUpdate=true; }
     else if(p.link) setRod(p.obj,p.link[0](k_a0),p.link[1](k_a1));
+    else if(p.aim){ p.aim(k_a0).sub(p.pivot); const L=k_a0.length(); k_pq.setFromUnitVectors(k_y,L>1e-9?k_a0.divideScalar(L):k_y); p.obj.matrix.compose(p.pivot,k_pq,k_one); p.obj.matrixWorldNeedsUpdate=true; }
   });
 }
 const k_r0=new THREE.Vector3(), k_r1=new THREE.Vector3();

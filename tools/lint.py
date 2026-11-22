@@ -197,7 +197,7 @@ if os.path.exists(P('meta3.json')):
 else: print('NOTE: meta3.json missing, exercise checks skipped (run meta.py && exercises.py first)')
 # exercise animation (docs/animation-design.md): rig.json (rig.py), data/animations.json (presets resolved by animlib.py), ../geo/skin-<level>.bin
 nanim = 0
-DOFS = {'spine': ('flex', 'lat', 'rot'), 'clav': ('elev', 'prot'), 'ball': ('flex', 'abd', 'rot'), 'knee': ('flex',), 'elbow': ('flex', 'pron'), 'ankle': ('flex',),
+DOFS = {'spine': ('flex', 'lat', 'rot'), 'clav': ('elev', 'prot'), 'ball': ('flex', 'abd', 'rot', 'twist'), 'knee': ('flex',), 'elbow': ('flex', 'pron'), 'ankle': ('flex',),
         'wrist': ('flex', 'dev', 'grip'), 'rad': (), 'finger': ()}
 SEGK = {'lumbar': 'spine', 'thorax': 'spine', 'chest': 'spine', 'neck': 'spine', 'head': 'spine', 'clav': 'clav', 'arm': 'ball', 'fore': 'elbow', 'rad': 'rad',
         'hand': 'wrist', 'thigh': 'ball', 'shank': 'knee', 'foot': 'ankle'}
@@ -316,6 +316,7 @@ if rig and os.path.exists(P('data', 'animations.json')):
                         if [k for k in ('at', 'follow', 'rot') if k in p]: err.append(f'{w}: at / follow / rot need a seg (a static machine takes pos and yaw)')
                         if 'pos' in p and not num3(p['pos']): err.append(f'{w}: machine pos must be [x,y,z]')
                         if 'yaw' in p and not num(p['yaw']): err.append(f'{w}: machine yaw must be degrees')
+                        if 'aim' in p and (not anchor_ok(p['aim'], hb) or 'yaw' in p or not num3(p.get('pos'))): err.append(f'{w}: machine aim (an anchor its local +y points at: a lever or landmine bar) needs pos (the pivot) and no yaw')
                 elif ty == 'link':
                     hb = any(q.get('type') in BARS for q in a.get('props', []))
                     if not (anchor_ok(p.get('from'), hb) and anchor_ok(p.get('to'), hb)): err.append(f'{w}: link needs anchors from and to ([x,y,z], {{seg, at}}, {{seg: handL|handR, grip}}, {{bar}})')
