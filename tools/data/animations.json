@@ -991,7 +991,7 @@
  },
  "Cable lateral raise": {
   "dur": 3.0,
-  "camera": {"theta": 15, "phi": 84, "r": 1.25, "target": [-0.08, 1.05, 0.05]},
+  "camera": {"theta": 15, "phi": 84, "r": 1.4, "target": [0.05, 1.05, 0.05]},
   "sym": false,
   "props": [
    {"type": "machine", "seg": "handL", "at": "grip", "parts": [{"cyl": [0.016, 0.12], "mat": "grip"}]},
