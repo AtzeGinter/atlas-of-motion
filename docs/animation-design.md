@@ -6,8 +6,9 @@ v2.5 shipped a beta with two exercises; rig v2 adds forearm rotation, gripping h
 and other props, pose presets and 13 animated exercises; the next round added straight-arm hanging bars (`bar.hang`), neutral
 grips on parallel handles and a V-handle, per-variation props, body-held dumbbells, two dev helpers and 20 more exercises; batch 3
 added generic machine props (static frames and pads, groups that follow a segment, sleds on rails, lever links), cable bars, a rope,
-cables to any anchor, machine handles held by IK (`ik.hax` / `ik.hfd`) and 20 machine and cable exercises (53 in all, list at the
-end).
+cables to any anchor, machine handles held by IK (`ik.hax` / `ik.hfd`) and 20 machine and cable exercises; batch 4 added an arm /
+thigh `twist` DOF (rotation about the bone's own axis), machine groups that pivot toward an anchor (`aim`: landmine and T-bar bars),
+the presets `kneel` and `arms-crossed` and 25 more cable and machine exercises (78 in all, list at the end).
 
 ## Overview
 
@@ -143,7 +144,10 @@ for single-axis joints, an axis. The segment transform is a rotation `q` about t
   handles, D-handles), `"follow": "move"` only translates the group with the anchor `at` (orientation `rot` stays: the leg
   press sled under the feet, the hack squat carriage on the chest, the calf machine's shoulder pads), optionally constrained to
   a rail: `axis` (+ `base`, a point on the rail line) keeps only the motion along the axis, and with `normal` it slides as far as
-  keeps the anchor on that contact plane. `"seg": "bar"` rides on the held bar.
+  keeps the anchor on that contact plane. `"seg": "bar"` rides on the held bar. A static group with `aim` (an anchor) pivots at `pos`
+  so that its local +y points at the anchor every frame: the landmine press bar aims at the hand's grip point (`{seg: "handL",
+  grip: 0}`), the T-bar row bar at the held crossbar (`{bar: [0, 0, 0]}`); parts are laid out along local y (sleeve, plates), and the
+  hand / handle path is authored on the sphere around the pivot so the bar keeps its length (the test allows 2 cm).
 * **Links** (`link`): a rod (`r`, `mat`) between two anchors, re-stretched every frame: lever arms from a fixed pivot to a handle
   (chest press, shoulder press, pec deck: the hand moves on an arc around the pivot, so the rod keeps its length within a few
   millimetres), the preacher machine's lever to the bar ends, D-handle straps.
@@ -165,7 +169,10 @@ Per exercise name (must exist in `exercises.py`):
   * `root`: `pos` (world position of the pelvis pivot; standing = `[0, 0.8842, -0.0268]`) and `rot` (world Euler XYZ, degrees;
     `[-90, 0, 0]` = supine, `[90, 0, 0]` = prone, positive x = lean forward).
   * `j`: `{segment: {dof: degrees}}`, local to the parent. DOFs: `lumbar thorax chest neck head` `flex lat rot`; `clav` `elev prot`;
-    `arm`/`thigh` `flex abd rot` (rot = internal rotation); `fore` `flex pron`; `shank` `flex`; `foot` `flex`; `hand` `flex dev grip`.
+    `arm`/`thigh` `flex abd rot twist` (rot = internal rotation about the vertical of the bind pose; twist = internal rotation about
+    the bone's own long axis, shoulder -> elbow / hip -> knee, applied first: the atlas humerus hangs ~10 degrees off vertical, so
+    only twist keeps the elbow in place while the forearm swings: cable external / internal rotation, overhead triceps extension);
+    `fore` `flex pron`; `shank` `flex`; `foot` `flex`; `hand` `flex dev grip`.
   * `ik`: `{thighL|thighR|armL|armR: {target, pole, end?, bar?, wext?}}`: `target` = world position of the ankle / wrist, `pole` =
     direction the knee / elbow points to (world space: rotate it with the torso when the torso leans a lot), `end` = world Euler
     of the foot / hand, `bar` = "over" | "under" | "neutral" (arms only, instead of target and end), `wext` -60..90; a handle:
@@ -196,7 +203,9 @@ Per exercise name (must exist in `exercises.py`):
 | `prone` | lying face down on the floor |
 | `hang` | shoulders elevated, legs slightly bent (pull-ups, hangs) |
 | `half-kneel` | left foot forward, right knee down (asymmetric, written for both sides) |
+| `kneel` | both knees on the floor (thighs vertical, shins back, insteps down: cable crunch) |
 | `seated` | pelvis on a 47 cm seat, feet flat in front |
+| `arms-crossed` | forearms crossed on the chest, left over right (back extensions, glute-ham raise) |
 | `grip-db-neutral`, `grip-db-over`, `grip-db-under` | `hand.grip` 1 and `fore.pron` 90 / 160 / 0 (dumbbells, free hand orientation) |
 | `bar-over`, `bar-under` | arm IK on the held bar with that grip, `hand.grip` 1 |
 | `grip-close`, `grip-shoulder`, `grip-wide` | bar grip width 0.36 / 0.5 / 0.84 m |
@@ -315,6 +324,29 @@ Per exercise name (must exist in `exercises.py`):
 | Straight-arm pulldown | slight hip hinge, straight bar on `bar.hang` (elbows ~15 degrees) from eye level to the thighs |
 | Cable curl | the barbell curl motion with a straight cable bar and a low pulley |
 | Preacher curl | machine: upper arms on two angled arm pads, bar fitted on an arc around the fixed elbows (drift < 2 cm), elbow 22 -> 118, lever links from hubs on the elbow axis to the bar ends |
+| Cable lateral raise | left arm only (`sym: false`), low pulley on the right, the cable crosses in front of the body to a D-handle; from the hand in front of the hip (adducted) to shoulder height in the scapular plane, neutral grip; the right hand holds the tower post |
+| Low-to-high cable fly | low pulleys on both sides, D-handles, palms forward; from the hands low and out (abd 32) up and together to eye level, constant slight elbow bend |
+| Overhead triceps extension | cable version: rope from a high pulley behind, 22-degree forward lean, upper arms by the head (flex 162); rope positions fitted from FK on an arc around the fixed elbows (drift < 1 cm), the humeral `twist` goes 32 -> -18 so the hands are close behind the head and spread at lockout; elbow ~145 -> ~25 |
+| Cable crunch | kneeling (`kneel`), the rope attached to the head segment (hands at the temples, neutral grip), pelvis fixed, lumbar / thoracic / chest flexion 24 / 26 / 16 (the chest turns ~66 degrees against the pelvis) |
+| Pallof press | side-on to a chest-high pulley on the right, both hands stacked on one vertical handle (arm IK with `hax` / `hfd`), pressed 38 cm straight out from the sternum and back; pelvis and chest do not turn |
+| Cable woodchop | high pulley on the right, rope, keys fitted from an FK design (pelvis yaw -28 -> 34, spine rotation and side bend, symmetric straight arms meeting at the midline) to the rope; hands from above the right shoulder to outside the left hip; the right foot pivots on the toes (heel up 24, turned in 26) |
+| Cable external rotation / Cable internal rotation | left arm, elbow at the side flexed ~80, forearm neutral; humeral `twist` 50 -> -55 (external, pulley on the right) or -55 -> 50 (internal, pulley on the left); the elbow stays put (0 mm), the forearm sweeps 105 degrees |
+| Cable glute kickback | facing the low pulley, hands on the tower posts, 16-degree lean, ankle cuff on the left; hip from 20 flexion to 28 extension with the knee nearly straight and a neutral lumbar spine (`sym: false`) |
+| Standing cable hip abduction | side-on, pulley on the right, the cable crosses in front of the standing leg to a cuff on the left ankle; from slightly across the right leg (abd -7) out to abd 38, torso upright; variation Hip position Slightly flexed, toes in (flex 18, twist 16) |
+| Standing cable hip flexion | facing away from the low pulley, cuff at the back of the left ankle; Straight leg (default) -10 -> 58 hip flexion; variation Knee Bent knee: hip and knee to ~90 |
+| Cable pull-through | facing away from a low pulley, rope (grip 8 cm) on `bar.hang` so the arms stay straight; hinge to 60 degrees with soft knees, the rope pulled back between the legs (tilt -30), then the hips drive through to standing |
+| Machine row | chest-supported: seated, chest on a vertical pad, neutral handles on lever arms from an overhead pivot (hand path on the lever's arc), from arms extended with protracted shoulder blades to elbows behind the torso, retracted |
+| T-bar row | landmine T-bar: the bar pivots on the floor behind the lifter (`aim` at the held crossbar), straddled, wide stance, ~45-degree hinge, overhand crossbar (w 0.42) pulled from straight arms to the lower chest on the bar's arc |
+| Smith machine squat | bar on the upper back (`seg: chest`), feet ~12 cm forward, root positions fitted so the bar path is vertical (drift 0 mm over 40 cm), carriage blocks follow it on two rails (`follow: move`, `axis` y); knees to ~107 |
+| Assisted pull-up | the pull-up with the knees bent 90 on an assist pad that rides up with the knees (`follow: move` on the shank, telescoping column into a floor sleeve) |
+| Machine crunch | seated against an upright backrest, chest pad on the chest segment, D-handles at the shoulders on lever links to hubs at waist height (length varies < 2 mm: the hub was searched for), pelvis fixed, spine curls ~62 degrees |
+| Rotary torso machine | seated, knees against a pad, pelvis fixed; the chest pad, handles and a column to a hub on the rotation axis above the head ride on the chest; spine rotation 5 / 18 / 17 = 40 degrees to the left and back |
+| Hip abduction machine / Hip adduction machine | seated, thighs level (back reclined 10), pads at the outer / inner knees on levers to hubs below the hips on the vertical abduction axis, footrests move with the shanks; abduction 3 -> 38, adduction 40 -> 8; variation Hip abduction Torso Leaning forward (pelvis 20 forward, hip flexion 110) |
+| Back extension | 45-degree bench: legs straight on the 45-degree line, ankles under the roller, the hip pad below the hip crease; root rotation 45 -> 132 about the hip centre with a neutral spine (`arms-crossed`) |
+| Back extension machine | seated, thighs fixed, pad on the upper back (rigid on the chest) with lever links to hubs at hip height; from 32-degree forward lean with a rounded lower back to 8 degrees behind vertical, slightly extended |
+| Reverse hyperextension | torso prone on a high pad with the hips at its edge, hands on front handles, pelvis fixed; legs swing from hanging (hip flexion 84) to in line with the torso; ankle strap on pendulum links from hubs on the hip axis (constant length) |
+| Glute-ham raise | GHD: knees fixed in front of the knee pad, shins on the shin pad, feet against the plate under the ankle roller; the body lowers as one straight line from the knees to 72 degrees and back (root on the circle around the knee, 12 keys: knee drift < 1 cm) |
+| Landmine press | left arm (`sym: false`), 15-degree lean; the bar pivots on the floor 2.1 m in front (`aim` at the grip point), neutral grip on the sleeve end (`hax` along the bar), from the front of the shoulder (elbow ~125) up and forward to near lockout on the bar's arc |
 
 Conventional deadlift, Romanian deadlift and Sumo deadlift use `bar.hang` (elbows ~4 degrees all the way; before, the bar
 positions left the deadlift elbows bent up to 46 degrees and the RDL up to 32). New variation motions: Romanian deadlift
@@ -343,6 +375,15 @@ elbows forward, forearms ~90), Lat pulldown Grip Close neutral (V-handle via var
 * Machine levers are links from a fixed pivot to the moving handle: the handle paths follow the arc in a few keys, so a lever
   changes its length by a few millimetres between keys. Machine handles and D-handles follow the hand (always in the grip).
 * The face-pull rope is drawn as straight strands (no sag); at the end position the ring sits a few centimetres in front of the face. The front-rack elbow (~138 degrees) and the Zercher bar resting on the biceps are at the limit of the skinning.
+
+* Batch 4: ropes are drawn as straight strands; the woodchop cable crosses the front of the chest at the end of the chop and the
+  cable crunch rope's virtual bar axis passes through the head (only the strands are drawn). Two hands on one handle (Pallof press)
+  are stacked with the palms facing each other. Single-arm and single-leg exercises (cable lateral raise, external / internal
+  rotation, kickback, standing hip abduction and flexion, landmine press) animate the left side; the other side rests. The
+  glute-ham raise knee pad is a fixed roller: the thighs float up to ~2 cm above it or sink ~1.5 cm into it during the descent
+  (a real pad deforms and the knees slide). The landmine and T-bar bars keep their length within a few millimetres because the
+  hand / handle path is authored on the sphere around the pivot. Machine pads in batch 4: -16..+22 mm (glute-ham raise), otherwise
+  -11..+4 mm; seats -18..-8 mm.
 
 ## Performance (desktop GPU, built-in browser, 860x800 canvas; beta measurements, rig v2 adds the dual-quaternion blend)
 

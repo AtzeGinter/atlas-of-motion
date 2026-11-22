@@ -2126,10 +2126,13 @@ async function animRun(){
  const names=Object.keys(A),ANIMS=['Back squat','Conventional deadlift','Romanian deadlift','Barbell bench press','Barbell row','Pull-up','Lat pulldown','Overhead press','Barbell curl','Hip thrust','Lateral raise','Bulgarian split squat','Dumbbell bench press',
   'Front squat','Zercher squat','Goblet squat','Chin-up','Incline barbell bench press','Decline bench press','Close-grip bench press','Incline dumbbell press','Seated dumbbell press','Pendlay row','Good morning','Sumo deadlift','Shrug','Hammer curl','Upright row','Front raise','Skull crusher','Reverse lunge','Walking lunge','Glute bridge',
   'Leg press','Hack squat','Leg extension','Lying leg curl','Seated leg curl','Standing calf raise','Seated calf raise','Leg press calf raise','Chest press machine','Shoulder press machine',
-  'Pec deck','Reverse pec deck','Dips','Triceps pushdown','Cable fly','Seated cable row','Face pull','Straight-arm pulldown','Cable curl','Preacher curl'];
+  'Pec deck','Reverse pec deck','Dips','Triceps pushdown','Cable fly','Seated cable row','Face pull','Straight-arm pulldown','Cable curl','Preacher curl',
+  'Cable lateral raise','Low-to-high cable fly','Overhead triceps extension','Cable crunch','Pallof press','Cable woodchop','Cable external rotation','Cable internal rotation','Cable glute kickback','Standing cable hip abduction',
+  'Standing cable hip flexion','Cable pull-through','Machine row','T-bar row','Smith machine squat','Assisted pull-up','Machine crunch','Rotary torso machine','Hip abduction machine','Hip adduction machine','Back extension',
+  'Back extension machine','Reverse hyperextension','Glute-ham raise','Landmine press'];
  ok(ANIMS.every(n=>A[n])&&names.every(n=>META.ex.some(e=>e.n===n)&&A[n].keys[0].t===0&&A[n].keys[A[n].keys.length-1].t===1),'META.anim: '+names.length+' animations, all existing exercises, keys from t=0 to 1 ('+names.join(', ')+')');
  ok(names.every(n=>A[n].keys.every(k=>!('use' in k)))&&A['Back squat'].keys[0].ik.thighR&&A['Back squat'].keys[0].ik.thighR.target[0]===-A['Back squat'].keys[0].ik.thighL.target[0]&&A['Back squat'].keys[0].ik.armR.bar==='over','presets are resolved at build time and left entries are mirrored to the right (Back squat: right foot = mirrored left foot, both hands overhand on the bar)');
- ok(names.length>=53,'META.anim: at least 53 animated exercises ('+names.length+')');
+ ok(names.length>=78,'META.anim: at least 78 animated exercises ('+names.length+')');
  const exp='window.__an={get anim(){return anim},skU,segPos,segQ,SEGI,SEGJ,RIG,cpuSkin,allMeshes,boneMeshes,muscleMeshes,byKey,HM,propGrp,nerveMeshes,solvePose,poseAt,prepKeys,barC,barA,get barW(){return barW},get heldBar(){return heldBar},get skN(){return skN},get skinLv(){return skinLv}};';
  const mk=o=>boot(Object.assign({store:{}},o,{js:js.replace('//@licexport',exp)}));
  const x=mk({}),xd=x.document,xq=s=>xd.querySelector(s),xqa=s=>[...xd.querySelectorAll(s)];
@@ -2227,15 +2230,17 @@ async function animRun(){
   if(!btn()||xq('#card h2').textContent!==nmx) exI(nmx).click();
   btn().click();await waitFor(()=>X.anim&&X.anim.ready,30000,nmx);
   xq('#animPP').click();
-  const def=A[nmx],k0=def.keys[0],fixed=['thighL','thighR'].filter(c=>k0.ik[c]&&def.keys.every(k=>!k.ik||!k.ik[c]||!k.ik[c].target||k.ik[c].target.join()===k0.ik[c].target.join()));
+  const def=A[nmx],k0=def.keys[0],fixed=['thighL','thighR'].filter(c=>(k0.ik||{})[c]&&def.keys.every(k=>!k.ik||!k.ik[c]||!k.ik[c].target||k.ik[c].target.join()===k0.ik[c].target.join()));
   if(X.heldBar) barNames.push(nmx); if(fixed.length) ftNames.push(nmx);
   for(let s=0;s<=24;s++){
    sl.value=String(Math.round(s/24*999));sl.dispatchEvent(new x.Event('input',{bubbles:true}));
    if(Array.from(X.skU.value).some(v=>!isFinite(v))) {allOk=false;why=nmx;}
-   if(X.heldBar&&k0.ik.armL&&k0.ik.armL.bar) ['L','R'].forEach(sd=>{const e=gpt(sd).distanceTo(X.barC.clone().addScaledVector(X.barA,(sd==='L'?1:-1)*X.barW/2));worst=Math.max(worst,e);if(e>0.005){barOk=false;why=nmx+' t='+X.anim.t.toFixed(2)+' '+sd+' '+(e*1000).toFixed(1)+' mm';}});
+   if(X.heldBar&&(k0.ik||{}).armL&&k0.ik.armL.bar) ['L','R'].forEach(sd=>{const e=gpt(sd).distanceTo(X.barC.clone().addScaledVector(X.barA,(sd==='L'?1:-1)*X.barW/2));worst=Math.max(worst,e);if(e>0.005){barOk=false;why=nmx+' t='+X.anim.t.toFixed(2)+' '+sd+' '+(e*1000).toFixed(1)+' mm';}});
    fixed.forEach(c=>{if(!near(X.segPos[X.SEGI['foot'+c.slice(-1)]].toArray(),k0.ik[c].target,0.002)){feetOk=false;why=nmx+' '+c;}});
    if(STRAIGHT.includes(nmx)) elbowMax[nmx]=Math.max(elbowMax[nmx]||0,elbowAt('L'),elbowAt('R'));
-   (MET[nmx]=MET[nmx]||[]).push({t:X.anim.t,el:elbowAt('L'),er:elbowAt('R'),kn:kneeAt('L'),pl:plantAt('L'),pel:X.segPos[0].toArray(),pq:X.segQ[0].toArray(),S:X.segPos[X.SEGI.armL].toArray(),E:X.segPos[X.SEGI.foreL].toArray(),W:X.segPos[X.SEGI.handL].toArray(),props:X.propGrp.children.length});
+   (MET[nmx]=MET[nmx]||[]).push({t:X.anim.t,el:elbowAt('L'),er:elbowAt('R'),kn:kneeAt('L'),pl:plantAt('L'),pel:X.segPos[0].toArray(),pq:X.segQ[0].toArray(),S:X.segPos[X.SEGI.armL].toArray(),E:X.segPos[X.SEGI.foreL].toArray(),W:X.segPos[X.SEGI.handL].toArray(),props:X.propGrp.children.length,
+    cq:X.segQ[X.SEGI.chest].toArray(),K:X.segPos[X.SEGI.shankL].toArray(),KR:X.segPos[X.SEGI.shankR].toArray(),G:gpt('L').toArray(),bar:X.heldBar?X.barC.toArray():null,
+    C7:new T.Vector3().fromArray(J('neck')).sub(X.SEGJ[X.SEGI.chest]).applyQuaternion(X.segQ[X.SEGI.chest]).add(X.segPos[X.SEGI.chest]).toArray()});
    if(s===0&&/deadlift/.test(nmx)&&nmx!=='Romanian deadlift') elbowMax[nmx+' floor']=X.barC.y;
    ['footL','footR','handL','handR'].forEach(sn=>{if(X.segPos[X.SEGI[sn]].y<0.03){floorOk=false;why=nmx+' '+sn;}});
    if(X.heldBar&&X.barC.y<0.2){floorOk=false;why=nmx+' bar';}
@@ -2259,6 +2264,22 @@ async function animRun(){
  const db=MET['Dips'].reduce((a,m)=>Math.abs(m.t-0.5)<Math.abs(a.t-0.5)?m:a);
  ok(db.S[1]<db.E[1]+0.04&&mn('Dips',m=>m.el)<20,'Dips: from straight arms down to shoulders at elbow depth (shoulder '+cm(db.S[1]-db.E[1])+' relative to the elbow at the bottom)');
  ok(mx('Straight-arm pulldown',m=>Math.max(m.el,m.er))<20&&mx('Hack squat',m=>m.kn)>95&&MET['Hack squat'].every(m=>m.pq.every((v,i)=>Math.abs(v-MET['Hack squat'][0].pq[i])<1e-9)),'Straight-arm pulldown keeps the arms straight (elbows < '+degs(mx('Straight-arm pulldown',m=>Math.max(m.el,m.er))+1)+' degrees); hack squat below parallel (knee '+degs(mx('Hack squat',m=>m.kn))+') with the torso angle of the back pad');
+ // batch 4: cable and machine exercises
+ const Q4=a=>new T.Quaternion().fromArray(a),yawOf=a=>{const f=new T.Vector3(0,0,1).applyQuaternion(Q4(a));return Math.atan2(f.x,f.z)*180/Math.PI;},upOf=a=>new T.Vector3(0,1,0).applyQuaternion(Q4(a)),angV=(a,b)=>Math.acos(Math.max(-1,Math.min(1,a.clone().normalize().dot(b.clone().normalize()))))*180/Math.PI;
+ const rngOf=(n,f)=>mx(n,f)-mn(n,f),spineBend=m=>angV(upOf(m.pq),upOf(m.cq)),tilt=m=>angV(upOf(m.pq),new T.Vector3(0,1,0));
+ ok(rngOf('Pallof press',m=>yawOf(m.cq))<2&&rngOf('Pallof press',m=>yawOf(m.pq))<1&&rngOf('Pallof press',m=>m.G[2])>0.3,'Pallof press: the torso stays square (chest turns '+rngOf('Pallof press',m=>yawOf(m.cq)).toFixed(1)+' degrees) while the hands press '+cm(rngOf('Pallof press',m=>m.G[2]))+' straight out');
+ ok(still('Cable crunch')&&mx('Cable crunch',spineBend)>50&&still('Machine crunch')&&mx('Machine crunch',spineBend)>50,'cable crunch and machine crunch: the pelvis stays fixed while the spine curls (chest '+degs(mx('Cable crunch',spineBend))+' / '+degs(mx('Machine crunch',spineBend))+' degrees against the pelvis)');
+ const fa=m=>Math.atan2(m.W[0]-m.E[0],m.W[2]-m.E[2])*180/Math.PI,ROT=['Cable external rotation','Cable internal rotation'];
+ ok(ROT.every(n=>drift(n,'E')<0.005&&rngOf(n,fa)>90&&rngOf(n,m=>m.el)<2),'cable external / internal rotation: the elbow stays at the side (drift '+ROT.map(n=>(drift(n,'E')*1000).toFixed(1)+' mm').join(', ')+') while the forearm swings '+ROT.map(n=>degs(rngOf(n,fa))).join(' / ')+' degrees about the upper-arm axis');
+ const line=m=>angV(V3(m.pel).sub(V3(m.K)),V3(m.C7).sub(V3(m.pel)));
+ ok(drift('Glute-ham raise','K')<0.01&&rngOf('Glute-ham raise',line)<3&&rngOf('Glute-ham raise',tilt)>60,'glute-ham raise: the knees stay on the pad (drift '+(drift('Glute-ham raise','K')*1000).toFixed(1)+' mm) and the body lowers '+degs(rngOf('Glute-ham raise',tilt))+' degrees as one line from knee to shoulder (knee-hip-C7 angle constant within '+rngOf('Glute-ham raise',line).toFixed(1)+')');
+ ok(mx('Back extension',spineBend)<4&&rngOf('Back extension',tilt)>75&&drift('Back extension','K')<0.003,'back extension: the hips hinge '+degs(rngOf('Back extension',tilt))+' degrees over the pad with a neutral spine (chest within '+mx('Back extension',spineBend).toFixed(1)+' degrees of the pelvis) and the legs fixed');
+ ok(still('Reverse hyperextension')&&rngOf('Reverse hyperextension',m=>m.K[1])>0.3&&still('Rotary torso machine')&&rngOf('Rotary torso machine',m=>yawOf(m.cq))>35,'reverse hyperextension: the torso stays on the pad while the legs swing up (knees rise '+cm(rngOf('Reverse hyperextension',m=>m.K[1]))+'); rotary torso: the pelvis stays put while the chest turns '+degs(rngOf('Rotary torso machine',m=>yawOf(m.cq)))+' degrees');
+ ok(rngOf('Cable woodchop',m=>yawOf(m.cq))>60&&rngOf('Cable woodchop',m=>yawOf(m.pq))>40&&mx('Cable woodchop',m=>m.bar[1])>1.6&&mn('Cable woodchop',m=>m.bar[1])<1.0,'cable woodchop: high to low (hands '+mx('Cable woodchop',m=>m.bar[1]).toFixed(2)+' -> '+mn('Cable woodchop',m=>m.bar[1]).toFixed(2)+' m) while the chest turns '+degs(rngOf('Cable woodchop',m=>yawOf(m.cq)))+' and the pelvis '+degs(rngOf('Cable woodchop',m=>yawOf(m.pq)))+' degrees');
+ ok(rngOf('Smith machine squat',m=>m.bar[0])<0.002&&rngOf('Smith machine squat',m=>m.bar[2])<0.01&&rngOf('Smith machine squat',m=>m.bar[1])>0.35&&mx('Smith machine squat',m=>m.kn)>95,'Smith machine squat: the bar runs on the vertical rails (fore-aft drift '+cm(rngOf('Smith machine squat',m=>m.bar[2]))+' over '+cm(rngOf('Smith machine squat',m=>m.bar[1]))+' of travel), knees to '+degs(mx('Smith machine squat',m=>m.kn)));
+ const lmP=V3(A['Landmine press'].props.find(p=>p.aim).pos),tbP=V3(A['T-bar row'].props.find(p=>p.aim).pos),lmR=MET['Landmine press'].map(m=>V3(m.G).distanceTo(lmP)),tbR=MET['T-bar row'].map(m=>V3(m.bar).distanceTo(tbP));
+ ok(Math.max(...lmR)-Math.min(...lmR)<0.02&&Math.max(...tbR)-Math.min(...tbR)<0.01&&rngOf('Landmine press',m=>m.el)>80,'landmine press and T-bar row: the hand / handle stays on the arc of the bar around its floor pivot (length varies '+((Math.max(...lmR)-Math.min(...lmR))*1000).toFixed(0)+' / '+((Math.max(...tbR)-Math.min(...tbR))*1000).toFixed(0)+' mm); the press extends the elbow '+degs(mx('Landmine press',m=>m.el))+' -> '+degs(mn('Landmine press',m=>m.el)));
+ ok(['Hip abduction machine','Hip adduction machine'].every(n=>still(n)&&rngOf(n,m=>m.K[0]-m.KR[0])>0.35),'hip abduction / adduction machine: seated still while the knees move '+['Hip abduction machine','Hip adduction machine'].map(n=>cm(rngOf(n,m=>m.K[0]-m.KR[0]))).join(' / ')+' apart and together');
  ok(STRAIGHT.every(n=>elbowMax[n]<10),'straight arms: the elbows stay locked (< 10 degrees of flexion) in every sampled frame of '+STRAIGHT.map(n=>n+' '+elbowMax[n].toFixed(1)).join(', '));
  ok(['Conventional deadlift','Sumo deadlift'].every(n=>Math.abs(elbowMax[n+' floor']-0.225)<0.004),'deadlifts start from the floor: bar centre at plate radius ('+['Conventional deadlift','Sumo deadlift'].map(n=>(elbowMax[n+' floor']*1000).toFixed(0)+' mm').join(', ')+') with straight arms (bar.hang)');
  ok(barOk&&barNames.length>=18,'two-hand bar constraint: both grip points stay on the bar at grip width in every sampled frame of '+barNames.length+' bar exercises (worst '+(worst*1000).toFixed(1)+' mm)'+(barOk?'':' ('+why+')'));
@@ -2278,7 +2299,7 @@ async function animRun(){
    if(neutral&&!(X.heldBar&&(nmx==='Pull-up'?(A[nmx].props.find(pp=>pp.type==='pullbar')||{}).handles:(X.anim.ps||[]).some(pp=>pp.type==='vhandle')))){vOk=false;vWhy=nmx+'/'+o[0]+' no handles';}
    for(let s=0;s<=12;s++){sl.value=String(Math.round(s/12*999));sl.dispatchEvent(new x.Event('input',{bubbles:true}));
     if(neutral) ['L','R'].forEach(sd=>{const pr=pronAt(sd);pMin=Math.min(pMin,pr);pMax=Math.max(pMax,pr);if(pr<55||pr>125){vOk=false;vWhy=nmx+'/'+o[0]+' forearm '+pr.toFixed(0);}});
-    if(X.heldBar&&A[nmx].keys[0].ik.armL&&A[nmx].keys[0].ik.armL.bar) ['L','R'].forEach(sd=>{const er=gpt(sd).distanceTo(X.barC.clone().addScaledVector(X.barA,(sd==='L'?1:-1)*X.barW/2));if(er>0.005){vOk=false;vWhy=nmx+'/'+o[0]+' '+(er*1000).toFixed(1)+' mm';}});}
+    if(X.heldBar&&(A[nmx].keys[0].ik||{}).armL&&A[nmx].keys[0].ik.armL.bar) ['L','R'].forEach(sd=>{const er=gpt(sd).distanceTo(X.barC.clone().addScaledVector(X.barA,(sd==='L'?1:-1)*X.barW/2));if(er>0.005){vOk=false;vWhy=nmx+'/'+o[0]+' '+(er*1000).toFixed(1)+' mm';}});}
    xq('#card [data-var="'+gi+':0"]').click();
   }
   xq('#animStop').click();
