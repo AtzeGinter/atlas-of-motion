@@ -4,8 +4,10 @@ Goal: animate the existing atlas body (the real BodyParts3D / Z-Anatomy meshes, 
 muscles bending at the joints and the exercise heat colours (prime mover / synergist / stabiliser) visible while it moves.
 v2.5 shipped a beta with two exercises; rig v2 adds forearm rotation, gripping hands, a three-part thoracolumbar spine, held bars
 and other props, pose presets and 13 animated exercises; the next round added straight-arm hanging bars (`bar.hang`), neutral
-grips on parallel handles and a V-handle, per-variation props, body-held dumbbells, two dev helpers and 20 more exercises (33 in
-all, list at the end).
+grips on parallel handles and a V-handle, per-variation props, body-held dumbbells, two dev helpers and 20 more exercises; batch 3
+added generic machine props (static frames and pads, groups that follow a segment, sleds on rails, lever links), cable bars, a rope,
+cables to any anchor, machine handles held by IK (`ik.hax` / `ik.hfd`) and 20 machine and cable exercises (53 in all, list at the
+end).
 
 ## Overview
 
@@ -123,8 +125,28 @@ for single-axis joints, an axis. The segment transform is a rotation `q` about t
   hand at `pt.grip`, handle along `dir.gax`; or, with `seg` = a body segment and `at` (bind pose) + optional `rot`, held against
   the body: the goblet squat's dumbbell rides on `chest`, handle vertical), `barbell` (`len`, `plates` `[[radius, thickness], ...]`,
   `w`, optional `seg` + `at`), `pullbar` (`len`, `posts`, optional `handles: [distance, length]` = two parallel neutral-grip
-  handles across the bar), `latbar`, `vhandle` (close neutral grip: two parallel grips `w` apart joined to a cable ring), `cable`
-  (`pulley`, `stack`: a tower and a cable from the pulley to the held bar, updated every frame).
+  handles across the bar), `latbar`, `vhandle` (close neutral grip: two parallel grips `w` apart joined to a cable ring),
+  `straightbar` (straight cable bar `len` with end caps and a swivel sleeve: pushdown, cable curl, straight-arm pulldown),
+  `rope` (held bar of grip width `w` down to 0.08, gripped `"neutral"`: from a ring two strands of length `len` run to the fists,
+  through them along the bar frame's z and end in knobs; the ring points toward `toward`, normally the pulley, and is rebuilt
+  every frame from `barW`, so the rope opens into a V as the hands spread), `cable` (`pulley`, `stack [x, z]`, optional `top` =
+  tower height: a tower and a cable from the pulley to `to`, any anchor, default the held bar's centre; updated every frame).
+* **Anchors** (points props attach to): `[x, y, z]` fixed in the world; `{seg, at}` a bind-pose point carried by a segment;
+  `{seg: "handL", grip: d}` the hand's grip point moved `d` along the handle axis (toward the thumb); `{bar: [x, y, z]}` a point in
+  the held bar's frame, `{bar: "L" | "R"}` that hand's grip point on it, `{bar: "ring"}` the rope's ring.
+* **Machines** (`machine`): a group of `parts`, each `{box: [sx, sy, sz]}` | `{cyl: [r, length]}` (along local y) |
+  `{rod: [[x,y,z], [x,y,z]], r}` with `pos`, `rot` (Euler degrees), `mat` (`pad` | `frame` | `iron` | `grip` | `cable`) and
+  `pad: true` (+ `name`) for a contact pad (box: its local +y face; roller: its surface; `animcheck.js` reports how deep the body
+  sinks into it). Without `seg` the group is static (`pos`, `yaw`). With `seg` it follows a body segment: `"follow": "rigid"`
+  (default) carries the parts with the segment (rollers on the shin and their lever to the knee axis, `at: [0,0,0]` = parts in
+  bind-pose world coordinates), `at: "grip"` on a hand puts the origin at the grip point with local y along the handle (machine
+  handles, D-handles), `"follow": "move"` only translates the group with the anchor `at` (orientation `rot` stays: the leg
+  press sled under the feet, the hack squat carriage on the chest, the calf machine's shoulder pads), optionally constrained to
+  a rail: `axis` (+ `base`, a point on the rail line) keeps only the motion along the axis, and with `normal` it slides as far as
+  keeps the anchor on that contact plane. `"seg": "bar"` rides on the held bar.
+* **Links** (`link`): a rod (`r`, `mat`) between two anchors, re-stretched every frame: lever arms from a fixed pivot to a handle
+  (chest press, shoulder press, pec deck: the hand moves on an arc around the pivot, so the rod keeps its length within a few
+  millimetres), the preacher machine's lever to the bar ends, D-handle straps.
 * **Variation props**: a variation option may replace the exercise's props (`vars[group][option].props`, next to its key
   patches); `animProps(i, def)` picks them and a variation change while playing rebuilds the props (Lat pulldown Close neutral
   swaps the lat bar for a V-handle).
@@ -146,10 +168,15 @@ Per exercise name (must exist in `exercises.py`):
     `arm`/`thigh` `flex abd rot` (rot = internal rotation); `fore` `flex pron`; `shank` `flex`; `foot` `flex`; `hand` `flex dev grip`.
   * `ik`: `{thighL|thighR|armL|armR: {target, pole, end?, bar?, wext?}}`: `target` = world position of the ankle / wrist, `pole` =
     direction the knee / elbow points to (world space: rotate it with the torso when the torso leans a lot), `end` = world Euler
-    of the foot / hand, `bar` = "over" | "under" | "neutral" (arms only, instead of target and end), `wext` -60..90. Chains are declared in key 0. Joints a chain drives cannot also get `j` angles (lint); exceptions:
+    of the foot / hand, `bar` = "over" | "under" | "neutral" (arms only, instead of target and end), `wext` -60..90; a handle:
+    `hax` (world direction of the handle toward the thumb) + `hfd` (finger direction, from the wrist along the hand): the hand
+    orientation comes from these two (`frameQ`, like a bar grip), the forearm rotation follows and `target` becomes the grip point
+    (the handle's centre) instead of the wrist, so machine handle paths are authored where the handles are (mirrored like `pole`).
+    Chains are declared in key 0. Joints a chain drives cannot also get `j` angles (lint); exceptions:
     `fore.pron` when the hand orientation is free, `hand.grip` always.
   * `bar`: `{pos | hang, rot, w}` for a held bar that is not attached to a segment (attached ones take only `w`); `hang: [f, tilt]`
-    = hanging from straight arms (above).
+    = hanging from straight arms (above; tilt -45..150 degrees, past 90 the bar is in front of and above the shoulders: the
+    straight-arm pulldown sweeps it from 105 to -2).
 * `_presets`: `{name: fragment}`; a fragment is a partial key (`root`, `j`, `ik`, `bar`, and `use` for other presets). A key's
   `use` (name or list) merges the presets in order (dicts recursively, numbers and lists replace), then the key's own fields.
 * Mirroring (`sym`, default true): after merging, every left entry of `j` / `ik` without a right entry in the same key gets one
@@ -221,7 +248,8 @@ Per exercise name (must exist in `exercises.py`):
   elbow flexion L/R (3D angle shoulder-elbow-wrist; the atlas pose has ~12), forearm rotation L/R (90 = neutral), knee flexion,
   bar centre height / depth and its clearance to the nearest body vertex outside the hands (mm, negative = inside a muscle or
   bone, with that structure), the same for dumbbells, the lowest body vertex (floor) and, per bench, how deep the body sinks
-  into the seat / backrest (< 0) or floats above it (> 0). `--summary` = one line per exercise with the worst values; no names
+  into the seat / backrest (< 0) or floats above it (> 0), and the same for every machine pad (`pad: true`; only vertices within
+  the pad's thickness count, so a torso behind a thin pad is not reported). `--summary` = one line per exercise with the worst values; no names
   = every animated exercise. As a module (`bootAnim()`) it also serves quick tuning scripts: solve a key's root position for a
   wanted bar position, grid-search a pole, fit FK arm angles to a point.
 * `node animshot.js "Exercise" --t 0,0.5 [--var Group=Option] [--turn px] [--zoom n] [--out dir] [--url http://127.0.0.1:8799/]`
@@ -267,6 +295,26 @@ Per exercise name (must exist in `exercises.py`):
 | Reverse lunge | right leg steps back (foot lifted on the way), rear knee close to the floor on the toes, return (`sym: false`) |
 | Walking lunge | done in place as a forward lunge: left leg steps forward, rear heel rises, push back (`sym: false`) |
 | Glute bridge | supine on the floor, feet flat, hips up until knees-hips-shoulders line up, upper back and head stay on the floor (upper spine flexes to stay flat) |
+| Leg press | 45-degree sled; back on a 31-degree pad, pelvis fixed (no tuck), knees 18 -> 90 degrees; the ankles move on the sled line through the hips, the foot plate (a `move` sled under the left foot) is tilted so the ankles go from ~24 degrees plantarflexion at lockout to ~20 dorsiflexion at the bottom; variation Feet High / Low (feet shifted up / down the plate) / Wide (toes out 18) |
+| Hack squat | back and shoulder pads on a carriage that follows the chest along 50-degree rails, torso angle constant, feet on a 20-degree plate, knees 18 -> 105 (below parallel) |
+| Leg extension | seated, thighs level, shin roller with its lever to the knee axis (rigid on the shank), knees 90 -> 4, hands on side handles |
+| Lying leg curl | prone on a flat bench, hips fixed on the pad, heel roller (rigid on the shank), knees 4 -> 121, hands on front handles |
+| Seated leg curl | seated, thigh pad above the knees, roller behind the ankles, knees 15 -> 110 |
+| Standing calf raise | balls of the feet on the edge of a narrow block (the toes overhang its front), the foot turns about the ball from -16 (stretch) to +32 degrees, knees ~15 degrees throughout, shoulder pads on a carriage sliding up two posts; variation Feet Toes out / Toes in (foot yaw, the ball stays on the edge) |
+| Seated calf raise | knees ~90 degrees, balls on a block, the knee pad rides on the thighs, ankle -14 -> +30 |
+| Leg press calf raise | legs nearly straight on the leg press (knees ~18 degrees), the balls of the feet on the plate's lower edge, the foot turns about the ball from a real stretch to the peak (ankle ~-13 to ~+39 degrees against the shank), the plate slides along the rails |
+| Chest press machine | seated, horizontal pronated handles (`hax`/`hfd`), levers from an overhead pivot, hands on the lever arc from beside the chest to near lockout |
+| Shoulder press machine | seated, pronated handles from beside the head (elbows ~90) to overhead, levers from pivots behind the seat |
+| Pec deck | seated, upper arms level (flex 80 + 5 lean = horizontal), internal rotation 90 so the elbows point back, elbow bend 16 constant, thumbs up on vertical handles, arms swing about a vertical axis through the shoulder; lever links to pivots above the shoulders |
+| Reverse pec deck | chest on a pad, arms from in front (abd 18) back to slightly behind the frontal plane (abd 94), elbows ~12 degrees constant, shoulder blades retract |
+| Dips | parallel bars, neutral grip on the bars (`hax` forward, fingers down and out), knees bent behind, 16 -> 28 degrees forward lean, from straight arms down to the shoulders at elbow height; variation Torso Upright (5 -> 9 degrees) |
+| Triceps pushdown | straight cable bar from a high pulley, slight forward lean, bar positions and poles fitted on an arc around a fixed elbow (elbow drift < 2 cm), elbow 94 -> 14 degrees |
+| Cable fly | standing between two towers, FK arms (flex 52 -> 70, abd 84 -> 14, internal rotation 90, elbow 20 constant), D-handles in the hands, a cable from each high pulley |
+| Seated cable row | low bench, feet on a plate, V-handle (turned so its grips are vertical, thumbs up) from arms extended with a 18-degree lean to the upper abdomen with the torso slightly behind vertical, shoulder blades from protracted to retracted; variation Elbows Flared (straight bar overhand to the lower chest, elbows out) |
+| Face pull | rope from a face-height pulley, from arms extended (thumbs up) to the hands beside the head with the elbows at shoulder height and the forearms vertical (external rotation, thumbs back) |
+| Straight-arm pulldown | slight hip hinge, straight bar on `bar.hang` (elbows ~15 degrees) from eye level to the thighs |
+| Cable curl | the barbell curl motion with a straight cable bar and a low pulley |
+| Preacher curl | machine: upper arms on two angled arm pads, bar fitted on an arc around the fixed elbows (drift < 2 cm), elbow 22 -> 118, lever links from hubs on the elbow axis to the bar ends |
 
 Conventional deadlift, Romanian deadlift and Sumo deadlift use `bar.hang` (elbows ~4 degrees all the way; before, the bar
 positions left the deadlift elbows bent up to 46 degrees and the RDL up to 32). New variation motions: Romanian deadlift
@@ -287,7 +335,14 @@ elbows forward, forearms ~90), Lat pulldown Grip Close neutral (V-handle via var
 * No toe joints: a heel-up rear foot (lunges) pivots as one rigid piece, so it is lifted only ~30 degrees and the toes rest on the
   floor instead of bending. The goblet dumbbell sits a little high (top head near the chin) so the forearms clear its heads.
 * Bench contact is measured on muscles and bones (there is no skin): bodies rest a few millimetres into the pad, thighs on a
-  seat up to ~1 cm. The front-rack elbow (~138 degrees) and the Zercher bar resting on the biceps are at the limit of the skinning.
+  seat up to ~1.5 cm (the hamstrings of the standing atlas pose hang lower than the buttocks when the hip flexes 90 degrees, so a
+  seat that touches the buttocks would swallow the thighs; the seats are set between). Machine pads: -13..+6 mm (`animcheck.js`).
+* Calf raises without toe joints: the foot turns as one rigid piece. On the standing and seated calf raise the block is narrow
+  and the toes overhang its front edge, so they tip down beside it instead of bending; on the leg press calf raise the foot turns
+  about the ball on the plate, so the toes lift off the plate in the stretch and the toe tips touch it (up to ~9 mm in) at the peak.
+* Machine levers are links from a fixed pivot to the moving handle: the handle paths follow the arc in a few keys, so a lever
+  changes its length by a few millimetres between keys. Machine handles and D-handles follow the hand (always in the grip).
+* The face-pull rope is drawn as straight strands (no sag); at the end position the ring sits a few centimetres in front of the face. The front-rack elbow (~138 degrees) and the Zercher bar resting on the biceps are at the limit of the skinning.
 
 ## Performance (desktop GPU, built-in browser, 860x800 canvas; beta measurements, rig v2 adds the dual-quaternion blend)
 

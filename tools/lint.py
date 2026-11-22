@@ -310,7 +310,7 @@ if rig and os.path.exists(P('data', 'animations.json')):
                         elif p['seg'] not in sn or segk(p['seg']) == 'finger': err.append(f'{w}: machine seg must be a body segment or "bar"')
                         if 'at' in p and not (num3(p['at']) or (p['at'] == 'grip' and p.get('seg') in ('handL', 'handR'))): err.append(f'{w}: machine at is [x,y,z] (bind pose) or "grip" (hands)')
                         if p.get('follow', 'rigid') not in ('rigid', 'move') or (p.get('follow') == 'move' and p['seg'] == 'bar'): err.append(f'{w}: machine follow is "rigid" or "move" (segments only)')
-                        if ('axis' in p or 'base' in p) and not (p.get('follow') == 'move' and num3(p.get('axis')) and num3(p.get('base', [0, 0, 0]))): err.append(f'{w}: machine axis [x,y,z] (+ base [x,y,z], a point on the rail line) needs follow "move"')
+                        if ('axis' in p or 'base' in p or 'normal' in p) and not (p.get('follow') == 'move' and num3(p.get('axis')) and num3(p.get('base', [0, 0, 0])) and num3(p.get('normal', [0, 0, 1]))): err.append(f'{w}: machine axis [x,y,z] (+ base [x,y,z], a point on the rail line, + normal [x,y,z] of a contact plane) needs follow "move"')
                         if 'rot' in p and not num3(p['rot']): err.append(f'{w}: machine rot must be [x,y,z] degrees')
                     else:
                         if [k for k in ('at', 'follow', 'rot') if k in p]: err.append(f'{w}: at / follow / rot need a seg (a static machine takes pos and yaw)')

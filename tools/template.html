@@ -2511,7 +2511,7 @@ function buildProps(def,list){
           const s=SEGI[p.seg], sd=p.seg.slice(-1);
           if(p.at==="grip"){ at=new THREE.Vector3().fromArray(RIG.pt["grip"+sd]); q0=new THREE.Quaternion().setFromUnitVectors(k_y,gaxB[sd]).multiply(q0); }   // local y = the handle axis (toward the thumb), origin = the grip point
           else at=new THREE.Vector3().fromArray(p.at||SEGJ[s].toArray());
-          if(p.follow==="move") props.push({obj:g,move:anchorFn({seg:p.seg,at:at.toArray()}),q0:q0,axis:p.axis?new THREE.Vector3().fromArray(p.axis).normalize():null,base:new THREE.Vector3().fromArray(p.base||[0,0,0])});   // move: position only; with axis (+ base) only along that line (a sled on its rails)
+          if(p.follow==="move") props.push({obj:g,move:anchorFn({seg:p.seg,at:at.toArray()}),q0:q0,axis:p.axis?new THREE.Vector3().fromArray(p.axis).normalize():null,base:new THREE.Vector3().fromArray(p.base||[0,0,0]),normal:p.normal?new THREE.Vector3().fromArray(p.normal).normalize():null});   // move: position only; with axis (+ base) only along that line (a sled on its rails); with normal as far along it as keeps the anchor on that plane (a foot plate the ball of the foot pushes)
           else props.push({obj:g,seg:s,loc:new THREE.Matrix4().compose(at,q0,k_one)});
         }
       }
@@ -2527,7 +2527,7 @@ function syncProps(){
     if(p.seg!==undefined&&!p.bar){ p.obj.matrix.multiplyMatrices(segMatrix(p.seg,k_pm),p.loc); p.obj.matrixWorldNeedsUpdate=true; }
     else if(p.bar){ p.obj.matrix.compose(barC,barQ,k_one); p.obj.matrixWorldNeedsUpdate=true; if(p.rope) syncRope(p.rope); }
     else if(p.onBar){ p.obj.matrix.compose(barC,barQ,k_one).multiply(p.onBar); p.obj.matrixWorldNeedsUpdate=true; }
-    else if(p.move){ p.move(k_a0); if(p.axis) k_a0.sub(p.base).projectOnVector(p.axis).add(p.base); p.obj.matrix.compose(k_a0,p.q0,k_one); p.obj.matrixWorldNeedsUpdate=true; }
+    else if(p.move){ p.move(k_a0); if(p.axis){ k_a0.sub(p.base); const s=p.normal?k_a0.dot(p.normal)/(p.axis.dot(p.normal)||1):k_a0.dot(p.axis); k_a0.copy(p.base).addScaledVector(p.axis,s); } p.obj.matrix.compose(k_a0,p.q0,k_one); p.obj.matrixWorldNeedsUpdate=true; }
     else if(p.link) setRod(p.obj,p.link[0](k_a0),p.link[1](k_a1));
   });
 }
