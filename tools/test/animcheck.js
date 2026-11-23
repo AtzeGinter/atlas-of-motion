@@ -13,6 +13,9 @@
 //   floor   the lowest body vertex (m) and its structure (< 0 = below the floor)
 //   bench   per bench: the body vertex nearest to (or deepest in) the pad's top surface (mm; < 0 = sinking in, > 0 = floating)
 //   pads    the same per machine pad (parts with pad: true; rollers: distance to the cylinder surface)
+//   floor contact (after each exercise) the lowest vertex per body region (hand, forearm, upper arm, thigh, shin, foot L / R, trunk,
+//           head; by the segment of the vertex's first skin influence) for the regions that come within 3 cm of the floor, as the range
+//           over the repetition (mm): a resting contact stays at ~0, a lifted one rises, nothing should sink below ~-10
 // Usage (from tools/test):  node animcheck.js ["Exercise name" ...] [--var Group=Option] [--frames 24] [--lod low|medium|high] [--summary] [--fast]
 //   no names = every animated exercise; --summary prints one line per exercise (worst values); --fast skips the clearances and the floor
 // As a module: const {bootAnim} = require('./animcheck.js'); const A = await bootAnim({lod:'low'}); A.play(name, vars); A.at(t); A.measure();
@@ -48,6 +51,10 @@ async function bootAnim(opts){
   const reachOf=sd=>J('fore'+sd).distanceTo(J('arm'+sd))+J('hand'+sd).distanceTo(J('fore'+sd));
   const ang=(a,b,c)=>{const u=a.clone().sub(b).normalize(),v=c.clone().sub(b).normalize();return 180-Math.acos(Math.max(-1,Math.min(1,u.dot(v))))*180/Math.PI;};
   const hand=m=>m.userData.group==='Hand';
+  // body regions for the floor-contact report: segment index -> region name (fingers count with their hand)
+  const RG={hand:'hand',rad:'forearm',fore:'forearm',arm:'upper arm',clav:'upper arm',thigh:'thigh',shank:'shin',foot:'foot'};
+  const REGION=X.RIG.seg.map((s,i)=>{ let k=i; while(k>=X.RIG.nbody) k=X.RIG.seg[k][1]; const n=X.RIG.seg[k][0], b=n.slice(0,-1);
+    return RG[b]?RG[b]+' '+n.slice(-1):/^(neck|head)$/.test(n)?'head':'trunk'; });
   let pos=null;
   const A={w,X,T,errs,
     play:async(name,vars)=>{   // vars: {group: option} names
@@ -89,6 +96,9 @@ async function bootAnim(opts){
       if(!fast){ X.propGrp.updateMatrixWorld(true); X.props.filter(p=>p.onBar).forEach(p=>p.obj.traverse(o=>{ if(!o.geometry||o.geometry.type!=='SphereGeometry') return; const c=new T.Vector3().setFromMatrixPosition(o.matrixWorld),rr=o.geometry.parameters.radius;
         (r.db=r.db||[]).push(A.clear(c,c.clone().add(new T.Vector3(1e-6,0,0)),()=>rr,hand,[A.gripPt('L'),A.gripPt('R')])); })); }
       r.floor={y:NaN,who:''};if(fast) return r;const P=A.posed();let lo=1e9,lw='';X.allMeshes.forEach((m,mi)=>{const p=P[mi];for(let k=1;k<p.length;k+=3) if(p[k]<lo){lo=p[k];lw=m.userData.key;}});r.floor={y:lo,who:lw};
+      // floor contact per body region (lowest vertex, by the segment of its first skin influence): floor exercises rest hands, forearms,
+      // knees, feet, trunk or head on the floor (y = 0), so each region should sit at ~0 when it is a contact and never far below it
+      r.region={};X.allMeshes.forEach((m,mi)=>{const p=P[mi],I=m.geometry.attributes.aSkI.array;for(let k=0;k<p.length/3;k++){const g=REGION[I[3*k]];if(!(p[3*k+1]>=(r.region[g]?r.region[g].y:1e9))) r.region[g]={y:p[3*k+1],who:m.userData.key};}});
       {let l2=1e9,w2='';X.allMeshes.forEach((m,mi)=>{if(!/^(Back|Shoulder|Chest|Neck|Skull|Thorax|Spine|Face|Upper arm|Arm|Abdomen|Hip)$/.test(m.userData.group)) return;const p=P[mi];for(let k=1;k<p.length;k+=3) if(p[k]<l2){l2=p[k];w2=m.userData.key;}});r.floorUp={y:l2,who:w2};}   // lowest vertex of trunk, head, upper arms and hips (lying exercises: the back on the floor)
       // benches: signed distance of body vertices over the pad to its top surface (seat, and the backrest of an inclined bench); the
       // smallest value above -8 cm = how deep the body sinks in (< 0) or how far it floats above the pad (> 0)
@@ -124,16 +134,20 @@ if(require.main===module)(async()=>{
   const list=names.length?names:Object.keys(A.X.ANIM);
   const f1=x=>x.toFixed(1),f0=x=>Math.round(x),mm=c=>c.d>=1e8?'-':f0(c.d*1000)+' '+c.who;
   for(const n of list){
-    await A.play(n,vars);const W={grip:0,reach:0,elbow:0,bar:1e9,db:1e9,floor:1e9,bench:1e9,pad:1e9};let wb='',wd='',wf='',wbe='',wpd='';
+    await A.play(n,vars);const W={grip:0,reach:0,elbow:0,bar:1e9,db:1e9,floor:1e9,bench:1e9,pad:1e9,reg:{}};let wb='',wd='',wf='',wbe='',wpd='';
     if(!sum) console.log('\n'+n+(Object.keys(vars).length?' '+JSON.stringify(vars):'')+'\n    t   grip mm L/R   reach % L/R   elbow L/R   pron L/R    knee L/R   bar y,z  clearance mm             dumbbells mm            floor');
     for(let s=0;s<=frames;s++){
       A.at(Math.min(0.999,s/frames));const r=A.measure(fast);
       if(r.grip){W.grip=Math.max(W.grip,...r.grip);W.reach=Math.max(W.reach,...r.reach);}
       W.elbow=Math.max(W.elbow,...r.elbow);if(r.bar&&r.bar.d<W.bar){W.bar=r.bar.d;wb=r.bar.who+' @'+r.t.toFixed(2);}
       r.db.forEach(c=>{if(c.d<W.db){W.db=c.d;wd=c.who+' @'+r.t.toFixed(2);}});if(!fast&&r.floor.y<W.floor){W.floor=r.floor.y;wf=r.floor.who+' @'+r.t.toFixed(2);}(r.bench||[]).forEach(c=>{if(c.d<W.bench){W.bench=c.d;wbe=c.who+' @'+r.t.toFixed(2);}});(r.pads||[]).forEach(c=>{if(c.d<W.pad){W.pad=c.d;wpd=c.who+' @'+r.t.toFixed(2);}});
+      Object.keys(r.region||{}).forEach(g=>{const c=r.region[g],w=W.reg[g]||(W.reg[g]={lo:1e9,hi:-1e9});w.lo=Math.min(w.lo,c.y);w.hi=Math.max(w.hi,c.y);});
       if(!sum) console.log(r.t.toFixed(3).padStart(6)+'   '+(r.grip?r.grip.map(f1).join(' / '):'-').padEnd(12)+'  '+(r.reach?r.reach.map(f1).join(' / '):'-').padEnd(12)+'  '+r.elbow.map(f0).join(' / ').padEnd(10)+'  '+r.pron.map(f0).join(' / ').padEnd(10)+'  '+r.knee.map(f0).join(' / ').padEnd(9)+'  '+(r.barP?r.barP.map(v=>v.toFixed(3)).join(',')+' '+(r.bar?mm(r.bar):''):'-').padEnd(34)+'  '+(r.db.map(mm).join(', ')||'-').padEnd(22)+'  '+r.floor.y.toFixed(3)+' '+r.floor.who+(r.bench&&r.bench.length?'   bench '+r.bench.map(c=>mm(c)+(c.seat?' / seat '+mm(c.seat):c.back?' / back '+mm(c.back):'')).join(', '):'')+(r.pads&&r.pads.length?'   pads '+r.pads.map(mm).join(', '):''));
     }
     console.log((sum?n.padEnd(30):'worst: ')+' grip '+f1(W.grip)+' mm, reach '+f1(W.reach)+' %, elbow max '+f0(W.elbow)+', bar clearance '+(W.bar<1e8?f0(W.bar*1000)+' mm ('+wb+')':'-')+', dumbbells '+(W.db<1e8?f0(W.db*1000)+' mm ('+wd+')':'-')+', lowest '+W.floor.toFixed(3)+' m ('+wf+')'+(W.bench<1e8?', bench '+f0(W.bench*1000)+' mm ('+wbe+')':'')+(W.pad<1e8?', pads '+f0(W.pad*1000)+' mm ('+wpd+')':''));
+    // floor contact: regions that come within 3 cm of the floor, lowest .. highest of their lowest vertex over the repetition (mm)
+    const fc=Object.keys(W.reg).filter(g=>W.reg[g].lo<0.03).sort().map(g=>g+' '+f0(W.reg[g].lo*1000)+(W.reg[g].hi-W.reg[g].lo>0.002?'..'+f0(W.reg[g].hi*1000):''));
+    if(fc.length) console.log((sum?''.padEnd(30):'')+' floor contact mm: '+fc.join(', '));
     A.X.animStop(true);
   }
   if(A.errs.length) console.log('page errors:\n'+A.errs.join('\n'));

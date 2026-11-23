@@ -10,7 +10,9 @@ cables to any anchor, machine handles held by IK (`ik.hax` / `ik.hfd`) and 20 ma
 thigh `twist` DOF (rotation about the bone's own axis), machine groups that pivot toward an anchor (`aim`: landmine and T-bar bars),
 the presets `kneel` and `arms-crossed` and 25 more cable and machine exercises; batch 5 added the invisible held handle `grip` (what is
 held - trap bar, kettlebell, weight plate, a dumbbell in both hands - is built from machine parts riding on the bar), sphere parts, a
-full-circle `bar.hang` tilt and 23 dumbbell, free-weight and carry exercises (101 in all, list at the end).
+full-circle `bar.hang` tilt and 23 dumbbell, free-weight and carry exercises (101 in all); batch 6 added `root.fix` (the root follows a
+contact point: toes, knees, a heel, a hip, a shoulder), flat hands (negative `hand.grip`), the presets `pushup` and `supine-floor`, a
+floor-contact report in `animcheck.js` and 30 bodyweight exercises on the floor, on a bar and for the legs (131 in all, list at the end).
 
 ## Overview
 
@@ -176,12 +178,22 @@ Per exercise name (must exist in `exercises.py`):
 * `keys`: 3-12 keyframes, `t` rising from 0 to 1. Each key inherits whatever it does not set from the previous key; `ease`
   (`inOut` default, `in`, `out`, `linear`) shapes the segment that ends at this key.
   * `root`: `pos` (world position of the pelvis pivot; standing = `[0, 0.8842, -0.0268]`) and `rot` (world Euler XYZ, degrees;
-    `[-90, 0, 0]` = supine, `[90, 0, 0]` = prone, positive x = lean forward).
+    `[-90, 0, 0]` = supine, `[90, 0, 0]` = prone, positive x = lean forward), or `fix` instead of `pos`: `{seg, at, to}` places the
+    root so that the bind-pose point `at`, carried by segment `seg`, lands on the world point `to` in every frame (`fixRoot()` walks the
+    forward kinematics from the pelvis to `seg` before the solve). The body then turns exactly about that contact point while `root.rot`
+    and the joint angles change, instead of moving on the chord between two keyed positions: push-up toes (`footL` at the big-toe tip,
+    `[0.105, 0.015, 0.125]`), Nordic curl and ab-wheel knees (`shankL` at the tibial tuberosity, `[0.075, 0.4, 0.02]`), the inverted-row
+    heel, the bottom foot of the side planks, the medial ankle on the Copenhagen bench, the stance hip of the hip airplane (`pelvis` at
+    the left hip centre) and the shoulders of the hangs (`clavL` at the shoulder centre, so the trunk swings under the bar). Key 0
+    declares it; later keys may move only `to` (lerped); no key may also set `pos`; `seg` must not hang below an IK chain (lint). The
+    other contacts are ordinary IK targets (planted hands with `ik.end`, feet). Keep the pose symmetric (or key `to.x`) when the anchor
+    is on one side, or the body drifts sideways (the dead hang keys `to.x` as the clavicle elevates).
   * `j`: `{segment: {dof: degrees}}`, local to the parent. DOFs: `lumbar thorax chest neck head` `flex lat rot`; `clav` `elev prot`;
     `arm`/`thigh` `flex abd rot twist` (rot = internal rotation about the vertical of the bind pose; twist = internal rotation about
     the bone's own long axis, shoulder -> elbow / hip -> knee, applied first: the atlas humerus hangs ~10 degrees off vertical, so
     only twist keeps the elbow in place while the forearm swings: cable external / internal rotation, overhead triceps extension);
-    `fore` `flex pron`; `shank` `flex`; `foot` `flex`; `hand` `flex dev grip`.
+    `fore` `flex pron`; `shank` `flex`; `foot` `flex`; `hand` `flex dev grip` (`grip` -1..1: 0 = the slightly curled atlas fingers,
+    1 = wrapped around a handle, negative = straightened; -0.4..-0.6 lays the hand flat on the floor or a bench: push-ups, planks).
   * `ik`: `{thighL|thighR|armL|armR: {target, pole, end?, bar?, wext?}}`: `target` = world position of the ankle / wrist, `pole` =
     direction the knee / elbow points to (world space: rotate it with the torso when the torso leans a lot), `end` = world Euler
     of the foot / hand, `bar` = "over" | "under" | "neutral" (arms only, instead of target and end), `wext` -60..90; a handle:
@@ -215,6 +227,8 @@ Per exercise name (must exist in `exercises.py`):
 | `kneel` | both knees on the floor (thighs vertical, shins back, insteps down: cable crunch) |
 | `seated` | pelvis on a 47 cm seat, feet flat in front |
 | `arms-crossed` | forearms crossed on the chest, left over right (back extensions, glute-ham raise) |
+| `pushup` | push-up top: root 73 degrees with `root.fix` at the big-toe tips on the floor 0.85 m behind, flat hands (`grip` -0.6, palm down, fingers forward: `end` [90, 0, 180]) planted below the shoulders, elbows back and out |
+| `supine-floor` | lying on the back on the floor (root `[0, 0.103, 0]`, rot -90: back of the pelvis and the shoulder blades touch y = 0) |
 | `grip-db-neutral`, `grip-db-over`, `grip-db-under` | `hand.grip` 1 and `fore.pron` 90 / 160 / 0 (dumbbells, free hand orientation) |
 | `bar-over`, `bar-under` | arm IK on the held bar with that grip, `hand.grip` 1 |
 | `grip-close`, `grip-shoulder`, `grip-wide` | bar grip width 0.36 / 0.5 / 0.84 m |
@@ -268,7 +282,10 @@ Per exercise name (must exist in `exercises.py`):
   bone, with that structure), the same for dumbbells, the lowest body vertex (floor) and, per bench, how deep the body sinks
   into the seat / backrest (< 0) or floats above it (> 0), and the same for every machine pad (`pad: true`; only vertices within
   the pad's thickness count, so a torso behind a thin pad is not reported); spheres riding on a `grip` (the kettlebell ball) are reported with
-  the dumbbells, and the shaft-line clearance is skipped for a `grip` (an invisible handle). `--summary` = one line per exercise with the worst values; no names
+  the dumbbells, and the shaft-line clearance is skipped for a `grip` (an invisible handle). After each exercise a "floor contact" line
+  lists, for every body region that comes within 3 cm of the floor (hand, forearm, upper arm, thigh, shin, foot per side, trunk, head; by
+  the segment of each vertex's first skin influence), the range of its lowest vertex over the repetition in mm: a resting contact reads
+  ~0, a lifted limb rises, and nothing should sink below ~-10. `--summary` = one line per exercise with the worst values; no names
   = every animated exercise. As a module (`bootAnim()`) it also serves quick tuning scripts: solve a key's root position for a
   wanted bar position, grid-search a pole, fit FK arm angles to a point.
 * `node animshot.js "Exercise" --t 0,0.5 [--var Group=Option] [--turn px] [--zoom n] [--out dir] [--url http://127.0.0.1:8799/]`
@@ -378,6 +395,35 @@ Per exercise name (must exist in `exercises.py`):
 | Meadows row | landmine bar to the lifter's right (`aim` at the grip point, pivot 2.1 m away and slightly forward), staggered stance with the right leg forward and the right hand on the right knee, ~60-degree hinge; the left hand grips the sleeve end overhand (`hax` toward the pivot, plates on the thumb side) and rows on the bar's arc from a straight arm to beside the hip with the elbow high |
 | Kettlebell swing | two hands on one handle (`grip` w 0.12, overhand, `bar.hang` f 0.99), wide stance; hinge to 58 degrees with the bell hiked back between the legs (tilt -26), hips snap through to a float at chest height (tilt 72, hands at 1.2 m) with the bell in line with the arms |
 | Russian twist | seated on the floor, torso 40 degrees back, feet lifted (V-sit), a plate held at its rim (`grip` riding on `chest`, neutral grip); spine rotation 8 / 15 / 15 to each side (81 degrees in all) while the pelvis stays still |
+| Push-up | `pushup` preset: the body turns about the big-toe tips (`root.fix`) from 73 to 88 degrees, flat hands planted (IK `end`), elbows back and out, shoulder blades from protracted to retracted; the chest stops ~5 cm above the floor; variations Hands Wide / Close (targets, poles, a lower start for Wide) and Feet Elevated (toes on a 45 cm box, 92.6 -> 107.5 degrees, neck extended at the bottom so the head clears the floor) |
+| Diamond push-up | hands together under the chest, fingers turned in 45 degrees (`end` [90, 0, 225]), elbows tucked |
+| Scapular push-up | push-up top with nearly locked elbows (< 20 degrees); only the clavicles move (protraction 12 -> -12) and the trunk sinks 1.6 degrees between the shoulder blades |
+| Plank | forearm plank: elbows under the shoulders, forearms on the floor with fists thumb up (`end` [-90, -90, 0]), body straight from the toes (`root.fix`); a hold with a slight breathing motion of the spine |
+| Side plank / Side plank with hip abduction | lying on the right side (root rot z 73.4: head toward -x, front toward +z, camera from the front), the right forearm on the floor under the shoulder (arm IK), the right foot's outer edge fixed (`root.fix`), the top arm resting on the side; the abduction variant lifts the top leg 0 -> 34 degrees (`sym: false`) |
+| Copenhagen plank | the same side plank with the top leg's inner ankle fixed on a 48 cm bench pad; the bottom leg rises from the floor (abd 19) toward the bench underside (abd 5) and lowers |
+| Bench dip | hands on the edge of a bench behind (flat, fingers forward), heels on the floor with bent knees; the hips lower 25 cm in front of the bench, elbows 4 -> 83 degrees pointing back |
+| Inverted row | supine under a hip-high bar (0.95 m) on posts, heels fixed on the floor (`root.fix`), overhand grip 0.62; the straight body turns about the heels from -75 to -55 degrees, chest to the bar, elbows 30 -> 142 |
+| Ab wheel rollout | kneeling, knees fixed (`root.fix` on the shin), the wheel (`grip` + machine parts: wheel, hub, handle) rolls along the floor at y = wheel radius from 0.55 to 1.13 m in front while hips and spine extend; wheel positions computed from the shoulder positions so the elbows stay < 33 degrees |
+| Crunch | `supine-floor`, knees bent with the feet flat (IK), arms crossed; thorax / chest / neck flex 20 / 14 / 18 while the pelvis and the lower back stay down |
+| Sit-up | the crunch, then the pelvis rolls up to -25 degrees (sitting) and back down through the crunch |
+| Dead bug | supine, arms vertical, hips and knees at 90; the left arm reaches overhead while the right leg extends to just above the floor, back, then the other pair (`sym: false`) |
+| Bird dog | quadruped: left knee fixed (`root.fix`), right hand planted (IK); the left arm reaches forward to shoulder height (thumb up) and the right leg extends back to hip height (both IK) |
+| Lying leg raise | supine, straight legs from just above the floor (hip flexion 2) to vertical (88), pelvis still |
+| Side-lying hip abduction | lying on the right side (rot z 90; the trunk lifts its shoulders by spine side bend instead of rolling the root, so the legs stay level), the bottom arm forward under the face, the top hand on the floor in front; the top leg, slightly behind the body, abducts 0 -> 36; variation Leg position Forward, toes up (flex 20, `twist` -30) |
+| Clamshell | same side-lying set-up, hips 45 and knees 90; the top ankle stays on top of the bottom ankle (IK target) while the pole swings up, so the top knee opens about the hip-ankle line |
+| Prone head lift | `prone`, forehead just off the floor (neck flex 8) to the head lifted (neck -24, head -10) |
+| Chin tuck | standing; neck extension -8 with head flexion +10 glides the head straight back (camera close on the head) |
+| Dead hang | pull-up bar, shoulder-width overhand grip; the left shoulder is fixed under the bar (`root.fix` on `clavL`), so moving from a passive hang (clavicle elevation 14) to an active one (-2) lifts the body ~4 cm with straight arms |
+| Hanging leg raise | active hang, shoulders fixed under the bar; the pelvis tilts back 24 degrees with lumbar / thoracic flexion 14 / 8 and the hips flex 72 (legs just above horizontal, knees soft) |
+| Cossack squat | wide stance (ankles at x 0.48, toes out 22); the pelvis shifts over the left foot and down (knee ~123) while the right leg straightens with the heel down and the toes up (foot rotated about the heel), then the same to the right (`sym: false`) |
+| Sissy squat | the balls of the feet on the edge of a 6 cm block (toes overhang it, like the calf raises), `root.fix` at the ball; FK legs with the hips straight, so knees, hips and shoulders stay one line while the knees bend 8 -> 112 and travel forward; the feet stay pitched 40 degrees (heels up) |
+| Nordic curl | knees on a pad (`root.fix` at the tibial tuberosity), ankles under a roller; the body lowers as one line from upright to 68 degrees forward (the knee angle follows so the shins stay on the pad), hands ready in front of the chest |
+| Single-leg box squat | standing on the left leg, the right leg held forward (FK); sit back until the buttocks touch a 42 cm box (contact within 1 mm) and stand up |
+| Lateral step-down | the left foot on a 20 cm step, the right leg hanging beside it; the left knee bends until the right heel touches the floor, pelvis level, then back up |
+| Single-leg calf raise | the standing calf raise's step edge and ball pivot on the left foot only (ankle -16 -> +32 degrees), the right foot hooked behind; variation Knee Bent (pelvis lower and back, knee ~25 degrees) |
+| Tibialis raise | leaning back against a wall (the head and upper back on it), feet 37 cm forward; the feet turn about the heels 25 degrees toes-up (ankle IK targets computed about the heel point) |
+| Hip airplane | standing on the left leg, hinged 65 degrees, the right leg in line behind, arms out; the pelvis turns about its long axis over the fixed left hip (`root.fix` on the pelvis at the hip centre: rot [65, -35, 0] open, [65, 18, 0] closed) |
+| Banded side walk | half squat, a band (two link strands) around the thighs above the knees; the left foot steps out and the right follows (pelvis 18 cm to the left), then back the same way, so the loop stays in place |
 
 Conventional deadlift, Romanian deadlift and Sumo deadlift use `bar.hang` (elbows ~4 degrees all the way; before, the bar
 positions left the deadlift elbows bent up to 46 degrees and the RDL up to 32). New variation motions: Romanian deadlift
@@ -415,6 +461,16 @@ elbows forward, forearms ~90), Lat pulldown Grip Close neutral (V-handle via var
   machine prop in the hand. Single-arm / single-leg exercises (concentration curl, one-arm row, Meadows row, suitcase carry, single-leg
   RDL, step-ups, wrist rotation / deviation) animate the left side. Bench / pad contact: seats -13..-8 mm, incline backrest -19 mm,
   chest pad -10 mm, boxes 0 mm (feet planted on the box top), one-arm row hand fingertips -7 mm, knee joint 5 cm above the pad.
+
+* Batch 6 (bodyweight): no skin or floor mesh is drawn, so contact is measured on muscles and bones (`animcheck.js` floor contact: planted
+  hands, toes, heels, knees, forearms, hips and backs rest at -5..+10 mm, worst -5 mm; the bottom arm of the side-lying exercises lies
+  ~1.5 cm above the floor so its deltoid does not sink in). No toe joints: push-ups and planks stand on the tips of rigid toes (the foot points down instead of
+  the toes bending), the sissy squat and calf raises stand with the balls of the feet on a block edge so the toes overhang. Hands lie
+  flat by straightening the fingers (negative grip); the thumb keeps its atlas angle. The bird dog and dead bug work one diagonal pair
+  per half rep; the side-lying, side-plank and Copenhagen exercises lie on the right side and move the left leg. The latissimus sheet
+  flares at the overhead arm (dead hang, ab-wheel extension), as in the pull-up. Skipped: Diaphragmatic breathing, Pelvic floor
+  contraction and Short foot (no skeletal motion the rig can show: breathing and the pelvic floor are soft tissue, short foot needs toe
+  and arch joints).
 
 * Batch 4: ropes are drawn as straight strands; the woodchop cable crosses the front of the chest at the end of the chop and the
   cable crunch rope's virtual bar axis passes through the head (only the strands are drawn). Two hands on one handle (Pallof press)
