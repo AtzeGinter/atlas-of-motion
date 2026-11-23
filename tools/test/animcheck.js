@@ -78,7 +78,8 @@ async function bootAnim(opts){
       if(hb){
         const gw=X.barW/2,e=sd=>X.barC.clone().addScaledVector(X.barA,(sd==='L'?1:-1)*gw);
         if(k0.ik.armL&&k0.ik.armL.bar){ r.grip=['L','R'].map(sd=>A.gripPt(sd).distanceTo(e(sd))*1000); r.reach=['L','R'].map(sd=>e(sd).distanceTo(X.segPos[X.SEGI['arm'+sd]])/(reachOf(sd)+V(X.RIG.pt['grip'+sd]).distanceTo(J('hand'+sd)))*100); }
-        r.barP=[X.barC.y,X.barC.z];const half=Math.max(gw+0.06,0.3);if(!fast) r.bar=A.clear(X.barC.clone().addScaledVector(X.barA,-half),X.barC.clone().addScaledVector(X.barA,half),()=>0.014,hand,[A.gripPt('L'),A.gripPt('R')]);
+        const grip=(X.anim.ps||X.anim.def.props||[]).some(q=>q.type==='grip');   // an invisible handle: its shaft line means nothing (the kettlebell ball is measured with the dumbbells)
+        r.barP=[X.barC.y,X.barC.z];const half=Math.max(gw+0.06,0.3);if(!fast&&!grip) r.bar=A.clear(X.barC.clone().addScaledVector(X.barA,-half),X.barC.clone().addScaledVector(X.barA,half),()=>0.014,hand,[A.gripPt('L'),A.gripPt('R')]);
       }
       r.db=fast?[]:X.props.filter(p=>p.db).map((p,k)=>{
         const def=X.anim.def.props.filter(q=>q.type==='dumbbell')[k]||{len:0.3,r:0.05},m=p.obj.matrix,c=new T.Vector3().setFromMatrixPosition(m),ay=new T.Vector3().setFromMatrixColumn(m,1).normalize(),h=def.len/2;
