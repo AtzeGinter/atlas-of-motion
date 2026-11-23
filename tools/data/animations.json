@@ -1427,5 +1427,334 @@
    {"t": 0.58},
    {"t": 1, "j": {"thighL": {"abd": 40}}}
   ]
+ },
+"Arnold press": {
+  "dur": 3.6,
+  "camera": {"theta": 40, "phi": 84, "r": 1.4, "target": [0, 1.0, 0]},
+  "props": [
+   {"type": "bench", "size": [0.3, 0.07, 1.0], "top": 0.45, "pos": [0, -0.22], "incline": 80, "seat": 0.4},
+   {"type": "dumbbell", "seg": "handL", "len": 0.28, "r": 0.05},
+   {"type": "dumbbell", "seg": "handR", "len": 0.28, "r": 0.05}
+  ],
+  "keys": [
+   {"t": 0, "use": ["seated"], "root": {"pos": [0, 0.595, -0.04], "rot": [-6, 0, 0]}, "j": {"handL": {"grip": 1}, "foreL": {"pron": 0}, "neck": {"flex": 4}}, "ik": {"armL": {"target": [0.13, 1.2, 0.15], "pole": [0, -1, 0.3]}}},
+   {"t": 0.08},
+   {"t": 0.28, "ease": "in", "j": {"foreL": {"pron": 50}}, "ik": {"armL": {"target": [0.3, 1.3, 0.0], "pole": [1, -0.6, 0.4]}}},
+   {"t": 0.48, "ease": "out", "j": {"foreL": {"pron": 93}, "clavL": {"elev": 10}}, "ik": {"armL": {"target": [0.16, 1.646, -0.051], "pole": [1, -0.2, 0]}}},
+   {"t": 0.56},
+   {"t": 0.78, "ease": "in", "j": {"foreL": {"pron": 50}, "clavL": {"elev": 0}}, "ik": {"armL": {"target": [0.3, 1.3, 0.0], "pole": [1, -0.6, 0.4]}}},
+   {"t": 1, "ease": "out", "j": {"foreL": {"pron": 0}}, "ik": {"armL": {"target": [0.13, 1.2, 0.15], "pole": [0, -1, 0.3]}}}
+  ]
+ },
+ "Cuban press": {
+  "dur": 4.4,
+  "camera": {"theta": 25, "phi": 84, "r": 1.5, "target": [0, 1.2, 0]},
+  "props": [
+   {"type": "dumbbell", "seg": "handL", "len": 0.26, "r": 0.045},
+   {"type": "dumbbell", "seg": "handR", "len": 0.26, "r": 0.045}
+  ],
+  "keys": [
+   {"t": 0, "use": ["stand", "stance-hip", "grip-db-over"], "j": {"armL": {"flex": 6, "abd": 4, "twist": 0}, "foreL": {"flex": 8}}},
+   {"t": 0.06},
+   {"t": 0.24, "j": {"armL": {"flex": 0, "abd": 84, "twist": 88}, "foreL": {"flex": 90, "pron": 100}, "clavL": {"elev": 4}}},
+   {"t": 0.3},
+   {"t": 0.44, "j": {"armL": {"twist": -82}}},
+   {"t": 0.62, "j": {"armL": {"abd": 150, "flex": 6}, "foreL": {"flex": 8}, "clavL": {"elev": 12}}},
+   {"t": 0.68},
+   {"t": 0.8, "j": {"armL": {"abd": 84, "flex": 0}, "foreL": {"flex": 90}, "clavL": {"elev": 4}}},
+   {"t": 0.9, "j": {"armL": {"twist": 88}}},
+   {"t": 1, "j": {"armL": {"flex": 6, "abd": 4, "twist": 0}, "foreL": {"flex": 8, "pron": 160}, "clavL": {"elev": 0}}}
+  ]
+ },
+ "Dumbbell side bend": {
+  "dur": 3.4,
+  "camera": {"theta": 10, "phi": 86, "r": 1.4, "target": [0, 1.0, 0]},
+  "sym": false,
+  "props": [
+   {"type": "dumbbell", "seg": "handL", "len": 0.28, "r": 0.05}
+  ],
+  "keys": [
+   {"t": 0, "use": ["stand"], "ik": {"thighL": {"target": [0.11, 0.075, -0.05], "pole": [0.1, 0, 1], "end": [0, 8, 0]}, "thighR": {"target": [-0.11, 0.075, -0.05], "pole": [-0.1, 0, 1], "end": [0, -8, 0]}},
+    "j": {"lumbar": {"lat": 0}, "thorax": {"lat": 0}, "chest": {"lat": 0}, "neck": {"lat": 0}, "armL": {"abd": 6}, "foreL": {"flex": -6, "pron": 90}, "handL": {"grip": 1}, "armR": {"abd": 6}, "foreR": {"flex": 10, "pron": 70}, "handR": {"grip": 0.3}, "clavL": {"elev": -3}}},
+   {"t": 0.08},
+   {"t": 0.45, "j": {"lumbar": {"lat": 10}, "thorax": {"lat": 12}, "chest": {"lat": 7}, "neck": {"lat": -8}, "armL": {"abd": 32}, "armR": {"abd": -22}}},
+   {"t": 0.55},
+   {"t": 0.85, "j": {"lumbar": {"lat": -4}, "thorax": {"lat": -4}, "chest": {"lat": -2}, "neck": {"lat": 3}, "armL": {"abd": 0}, "armR": {"abd": 14}}},
+   {"t": 1, "j": {"lumbar": {"lat": 0}, "thorax": {"lat": 0}, "chest": {"lat": 0}, "neck": {"lat": 0}, "armL": {"abd": 6}, "armR": {"abd": 6}}}
+  ]
+ },
+ "Farmer's carry": {
+  "dur": 1.4,
+  "camera": {"theta": 55, "phi": 84, "r": 1.4, "target": [0, 0.85, 0]},
+  "sym": false,
+  "props": [
+   {"type": "dumbbell", "seg": "handL", "len": 0.3, "r": 0.06},
+   {"type": "dumbbell", "seg": "handR", "len": 0.3, "r": 0.06}
+  ],
+  "keys": [
+   {"t": 0, "root": {"pos": [0, 0.879, -0.027], "rot": [2, 0, 0]}, "j": {"armL": {"abd": 9}, "armR": {"abd": 9}, "foreL": {"flex": -8, "pron": 90}, "foreR": {"flex": -8, "pron": 90}, "handL": {"grip": 1}, "handR": {"grip": 1}, "clavL": {"elev": -4, "prot": -4}, "clavR": {"elev": -4, "prot": -4}, "neck": {"flex": -2}},
+    "ik": {"thighL": {"target": [0.09, 0.075, -0.041], "pole": [0, 0, 1], "end": [0, 4, 0]}, "thighR": {"target": [-0.09, 0.075, -0.041], "pole": [0, 0, 1], "end": [0, -4, 0]}}},
+   {"t": 0.25, "root": {"pos": [-0.018, 0.884, -0.022], "rot": [2, 0, 0]}, "ik": {"thighL": {"target": [0.09, 0.15, 0.0], "end": [14, 4, 0]}}},
+   {"t": 0.5, "root": {"pos": [0, 0.879, -0.027]}, "ik": {"thighL": {"target": [0.09, 0.075, -0.041], "end": [0, 4, 0]}}},
+   {"t": 0.75, "root": {"pos": [0.018, 0.884, -0.022]}, "ik": {"thighR": {"target": [-0.09, 0.15, 0.0], "end": [14, -4, 0]}}},
+   {"t": 1, "root": {"pos": [0, 0.879, -0.027]}, "ik": {"thighR": {"target": [-0.09, 0.075, -0.041], "end": [0, -4, 0]}}}
+  ]
+ },
+ "Suitcase carry": {
+  "dur": 1.4,
+  "camera": {"theta": 30, "phi": 84, "r": 1.4, "target": [0, 0.85, 0]},
+  "sym": false,
+  "props": [
+   {"type": "dumbbell", "seg": "handL", "len": 0.3, "r": 0.06}
+  ],
+  "keys": [
+   {"t": 0, "root": {"pos": [0, 0.879, -0.027], "rot": [2, 0, 0]}, "j": {"armL": {"abd": 9}, "armR": {"abd": 4}, "foreL": {"flex": -8, "pron": 90}, "foreR": {"flex": 14, "pron": 70}, "handL": {"grip": 1}, "handR": {"grip": 0.35}, "clavL": {"elev": -5, "prot": -4}, "clavR": {"prot": -4}, "neck": {"flex": -2}},
+    "ik": {"thighL": {"target": [0.09, 0.075, -0.041], "pole": [0, 0, 1], "end": [0, 4, 0]}, "thighR": {"target": [-0.09, 0.075, -0.041], "pole": [0, 0, 1], "end": [0, -4, 0]}}},
+   {"t": 0.25, "root": {"pos": [-0.018, 0.884, -0.022], "rot": [2, 0, 0]}, "ik": {"thighL": {"target": [0.09, 0.15, 0.0], "end": [14, 4, 0]}}},
+   {"t": 0.5, "root": {"pos": [0, 0.879, -0.027]}, "ik": {"thighL": {"target": [0.09, 0.075, -0.041], "end": [0, 4, 0]}}},
+   {"t": 0.75, "root": {"pos": [0.018, 0.884, -0.022]}, "ik": {"thighR": {"target": [-0.09, 0.15, 0.0], "end": [14, -4, 0]}}},
+   {"t": 1, "root": {"pos": [0, 0.879, -0.027]}, "ik": {"thighR": {"target": [-0.09, 0.075, -0.041], "end": [0, -4, 0]}}}
+  ]
+ },
+ "Rear-delt fly": {
+  "dur": 3.0,
+  "camera": {"theta": 150, "phi": 70, "r": 1.4, "target": [0, 0.9, 0.05]},
+  "props": [
+   {"type": "dumbbell", "seg": "handL", "len": 0.26, "r": 0.045},
+   {"type": "dumbbell", "seg": "handR", "len": 0.26, "r": 0.045}
+  ],
+  "keys": [
+   {"t": 0, "use": ["stand", "stance-hip", "hip-hinge", "grip-db-neutral"], "root": {"pos": [0, 0.84, -0.22], "rot": [60, 0, 0]}, "j": {"armL": {"flex": 56, "abd": 4}, "foreL": {"flex": 16}, "clavL": {"prot": 8}}},
+   {"t": 0.1},
+   {"t": 0.28, "j": {"armL": {"flex": 34, "abd": 46}, "clavL": {"prot": 0}}},
+   {"t": 0.45, "ease": "out", "j": {"armL": {"flex": 6, "abd": 80}, "clavL": {"prot": -12}}},
+   {"t": 0.55},
+   {"t": 0.75, "ease": "in", "j": {"armL": {"flex": 34, "abd": 46}, "clavL": {"prot": 0}}},
+   {"t": 1, "ease": "out", "j": {"armL": {"flex": 56, "abd": 4}, "clavL": {"prot": 8}}}
+  ]
+ },
+ "Single-leg Romanian deadlift": {
+  "dur": 4.0,
+  "camera": {"theta": 75, "phi": 82, "r": 1.4, "target": [0, 0.75, 0]},
+  "sym": false,
+  "props": [
+   {"type": "dumbbell", "seg": "handL", "len": 0.27, "r": 0.05},
+   {"type": "dumbbell", "seg": "handR", "len": 0.27, "r": 0.05}
+  ],
+  "keys": [
+   {"t": 0, "root": {"pos": [0, 0.884, -0.03], "rot": [0, 0, 0]}, "j": {"lumbar": {"flex": -3}, "neck": {"flex": -3}, "armL": {"flex": 0, "abd": 8}, "armR": {"flex": 0, "abd": 8}, "foreL": {"flex": -6, "pron": 90}, "foreR": {"flex": -6, "pron": 90}, "handL": {"grip": 1}, "handR": {"grip": 1}, "clavL": {"elev": -4}, "clavR": {"elev": -4}, "thighR": {"flex": 0, "abd": 0}, "shankR": {"flex": 4}, "footR": {"flex": 0}},
+    "ik": {"thighL": {"target": [0.087, 0.075, -0.045], "pole": [0, 0, 1], "end": [0, 0, 0]}}},
+   {"t": 0.08},
+   {"t": 0.28, "root": {"pos": [0, 0.87, -0.1], "rot": [38, 0, 0]}, "j": {"lumbar": {"flex": -4}, "neck": {"flex": -16}, "armL": {"flex": 34}, "armR": {"flex": 34}, "thighR": {"flex": -2}, "shankR": {"flex": 10}, "footR": {"flex": -10}}},
+   {"t": 0.5, "root": {"pos": [0, 0.86, -0.16], "rot": [78, 0, 0]}, "j": {"lumbar": {"flex": -5}, "neck": {"flex": -32}, "head": {"flex": -6}, "armL": {"flex": 73}, "armR": {"flex": 73}, "clavL": {"elev": -2, "prot": 4}, "clavR": {"elev": -2, "prot": 4}, "thighR": {"flex": -6}, "shankR": {"flex": 8}, "footR": {"flex": -20}}},
+   {"t": 0.58},
+   {"t": 0.78, "root": {"pos": [0, 0.87, -0.1], "rot": [38, 0, 0]}, "j": {"lumbar": {"flex": -4}, "neck": {"flex": -16}, "head": {"flex": -2}, "armL": {"flex": 34}, "armR": {"flex": 34}, "clavL": {"elev": -4, "prot": 0}, "clavR": {"elev": -4, "prot": 0}, "thighR": {"flex": -2}, "shankR": {"flex": 10}, "footR": {"flex": -10}}},
+   {"t": 1, "root": {"pos": [0, 0.884, -0.03], "rot": [0, 0, 0]}, "j": {"lumbar": {"flex": -3}, "neck": {"flex": -3}, "head": {"flex": 0}, "armL": {"flex": 0}, "armR": {"flex": 0}, "thighR": {"flex": 0}, "shankR": {"flex": 4}, "footR": {"flex": 0}}}
+  ]
+ },
+ "Trap bar deadlift": {
+  "dur": 4.0,
+  "camera": {"theta": 38, "phi": 78, "r": 1.3, "target": [0, 0.7, 0]},
+  "props": [
+   {"type": "grip", "w": 0.56},
+   {"type": "machine", "seg": "bar", "parts": [
+    {"rod": [[0.28, 0, -0.262], [0.28, 0, 0.262]], "r": 0.017, "mat": "grip"}, {"rod": [[-0.28, 0, -0.262], [-0.28, 0, 0.262]], "r": 0.017, "mat": "grip"},
+    {"rod": [[0.43, 0, 0], [0.24, 0, 0.33]], "r": 0.018}, {"rod": [[0.24, 0, 0.33], [-0.24, 0, 0.33]], "r": 0.018}, {"rod": [[-0.24, 0, 0.33], [-0.43, 0, 0]], "r": 0.018},
+    {"rod": [[-0.43, 0, 0], [-0.24, 0, -0.33]], "r": 0.018}, {"rod": [[-0.24, 0, -0.33], [0.24, 0, -0.33]], "r": 0.018}, {"rod": [[0.24, 0, -0.33], [0.43, 0, 0]], "r": 0.018},
+    {"rod": [[0.43, 0, 0], [0.86, 0, 0]], "r": 0.025, "mat": "grip"}, {"rod": [[-0.43, 0, 0], [-0.86, 0, 0]], "r": 0.025, "mat": "grip"},
+    {"cyl": [0.04, 0.03], "pos": [0.5, 0, 0], "rot": [0, 0, 90]}, {"cyl": [0.04, 0.03], "pos": [-0.5, 0, 0], "rot": [0, 0, 90]},
+    {"cyl": [0.225, 0.055], "pos": [0.545, 0, 0], "rot": [0, 0, 90], "mat": "iron"}, {"cyl": [0.225, 0.055], "pos": [0.604, 0, 0], "rot": [0, 0, 90], "mat": "iron"},
+    {"cyl": [0.225, 0.055], "pos": [-0.545, 0, 0], "rot": [0, 0, 90], "mat": "iron"}, {"cyl": [0.225, 0.055], "pos": [-0.604, 0, 0], "rot": [0, 0, 90], "mat": "iron"}]}
+  ],
+  "keys": [
+   {"t": 0, "use": ["stand", "stance-hip"], "root": {"pos": [0, 0.4723, -0.3702], "rot": [52, 0, 0]}, "j": {"lumbar": {"flex": -6}, "neck": {"flex": -28}, "head": {"flex": -6}, "clavL": {"elev": -4}, "handL": {"grip": 1}}, "ik": {"thighL": {"pole": [0.2, 0, 1]}, "armL": {"bar": "neutral", "pole": [0.2, 0, -1]}}, "bar": {"hang": [0.995, -2], "rot": [180, 0, 0]}},
+   {"t": 0.1},
+   {"t": 0.22, "root": {"pos": [0, 0.6602, -0.3263], "rot": [42, 0, 0]}, "j": {"neck": {"flex": -22}}, "bar": {"hang": [0.995, 0]}},
+   {"t": 0.32, "root": {"pos": [0, 0.7981, -0.194], "rot": [24, 0, 0]}, "j": {"lumbar": {"flex": -5}, "neck": {"flex": -12}, "head": {"flex": -3}}, "bar": {"hang": [0.995, 0]}},
+   {"t": 0.42, "ease": "out", "root": {"pos": [0, 0.884, -0.03], "rot": [0, 0, 0]}, "j": {"lumbar": {"flex": -3}, "neck": {"flex": -3}, "head": {"flex": 0}, "clavL": {"elev": -6}}, "bar": {"hang": [0.995, 1]}},
+   {"t": 0.54},
+   {"t": 0.64, "root": {"pos": [0, 0.7981, -0.194], "rot": [24, 0, 0]}, "j": {"lumbar": {"flex": -5}, "neck": {"flex": -12}, "head": {"flex": -3}, "clavL": {"elev": -4}}, "bar": {"hang": [0.995, 0]}},
+   {"t": 0.76, "root": {"pos": [0, 0.6602, -0.3263], "rot": [42, 0, 0]}, "j": {"lumbar": {"flex": -6}, "neck": {"flex": -22}, "head": {"flex": -6}}, "bar": {"hang": [0.995, 0]}},
+   {"t": 0.9, "root": {"pos": [0, 0.4723, -0.3702], "rot": [52, 0, 0]}, "j": {"neck": {"flex": -28}}, "bar": {"hang": [0.995, -2]}},
+   {"t": 1}
+  ]
+ },
+ "Kettlebell swing": {
+  "dur": 1.8,
+  "camera": {"theta": 70, "phi": 82, "r": 1.4, "target": [0, 0.85, 0.1]},
+  "props": [
+   {"type": "grip", "w": 0.1},
+   {"type": "machine", "seg": "bar", "parts": [
+    {"cyl": [0.016, 0.17], "rot": [0, 0, 90], "mat": "iron"}, {"rod": [[0.083, 0, 0], [0.088, -0.11, 0]], "r": 0.016, "mat": "iron"}, {"rod": [[-0.083, 0, 0], [-0.088, -0.11, 0]], "r": 0.016, "mat": "iron"},
+    {"sph": 0.105, "pos": [0, -0.165, 0], "mat": "iron"}, {"cyl": [0.06, 0.02], "pos": [0, -0.265, 0], "mat": "iron"}]}
+  ],
+  "keys": [
+   {"t": 0, "use": ["stand", "stance-wide", "bar-over"], "root": {"pos": [0, 0.878, -0.035], "rot": [-3, 0, 0]}, "j": {"lumbar": {"flex": -2}, "neck": {"flex": 2}, "clavL": {"prot": 4}}, "ik": {"armL": {"pole": [0.3, -1, -0.2]}}, "bar": {"hang": [0.995, 72], "rot": [-72, 0, 0]}},
+   {"t": 0.2, "root": {"pos": [0, 0.87, -0.05], "rot": [8, 0, 0]}, "ik": {"armL": {"pole": [0.4, 0, -1]}}, "bar": {"hang": [0.995, 12], "rot": [-12, 0, 0]}},
+   {"t": 0.45, "ease": "out", "root": {"pos": [0, 0.82, -0.26], "rot": [58, 0, 0]}, "j": {"lumbar": {"flex": -5}, "neck": {"flex": -26}, "clavL": {"prot": 2}}, "ik": {"thighL": {"pole": [0.45, 0, 1]}}, "bar": {"hang": [0.995, -26], "rot": [26, 0, 0]}},
+   {"t": 0.52},
+   {"t": 0.72, "ease": "in", "root": {"pos": [0, 0.87, -0.05], "rot": [10, 0, 0]}, "j": {"lumbar": {"flex": -3}, "neck": {"flex": -4}}, "ik": {"thighL": {"pole": [0.35, 0, 1]}}, "bar": {"hang": [0.995, 14], "rot": [-14, 0, 0]}},
+   {"t": 1, "ease": "out", "root": {"pos": [0, 0.878, -0.035], "rot": [-3, 0, 0]}, "j": {"lumbar": {"flex": -2}, "neck": {"flex": 2}, "clavL": {"prot": 4}}, "ik": {"armL": {"pole": [0.3, -1, -0.2]}}, "bar": {"hang": [0.995, 72], "rot": [-72, 0, 0]}}
+  ]
+ },
+"Meadows row": {
+  "dur": 3.0,
+  "camera": {"theta": 40, "phi": 76, "r": 1.35, "target": [-0.2, 0.7, 0.1]},
+  "sym": false,
+  "props": [
+   {"type": "machine", "pos": [-1.8449, 0.04, 0.3565], "aim": {"seg": "handL", "grip": 0}, "parts": [{"rod": [[0, 0, 0], [0, 2.175, 0]], "r": 0.014, "mat": "grip"}, {"cyl": [0.025, 0.4], "pos": [0, 1.96, 0], "mat": "grip"}, {"cyl": [0.2, 0.045], "pos": [0, 2.06, 0], "mat": "iron"}, {"cyl": [0.04, 0.03], "pos": [0, 2.02, 0], "mat": "frame"}, {"cyl": [0.04, 0.08], "mat": "frame"}]},
+   {"type": "machine", "parts": [{"box": [0.25, 0.04, 0.25], "pos": [-1.8449, 0.02, 0.3565], "mat": "iron"}]}
+  ],
+  "keys": [
+   {"t": 0, "root": {"pos": [0, 0.8, -0.18], "rot": [50, 0, 0]}, "j": {"lumbar": {"flex": -5}, "neck": {"flex": -22}, "head": {"flex": -4}, "clavL": {"prot": 8, "elev": -2}, "handL": {"grip": 1}, "handR": {"grip": 0.4}},
+    "ik": {"thighL": {"target": [0.12, 0.075, -0.32], "pole": [0.1, 0, 1], "end": [0, 10, 0]}, "thighR": {"target": [-0.15, 0.075, 0.12], "pole": [-0.1, 0, 1], "end": [0, -10, 0]},
+     "armL": {"target": [0.25, 0.5, 0.21], "hax": [-0.9745, -0.214, 0.0681], "hfd": [0.2135, -0.9768, -0.0149], "pole": [0.4, 0, -1]}, "armR": {"target": [-0.13, 0.57, 0.3], "pole": [-0.6, 0.2, -1]}}},
+   {"t": 0.08},
+   {"t": 0.22, "ease": "in", "j": {"clavL": {"prot": 0}}, "ik": {"armL": {"target": [0.2214, 0.6, 0.16], "hax": [-0.9611, -0.2605, 0.0914], "hfd": [0.2593, -0.9655, -0.0247], "pole": [0.5, 0.3, -1]}}},
+   {"t": 0.34, "ease": "linear", "ik": {"armL": {"target": [0.1849, 0.7, 0.1], "hax": [-0.9442, -0.307, 0.1193], "hfd": [0.3046, -0.9517, -0.0385], "pole": [0.6, 0.5, -1]}}},
+   {"t": 0.44, "ease": "out", "j": {"clavL": {"prot": -12, "elev": -4}}, "ik": {"armL": {"target": [0.1604, 0.76, 0.07], "hax": [-0.9328, -0.3349, 0.1333], "hfd": [0.3315, -0.9422, -0.0474], "pole": [0.7, 0.6, -1]}}},
+   {"t": 0.54},
+   {"t": 0.66, "ease": "in", "j": {"clavL": {"prot": -4, "elev": -2}}, "ik": {"armL": {"target": [0.1849, 0.7, 0.1], "hax": [-0.9442, -0.307, 0.1193], "hfd": [0.3046, -0.9517, -0.0385], "pole": [0.6, 0.5, -1]}}},
+   {"t": 0.8, "ease": "linear", "j": {"clavL": {"prot": 0}}, "ik": {"armL": {"target": [0.2214, 0.6, 0.16], "hax": [-0.9611, -0.2605, 0.0914], "hfd": [0.2593, -0.9655, -0.0247], "pole": [0.5, 0.3, -1]}}},
+   {"t": 1, "ease": "out", "j": {"clavL": {"prot": 8}}, "ik": {"armL": {"target": [0.25, 0.5, 0.21], "hax": [-0.9745, -0.214, 0.0681], "hfd": [0.2135, -0.9768, -0.0149], "pole": [0.4, 0, -1]}}}
+  ]
+ },
+ "One-arm dumbbell row": {
+  "dur": 3.0,
+  "camera": {"theta": 60, "phi": 74, "r": 1.35, "target": [0, 0.7, 0.15]},
+  "sym": false,
+  "props": [
+   {"type": "bench", "size": [0.3, 0.06, 1.05], "top": 0.43, "pos": [-0.12, 0.18]},
+   {"type": "dumbbell", "seg": "handL", "len": 0.28, "r": 0.05}
+  ],
+  "keys": [
+   {"t": 0, "root": {"pos": [0, 0.86, 0], "rot": [80, 0, 0]}, "j": {"lumbar": {"flex": -4}, "neck": {"flex": -30}, "head": {"flex": -8}, "clavL": {"prot": 8, "elev": -2}, "foreL": {"pron": 90}, "handL": {"grip": 1}},
+    "ik": {"thighL": {"target": [0.2, 0.075, -0.05], "pole": [0.2, 0, 1], "end": [0, 12, 0]}, "thighR": {"target": [-0.1, 0.475, -0.23], "pole": [0, -1, 0.3], "end": [160, 0, 0]},
+     "armL": {"target": [0.18, 0.43, 0.48], "pole": [0.4, 0, -1]}, "armR": {"target": [-0.18, 0.46, 0.5], "pole": [-0.3, 0, -1], "end": [90, 0, 180]}}},
+   {"t": 0.08},
+   {"t": 0.26, "ease": "in", "j": {"clavL": {"prot": 0}}, "ik": {"armL": {"target": [0.19, 0.66, 0.38], "pole": [0.3, 0.5, -1]}}},
+   {"t": 0.42, "ease": "out", "j": {"clavL": {"prot": -12, "elev": -4}}, "ik": {"armL": {"target": [0.2, 0.84, 0.16], "pole": [0.2, 1, -0.3]}}},
+   {"t": 0.52},
+   {"t": 0.72, "ease": "in", "j": {"clavL": {"prot": 0, "elev": -2}}, "ik": {"armL": {"target": [0.19, 0.66, 0.38], "pole": [0.3, 0.5, -1]}}},
+   {"t": 1, "ease": "out", "j": {"clavL": {"prot": 8}}, "ik": {"armL": {"target": [0.18, 0.43, 0.48], "pole": [0.4, 0, -1]}}}
+  ]
+ },
+ "Russian twist": {
+  "dur": 2.6,
+  "camera": {"theta": 30, "phi": 66, "r": 1.3, "target": [0, 0.4, 0.15]},
+  "props": [
+   {"type": "grip", "seg": "chest", "at": [0, 1.24, 0.36], "rot": [90, 0, 0], "w": 0.32},
+   {"type": "machine", "seg": "bar", "parts": [{"cyl": [0.18, 0.035], "mat": "iron"}, {"cyl": [0.045, 0.05], "mat": "grip"}]}
+  ],
+  "keys": [
+   {"t": 0, "root": {"pos": [0, 0.13, 0], "rot": [-40, 0, 0]}, "j": {"lumbar": {"flex": 8, "rot": 0}, "thorax": {"flex": 8, "rot": 0}, "chest": {"flex": 0, "rot": 0}, "neck": {"flex": 10}, "handL": {"grip": 1}},
+    "ik": {"thighL": {"target": [0.11, 0.17, 0.44], "pole": [0.15, 1, 0.3], "end": [-15, 6, 0]}, "armL": {"bar": "neutral", "pole": [1, -1, -0.2]}}},
+   {"t": 0.25, "j": {"lumbar": {"rot": 8}, "thorax": {"rot": 15}, "chest": {"rot": 15}, "neck": {"rot": 6}}},
+   {"t": 0.5, "j": {"lumbar": {"rot": 0}, "thorax": {"rot": 0}, "chest": {"rot": 0}, "neck": {"rot": 0}}},
+   {"t": 0.75, "j": {"lumbar": {"rot": -8}, "thorax": {"rot": -15}, "chest": {"rot": -15}, "neck": {"rot": -6}}},
+   {"t": 1, "j": {"lumbar": {"rot": 0}, "thorax": {"rot": 0}, "chest": {"rot": 0}, "neck": {"rot": 0}}}
+  ]
+ },
+ "Dumbbell pullover": {
+  "dur": 3.6,
+  "camera": {"theta": 80, "phi": 72, "r": 1.4, "target": [0, 0.55, -0.15]},
+  "props": [
+   {"type": "bench", "size": [0.32, 0.06, 1.2], "top": 0.42, "pos": [0, -0.45], "yaw": 90},
+   {"type": "grip", "w": 0.09},
+   {"type": "machine", "seg": "bar", "parts": [{"cyl": [0.0145, 0.24], "pos": [0, -0.085, 0], "mat": "grip"}, {"cyl": [0.065, 0.045], "pos": [0, 0.055, 0], "mat": "iron"}, {"cyl": [0.065, 0.045], "pos": [0, -0.225, 0], "mat": "iron"}]}
+  ],
+  "keys": [
+   {"t": 0, "use": ["bar-over"], "root": {"pos": [0, 0.4, 0.12], "rot": [-80, 0, 0]}, "j": {"neck": {"flex": 14}, "clavL": {"prot": 4}, "handL": {"grip": 0.8}}, "ik": {"thighL": {"target": [0.15, 0.075, 0.58], "pole": [0.1, 1, 0.3], "end": [0, 0, 0]}, "armL": {"pole": [1, 0, 0]}}, "bar": {"hang": [0.975, -180], "rot": [0, 0, 0]}},
+   {"t": 0.08},
+   {"t": 0.5, "ease": "inOut", "j": {"clavL": {"prot": -2, "elev": 8}}, "ik": {"armL": {"pole": [1, 0.2, 0]}}, "bar": {"hang": [0.975, -84], "rot": [-96, 0, 0]}},
+   {"t": 0.58},
+   {"t": 1, "ease": "inOut", "j": {"clavL": {"prot": 4, "elev": 0}}, "ik": {"armL": {"pole": [1, 0, 0]}}, "bar": {"hang": [0.975, -180], "rot": [0, 0, 0]}}
+  ]
+ },
+ "Concentration curl": {
+  "dur": 3.0,
+  "camera": {"theta": 45, "phi": 78, "r": 1.2, "target": [0.1, 0.65, 0.25]},
+  "sym": false,
+  "props": [
+   {"type": "bench", "size": [0.3, 0.06, 1.1], "top": 0.45, "pos": [0, -0.42]},
+   {"type": "dumbbell", "seg": "handL", "len": 0.26, "r": 0.045}
+  ],
+  "keys": [
+   {"t": 0, "root": {"pos": [0, 0.56, 0], "rot": [40, 0, 0]}, "j": {"lumbar": {"flex": 4}, "thorax": {"flex": 6}, "chest": {"flex": 4}, "neck": {"flex": -20}, "armL": {"flex": 54, "abd": -8}, "foreL": {"flex": 4, "pron": 0}, "handL": {"grip": 1}},
+    "ik": {"thighL": {"target": [0.3, 0.075, 0.42], "pole": [0.6, 0.3, 1], "end": [0, 25, 0]}, "thighR": {"target": [-0.3, 0.075, 0.42], "pole": [-0.6, 0.3, 1], "end": [0, -25, 0]}, "armR": {"target": [-0.24, 0.58, 0.34], "pole": [-0.6, 0, -1]}}},
+   {"t": 0.1},
+   {"t": 0.45, "j": {"foreL": {"flex": 125}}},
+   {"t": 0.55},
+   {"t": 1, "j": {"foreL": {"flex": 4}}}
+  ]
+ },
+ "Wrist curl": {
+  "dur": 2.4,
+  "camera": {"theta": 60, "phi": 74, "r": 1.0, "target": [0, 0.6, 0.35]},
+  "props": [
+   {"type": "bench", "size": [0.3, 0.06, 1.1], "top": 0.45, "pos": [0, -0.42]},
+   {"type": "dumbbell", "seg": "handL", "len": 0.26, "r": 0.045},
+   {"type": "dumbbell", "seg": "handR", "len": 0.26, "r": 0.045}
+  ],
+  "keys": [
+   {"t": 0, "use": ["seated"], "root": {"rot": [45, 0, 0]}, "j": {"lumbar": {"flex": 6}, "thorax": {"flex": 10}, "chest": {"flex": 8}, "neck": {"flex": -30}, "foreL": {"pron": 0}, "handL": {"grip": 1, "flex": -45}}, "ik": {"armL": {"target": [0.15, 0.55, 0.42], "pole": [0.3, 0, -1]}}},
+   {"t": 0.1},
+   {"t": 0.45, "j": {"handL": {"flex": 55}}},
+   {"t": 0.55},
+   {"t": 1, "j": {"handL": {"flex": -45}}}
+  ]
+ },
+ "Reverse wrist curl": {
+  "dur": 2.4,
+  "camera": {"theta": 60, "phi": 74, "r": 1.0, "target": [0, 0.6, 0.35]},
+  "props": [
+   {"type": "bench", "size": [0.3, 0.06, 1.1], "top": 0.45, "pos": [0, -0.42]},
+   {"type": "dumbbell", "seg": "handL", "len": 0.26, "r": 0.045},
+   {"type": "dumbbell", "seg": "handR", "len": 0.26, "r": 0.045}
+  ],
+  "keys": [
+   {"t": 0, "use": ["seated"], "root": {"rot": [45, 0, 0]}, "j": {"lumbar": {"flex": 6}, "thorax": {"flex": 10}, "chest": {"flex": 8}, "neck": {"flex": -30}, "foreL": {"pron": 165}, "handL": {"grip": 1, "flex": 45}}, "ik": {"armL": {"target": [0.15, 0.55, 0.42], "pole": [0.3, 0, -1]}}},
+   {"t": 0.1},
+   {"t": 0.45, "j": {"handL": {"flex": -40}}},
+   {"t": 0.55},
+   {"t": 1, "j": {"handL": {"flex": 45}}}
+  ]
+ },
+ "Radial deviation": {
+  "dur": 2.4,
+  "camera": {"theta": 80, "phi": 80, "r": 1.0, "target": [0.1, 0.65, 0.35]},
+  "sym": false,
+  "props": [
+   {"type": "bench", "size": [0.3, 0.06, 1.1], "top": 0.45, "pos": [0, -0.42]},
+   {"type": "machine", "seg": "handL", "at": "grip", "parts": [{"cyl": [0.0145, 0.3], "pos": [0, 0.1, 0], "mat": "grip"}, {"cyl": [0.03, 0.02], "pos": [0, -0.055, 0], "mat": "iron"}, {"cyl": [0.055, 0.05], "pos": [0, 0.23, 0], "mat": "iron"}, {"cyl": [0.055, 0.03], "pos": [0, 0.19, 0], "mat": "iron"}]}
+  ],
+  "keys": [
+   {"t": 0, "root": {"pos": [0, 0.56, 0], "rot": [45, 0, 0]}, "j": {"lumbar": {"flex": 6}, "thorax": {"flex": 10}, "chest": {"flex": 8}, "neck": {"flex": -30}, "foreL": {"pron": 90}, "handL": {"grip": 1, "dev": -25}, "handR": {"grip": 0.3}},
+    "ik": {"thighL": {"target": [0.13, 0.075, 0.44], "pole": [0.1, 0.4, 1], "end": [0, 6, 0]}, "thighR": {"target": [-0.13, 0.075, 0.44], "pole": [-0.1, 0.4, 1], "end": [0, -6, 0]}, "armL": {"target": [0.15, 0.55, 0.42], "pole": [0.3, 0, -1]}, "armR": {"target": [-0.15, 0.56, 0.3], "pole": [-0.3, 0, -1]}}},
+   {"t": 0.1},
+   {"t": 0.45, "j": {"handL": {"dev": 22}}},
+   {"t": 0.55},
+   {"t": 1, "j": {"handL": {"dev": -25}}}
+  ]
+ },
+ "Forearm pronation and supination": {
+  "dur": 3.2,
+  "camera": {"theta": 80, "phi": 80, "r": 1.0, "target": [0.1, 0.65, 0.35]},
+  "sym": false,
+  "props": [
+   {"type": "bench", "size": [0.3, 0.06, 1.1], "top": 0.45, "pos": [0, -0.42]},
+   {"type": "machine", "seg": "handL", "at": "grip", "parts": [{"cyl": [0.0145, 0.3], "pos": [0, 0.1, 0], "mat": "grip"}, {"cyl": [0.03, 0.02], "pos": [0, -0.055, 0], "mat": "iron"}, {"cyl": [0.055, 0.05], "pos": [0, 0.23, 0], "mat": "iron"}, {"cyl": [0.055, 0.03], "pos": [0, 0.19, 0], "mat": "iron"}]}
+  ],
+  "vars": {"Direction": {"Pronation only": {"3": {"j": {"foreL": {"pron": 90}}}, "4": {"j": {"foreL": {"pron": 165}}}, "5": {"j": {"foreL": {"pron": 165}}}}, "Supination only": {"1": {"j": {"foreL": {"pron": 20}}}, "2": {"j": {"foreL": {"pron": 20}}}, "3": {"j": {"foreL": {"pron": 90}}}}}},
+  "keys": [
+   {"t": 0, "root": {"pos": [0, 0.56, 0], "rot": [45, 0, 0]}, "j": {"lumbar": {"flex": 6}, "thorax": {"flex": 10}, "chest": {"flex": 8}, "neck": {"flex": -30}, "foreL": {"pron": 90}, "handL": {"grip": 1}, "handR": {"grip": 0.3}},
+    "ik": {"thighL": {"target": [0.13, 0.075, 0.44], "pole": [0.1, 0.4, 1], "end": [0, 6, 0]}, "thighR": {"target": [-0.13, 0.075, 0.44], "pole": [-0.1, 0.4, 1], "end": [0, -6, 0]}, "armL": {"target": [0.15, 0.55, 0.42], "pole": [0.3, 0, -1]}, "armR": {"target": [-0.15, 0.56, 0.3], "pole": [-0.3, 0, -1]}}},
+   {"t": 0.22, "j": {"foreL": {"pron": 165}}},
+   {"t": 0.3},
+   {"t": 0.5, "j": {"foreL": {"pron": 90}}},
+   {"t": 0.72, "j": {"foreL": {"pron": 20}}},
+   {"t": 0.8},
+   {"t": 1, "j": {"foreL": {"pron": 90}}}
+  ]
  }
 }

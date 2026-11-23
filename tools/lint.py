@@ -209,7 +209,7 @@ def segk(n):
         if re.fullmatch(r'(th[mpd]|f[2-5][pmd])', b): return 'finger'
     return None
 CHAINS = {'thigh': ('shank', 'foot'), 'arm': ('fore', 'hand')}
-BARS = ('barbell', 'pullbar', 'latbar', 'vhandle', 'straightbar', 'rope')
+BARS = ('barbell', 'pullbar', 'latbar', 'vhandle', 'straightbar', 'rope', 'grip')
 PMATS = ('pad', 'frame', 'iron', 'grip', 'cable')
 num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool)
 num3 = lambda v: isinstance(v, list) and len(v) == 3 and all(num(x) for x in v)
@@ -260,8 +260,9 @@ if rig and os.path.exists(P('data', 'animations.json')):
         return 'at' not in v or num3(v['at'])
     def part_ok(q):
         if not isinstance(q, dict): return False
-        sh = [k for k in ('box', 'cyl', 'rod') if k in q]
-        if len(sh) != 1 or set(q) - {'box', 'cyl', 'rod', 'r', 'pos', 'rot', 'mat', 'pad', 'name'}: return False
+        sh = [k for k in ('box', 'cyl', 'rod', 'sph') if k in q]
+        if len(sh) != 1 or set(q) - {'box', 'cyl', 'rod', 'sph', 'r', 'pos', 'rot', 'mat', 'pad', 'name'}: return False
+        if 'sph' in q and not (num(q['sph']) and 0 < q['sph'] <= 1 and not q.get('pad')): return False
         if 'box' in q and not (num3(q['box']) and all(0 < v <= 3 for v in q['box'])): return False
         if 'cyl' in q and not (isinstance(q['cyl'], list) and len(q['cyl']) == 2 and all(num(v) and 0 < v <= 3 for v in q['cyl'])): return False
         if 'rod' in q and not (isinstance(q['rod'], list) and len(q['rod']) == 2 and all(num3(v) for v in q['rod']) and ('r' not in q or (num(q['r']) and 0 < q['r'] <= 0.2)) and 'pos' not in q and 'rot' not in q): return False
@@ -288,7 +289,7 @@ if rig and os.path.exists(P('data', 'animations.json')):
                 elif ty in BARS:
                     if held: err.append(f'{w}: only one held bar per animation')
                     held = p
-                    if 'w' in p and not (num(p['w']) and (0.08 if ty == 'rope' else 0.15) <= p['w'] <= 1.6): err.append(f'{w}: bar grip width w must be 0.15-1.6 m (rope: from 0.08)')
+                    if 'w' in p and not (num(p['w']) and (0.08 if ty in ('rope', 'grip') else 0.15) <= p['w'] <= 1.6): err.append(f'{w}: bar grip width w must be 0.15-1.6 m (rope, grip: from 0.08)')
                     if 'seg' in p and (p['seg'] not in sn or segk(p['seg']) == 'finger' or not num3(p.get('at'))): err.append(f'{w}: a bar attached to a segment needs seg (a body segment) and at [x,y,z] (bind pose)')
                     if ('toward' in p or 'len' in p and ty == 'rope') and not (ty == 'rope' and num3(p.get('toward', [0, 0, 0])) and num(p.get('len', 0.27)) and 0.1 <= p.get('len', 0.27) <= 0.5): err.append(f'{w}: a rope takes toward [x,y,z] (where its ring points, the pulley) and len (strand length 0.1-0.5 m)')
                     if 'handles' in p and not (ty == 'pullbar' and isinstance(p['handles'], list) and len(p['handles']) == 2 and all(num(v) for v in p['handles']) and 0.2 <= p['handles'][0] <= 1 and 0.05 <= p['handles'][1] <= 0.3): err.append(f'{w}: handles (pullbar only) are [distance 0.2-1 m, length 0.05-0.3 m]')
@@ -303,7 +304,7 @@ if rig and os.path.exists(P('data', 'animations.json')):
                     if 'stack' in p and not (isinstance(p['stack'], list) and len(p['stack']) == 2 and all(num(v) for v in p['stack'])): err.append(f'{w}: cable stack is [x, z]')
                 elif ty == 'machine':
                     hb = any(q.get('type') in BARS for q in a.get('props', []))
-                    if not isinstance(p.get('parts'), list) or not p['parts'] or not all(part_ok(q) for q in p['parts']): err.append(f'{w}: machine needs parts, each one of box [sx,sy,sz] | cyl [r, length] | rod [[x,y,z],[x,y,z]] (+ r) with optional pos, rot, mat ({"|".join(PMATS)}), pad, name')
+                    if not isinstance(p.get('parts'), list) or not p['parts'] or not all(part_ok(q) for q in p['parts']): err.append(f'{w}: machine needs parts, each one of box [sx,sy,sz] | cyl [r, length] | sph r | rod [[x,y,z],[x,y,z]] (+ r) with optional pos, rot, mat ({"|".join(PMATS)}), pad, name')
                     if 'seg' in p:
                         if p['seg'] == 'bar':
                             if not hb: err.append(f'{w}: a machine part on the bar needs a held bar')
@@ -341,10 +342,10 @@ if rig and os.path.exists(P('data', 'animations.json')):
                     if not held or ('seg' in held and set(b) - {'w'}): err.append(f'{kw}: bar keys need a held bar prop (one attached to a segment takes only w)')
                     for f in ('pos', 'rot'):
                         if f in b and not num3(b[f]): err.append(f'{kw}: bar.{f} must be [x,y,z]')
-                    if 'w' in b and not (num(b['w']) and (0.08 if held and held.get('type') == 'rope' else 0.15) <= b['w'] <= 1.6): err.append(f'{kw}: bar.w must be 0.15-1.6 m (rope: from 0.08)')
+                    if 'w' in b and not (num(b['w']) and (0.08 if held and held.get('type') in ('rope', 'grip') else 0.15) <= b['w'] <= 1.6): err.append(f'{kw}: bar.w must be 0.15-1.6 m (rope, grip: from 0.08)')
                     if 'hang' in b:
                         hg = b['hang']
-                        if not (isinstance(hg, list) and len(hg) == 2 and all(num(v) for v in hg) and 0.8 <= hg[0] <= 1 and -45 <= hg[1] <= 150): err.append(f'{kw}: bar.hang is [reach fraction 0.8-1, tilt -45..150 degrees]')
+                        if not (isinstance(hg, list) and len(hg) == 2 and all(num(v) for v in hg) and 0.8 <= hg[0] <= 1 and -180 <= hg[1] <= 180): err.append(f'{kw}: bar.hang is [reach fraction 0.8-1, tilt -180..180 degrees]')
                         if 'pos' in b: err.append(f'{kw}: bar takes pos or hang, not both')
                     if [f for f in b if f not in ('pos', 'rot', 'w', 'hang')]: err.append(f'{kw}: bar takes pos, rot, w, hang')
                 for s, ik in k.get('ik', {}).items():

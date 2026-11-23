@@ -2387,13 +2387,13 @@ function animRaycast(rc,hits){   // installed on the body meshes while an animat
   const g=this.geometry; this.geometry=posedGeo(this); try{ THREE.Mesh.prototype.raycast.call(this,rc,hits); } finally { this.geometry=g; }
 }
 // props: benches (flat or inclined), rollers, dumbbells (follow a hand), the held bar (barbell / pull-up bar / lat bar / V-handle / cable
-// bar / rope; both hands follow it), cables (tower, pulley and a cable to the held bar or to any anchor), machines (static frames, seats and
+// bar / rope / grip = an invisible handle that carries machine parts: trap bar, kettlebell, plate; both hands follow it), cables (tower, pulley and a cable to the held bar or to any anchor), machines (static frames, seats and
 // pads built from boxes, cylinders and rods, or a group that follows a body segment: rollers on the shin, handles in the hand, a sled under
 // the feet) and links (a rod between two anchors that is updated every frame: lever arms, rope strands)
 const propGrp=new THREE.Group(); scene.add(propGrp);
 const P_PAD=stdMat(lin(0x3a302b),{roughness:0.8}), P_FRAME=stdMat(lin(0x8d8a86),{roughness:0.4,metalness:0.5}), P_IRON=stdMat(lin(0x34322f),{roughness:0.45,metalness:0.4}), P_GRIP=stdMat(lin(0xa7a49f),{roughness:0.35,metalness:0.6}), P_CABLE=stdMat(lin(0x1f1d1b),{roughness:0.5});
 const PMAT={pad:P_PAD,frame:P_FRAME,iron:P_IRON,grip:P_GRIP,cable:P_CABLE};
-const BAR_TYPES={barbell:1,pullbar:1,latbar:1,vhandle:1,straightbar:1,rope:1};
+const BAR_TYPES={barbell:1,pullbar:1,latbar:1,vhandle:1,straightbar:1,rope:1,grip:1};
 let props=[];
 const k_y=new THREE.Vector3(0,1,0), k_pv=new THREE.Vector3(), k_one=new THREE.Vector3(1,1,1), k_sc=new THREE.Vector3(), k_a0=new THREE.Vector3(), k_a1=new THREE.Vector3();
 function cyl(r,h,mt,seg){ return new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg||14),mt); }
@@ -2415,13 +2415,13 @@ function setRod(m,a,b){   // a unit-height cylinder (local y) stretched from a t
   m.matrix.compose(k_ps.copy(a).add(b).multiplyScalar(0.5),k_pq,k_sc.set(1,Math.max(L,1e-4),1)); m.matrixWorldNeedsUpdate=true;
 }
 function rodMesh(r,mt,seg){ const m=cyl(r,1,mt,seg||10); m.matrixAutoUpdate=false; return m; }
-// a machine part: {box: [sx,sy,sz]} | {cyl: [r, length]} (along local y) | {rod: [[x,y,z],[x,y,z]], r}; pos, rot (Euler degrees), mat
+// a machine part: {box: [sx,sy,sz]} | {cyl: [r, length]} (along local y) | {sph: r} | {rod: [[x,y,z],[x,y,z]], r}; pos, rot (Euler degrees), mat
 // (pad | frame | iron | grip | cable); pad: true marks a contact pad (the dev helper animcheck.js measures how deep the body sinks into it)
 function partMesh(q){
   const mt=PMAT[q.mat||"frame"]||P_FRAME; let m;
   if(q.rod){ const a=new THREE.Vector3().fromArray(q.rod[0]), b=new THREE.Vector3().fromArray(q.rod[1]); m=cyl(q.r||0.02,Math.max(a.distanceTo(b),1e-4),mt);
     m.position.copy(a).add(b).multiplyScalar(0.5); m.quaternion.setFromUnitVectors(k_y,b.clone().sub(a).normalize()); return m; }
-  if(q.box) m=new THREE.Mesh(new THREE.BoxGeometry(q.box[0],q.box[1],q.box[2]),mt); else m=cyl(q.cyl[0],q.cyl[1],mt,q.cyl[0]>0.03?24:14);
+  if(q.box) m=new THREE.Mesh(new THREE.BoxGeometry(q.box[0],q.box[1],q.box[2]),mt); else if(q.sph) m=new THREE.Mesh(new THREE.SphereGeometry(q.sph,24,16),mt); else m=cyl(q.cyl[0],q.cyl[1],mt,q.cyl[0]>0.03?24:14);
   if(q.pos) m.position.fromArray(q.pos); if(q.rot) eulerQ(q.rot,m.quaternion);
   if(q.pad) m.userData.pad=q.box?{box:q.box.slice(),name:q.name||"pad"}:{cyl:q.cyl.slice(),name:q.name||"roller"};
   return m;
@@ -2484,6 +2484,7 @@ function buildProps(def,list){
         for(let k=0;k<4;k++){ const m=rodMesh(0.011,P_CABLE,8); g.add(m); rp.rods.push(m); }
         [-1,1].forEach(()=>{ const kn=cyl(0.02,0.03,P_IRON,14); kn.rotation.x=Math.PI/2; g.add(kn); rp.knobs.push(kn); });
         g.userData.rope=rp;
+      } else if(p.type==="grip"){   // an invisible held handle: only the frame both hands grip; what is held (trap bar, kettlebell, plate, a dumbbell held in both hands) is built from machine parts with "seg": "bar"
       } else {   // lat bar: straight centre, ends angled down
         add(cyl(0.014,L*0.7,P_GRIP),0);
         [-1,1].forEach(sg=>{ const e=cyl(0.014,L*0.17,P_GRIP); e.position.set(sg*(L*0.35+L*0.08),-L*0.03,0); e.rotation.z=Math.PI/2-sg*0.35; g.add(e); });
