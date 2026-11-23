@@ -84,6 +84,9 @@ async function bootAnim(opts){
         const def=X.anim.def.props.filter(q=>q.type==='dumbbell')[k]||{len:0.3,r:0.05},m=p.obj.matrix,c=new T.Vector3().setFromMatrixPosition(m),ay=new T.Vector3().setFromMatrixColumn(m,1).normalize(),h=def.len/2;
         return A.clear(c.clone().addScaledVector(ay,-h),c.clone().addScaledVector(ay,h),u=>Math.abs(u-0.5)*def.len>h-0.05?def.r:0.0145,hand,[c]);
       });
+      // spheres carried by the held bar (kettlebell): clearance between the ball and the nearest body vertex outside the hands
+      if(!fast){ X.propGrp.updateMatrixWorld(true); X.props.filter(p=>p.onBar).forEach(p=>p.obj.traverse(o=>{ if(!o.geometry||o.geometry.type!=='SphereGeometry') return; const c=new T.Vector3().setFromMatrixPosition(o.matrixWorld),rr=o.geometry.parameters.radius;
+        (r.db=r.db||[]).push(A.clear(c,c.clone().add(new T.Vector3(1e-6,0,0)),()=>rr,hand,[A.gripPt('L'),A.gripPt('R')])); })); }
       r.floor={y:NaN,who:''};if(fast) return r;const P=A.posed();let lo=1e9,lw='';X.allMeshes.forEach((m,mi)=>{const p=P[mi];for(let k=1;k<p.length;k+=3) if(p[k]<lo){lo=p[k];lw=m.userData.key;}});r.floor={y:lo,who:lw};
       {let l2=1e9,w2='';X.allMeshes.forEach((m,mi)=>{if(!/^(Back|Shoulder|Chest|Neck|Skull|Thorax|Spine|Face|Upper arm|Arm|Abdomen|Hip)$/.test(m.userData.group)) return;const p=P[mi];for(let k=1;k<p.length;k+=3) if(p[k]<l2){l2=p[k];w2=m.userData.key;}});r.floorUp={y:l2,who:w2};}   // lowest vertex of trunk, head, upper arms and hips (lying exercises: the back on the floor)
       // benches: signed distance of body vertices over the pad to its top surface (seat, and the backrest of an inclined bench); the
