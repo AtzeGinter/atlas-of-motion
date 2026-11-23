@@ -2411,6 +2411,8 @@ const BAR_TYPES={barbell:1,pullbar:1,latbar:1,vhandle:1,straightbar:1,rope:1,gri
 let props=[];
 const k_y=new THREE.Vector3(0,1,0), k_pv=new THREE.Vector3(), k_one=new THREE.Vector3(1,1,1), k_sc=new THREE.Vector3(), k_a0=new THREE.Vector3(), k_a1=new THREE.Vector3();
 function cyl(r,h,mt,seg){ return new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg||14),mt); }
+// a segment props ride on: a finger segment (hand-gripper handle) follows its hand when the fingers are not skinned (small uniform budget)
+const propSeg=n=>{ const s=SEGI[n]; return skN<NSEG?SEGHAND[s]:s; };
 // an anchor = a point that props can attach to: [x,y,z] (fixed, world), {seg, at} (bind-pose point carried by a segment), {seg: "handL",
 // grip: d} (the hand's grip point moved d metres along the handle axis toward the thumb), {bar: [x,y,z]} (a point in the held bar's frame),
 // {bar: "L"|"R"} (that hand's grip point on the held bar) or {bar: "ring"} (the ring of a rope). anchorFn returns a function that writes its current world position.
@@ -2421,7 +2423,7 @@ function anchorFn(a){
     if(a.bar==="ring") return out=>heldBar&&heldBar.rope?ropeRing(heldBar.rope,out).applyQuaternion(barQ).add(barC):out.copy(barC);   // the rope's ring
     const v=new THREE.Vector3().fromArray(Array.isArray(a.bar)?a.bar:[0,0,0]); return out=>out.copy(v).applyQuaternion(barQ).add(barC);
   }
-  const s=SEGI[a.seg], sd=a.seg.slice(-1), b=a.grip!==undefined?new THREE.Vector3().fromArray(RIG.pt["grip"+sd]).addScaledVector(gaxB[sd],a.grip):new THREE.Vector3().fromArray(a.at||SEGJ[s].toArray());
+  const s=propSeg(a.seg), sd=a.seg.slice(-1), b=a.grip!==undefined?new THREE.Vector3().fromArray(RIG.pt["grip"+sd]).addScaledVector(gaxB[sd],a.grip):new THREE.Vector3().fromArray(a.at||SEGJ[s].toArray());
   return out=>out.copy(b).sub(SEGJ[s]).applyQuaternion(segQ[s]).add(segPos[s]);
 }
 function setRod(m,a,b){   // a unit-height cylinder (local y) stretched from a to b (in its parent's frame)
@@ -2530,7 +2532,7 @@ function buildProps(def,list){
         g.matrixAutoUpdate=false; let q0=eulerQ(p.rot||[0,0,0],new THREE.Quaternion()), at;
         if(p.seg==="bar"){ props.push({obj:g,onBar:new THREE.Matrix4().compose(new THREE.Vector3().fromArray(p.at||[0,0,0]),q0,k_one)}); }
         else {
-          const s=SEGI[p.seg], sd=p.seg.slice(-1);
+          const s=propSeg(p.seg), sd=p.seg.slice(-1);
           if(p.at==="grip"){ at=new THREE.Vector3().fromArray(RIG.pt["grip"+sd]); q0=new THREE.Quaternion().setFromUnitVectors(k_y,gaxB[sd]).multiply(q0); }   // local y = the handle axis (toward the thumb), origin = the grip point
           else at=new THREE.Vector3().fromArray(p.at||SEGJ[s].toArray());
           if(p.follow==="move") props.push({obj:g,move:anchorFn({seg:p.seg,at:at.toArray()}),q0:q0,axis:p.axis?new THREE.Vector3().fromArray(p.axis).normalize():null,base:new THREE.Vector3().fromArray(p.base||[0,0,0]),normal:p.normal?new THREE.Vector3().fromArray(p.normal).normalize():null});   // move: position only; with axis (+ base) only along that line (a sled on its rails); with normal as far along it as keeps the anchor on that plane (a foot plate the ball of the foot pushes)

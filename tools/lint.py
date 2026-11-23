@@ -255,7 +255,7 @@ if rig and os.path.exists(P('data', 'animations.json')):
         if num3(v): return True
         if not isinstance(v, dict): return False
         if 'bar' in v: return bool(held) and set(v) == {'bar'} and (num3(v['bar']) or v['bar'] in ('L', 'R', 'ring'))
-        if v.get('seg') not in sn or segk(v['seg']) == 'finger' or set(v) - {'seg', 'at', 'grip'}: return False
+        if v.get('seg') not in sn or (segk(v['seg']) == 'finger' and 'grip' in v) or set(v) - {'seg', 'at', 'grip'}: return False
         if 'grip' in v: return v['seg'] in ('handL', 'handR') and num(v['grip']) and 'at' not in v
         return 'at' not in v or num3(v['at'])
     def part_ok(q):
@@ -308,7 +308,7 @@ if rig and os.path.exists(P('data', 'animations.json')):
                     if 'seg' in p:
                         if p['seg'] == 'bar':
                             if not hb: err.append(f'{w}: a machine part on the bar needs a held bar')
-                        elif p['seg'] not in sn or segk(p['seg']) == 'finger': err.append(f'{w}: machine seg must be a body segment or "bar"')
+                        elif p['seg'] not in sn or (segk(p['seg']) == 'finger' and (p.get('follow', 'rigid') != 'rigid' or 'at' in p and not num3(p['at']))): err.append(f'{w}: machine seg must be a body segment or "bar" (a finger segment: rigid, at [x,y,z])')
                         if 'at' in p and not (num3(p['at']) or (p['at'] == 'grip' and p.get('seg') in ('handL', 'handR'))): err.append(f'{w}: machine at is [x,y,z] (bind pose) or "grip" (hands)')
                         if p.get('follow', 'rigid') not in ('rigid', 'move') or (p.get('follow') == 'move' and p['seg'] == 'bar'): err.append(f'{w}: machine follow is "rigid" or "move" (segments only)')
                         if ('axis' in p or 'base' in p or 'normal' in p) and not (p.get('follow') == 'move' and num3(p.get('axis')) and num3(p.get('base', [0, 0, 0])) and num3(p.get('normal', [0, 0, 1]))): err.append(f'{w}: machine axis [x,y,z] (+ base [x,y,z], a point on the rail line, + normal [x,y,z] of a contact plane) needs follow "move"')
@@ -325,7 +325,7 @@ if rig and os.path.exists(P('data', 'animations.json')):
                     if p.get('mat', 'frame') not in PMATS: err.append(f'{w}: link mat must be one of {", ".join(PMATS)}')
                 else: err.append(f"{w}: unknown prop type {ty!r}")
             ks = a.get('keys', [])
-            if not 3 <= len(ks) <= 24: err.append(f'{w}: needs 3-24 keys')
+            if not 3 <= len(ks) <= 32: err.append(f'{w}: needs 3-32 keys')
             ts = [k.get('t') for k in ks]
             if not ts or ts[0] != 0 or ts[-1] != 1 or any(not num(t) or not b > t for t, b in zip(ts, ts[1:])): err.append(f'{w}: key times must rise strictly from 0 to 1')
             b0 = (ks[0].get('bar') or {}) if ks else {}
