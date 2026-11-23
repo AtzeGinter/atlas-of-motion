@@ -269,7 +269,7 @@ if rig and os.path.exists(P('data', 'animations.json')):
         if q.get('pad') and 'rod' in q: return False
         return all(num3(q[f]) for f in ('pos', 'rot') if f in q) and q.get('mat', 'frame') in PMATS
     def check_anim(w, a):
-            if not num(a.get('dur')) or not 0.5 <= a['dur'] <= 10: err.append(f'{w}: dur must be 0.5-10 seconds')
+            if not num(a.get('dur')) or not 0.5 <= a['dur'] <= 30: err.append(f'{w}: dur must be 0.5-30 seconds')
             c = a.get('camera', {})
             if not (num(c.get('theta')) and num(c.get('phi')) and 5 <= c['phi'] <= 175 and num(c.get('r')) and 0.3 <= c['r'] <= 2 and num3(c.get('target'))):
                 err.append(f'{w}: camera needs theta, phi (5-175), r (0.3-2, times the default distance), target [x,y,z]')
@@ -325,12 +325,13 @@ if rig and os.path.exists(P('data', 'animations.json')):
                     if p.get('mat', 'frame') not in PMATS: err.append(f'{w}: link mat must be one of {", ".join(PMATS)}')
                 else: err.append(f"{w}: unknown prop type {ty!r}")
             ks = a.get('keys', [])
-            if not 3 <= len(ks) <= 12: err.append(f'{w}: needs 3-12 keys')
+            if not 3 <= len(ks) <= 24: err.append(f'{w}: needs 3-24 keys')
             ts = [k.get('t') for k in ks]
             if not ts or ts[0] != 0 or ts[-1] != 1 or any(not num(t) or not b > t for t, b in zip(ts, ts[1:])): err.append(f'{w}: key times must rise strictly from 0 to 1')
             b0 = (ks[0].get('bar') or {}) if ks else {}
             if held and 'seg' not in held and not num3(b0.get('pos')) and 'hang' not in b0 and not num3(held.get('pos')): err.append(f'{w}: the held bar needs bar.pos or bar.hang in key 0 (or seg + at on the prop)')
-            if any('hang' in (k.get('bar') or {}) for k in ks) and 'hang' not in b0: err.append(f'{w}: bar.hang must start in key 0 (a hanging bar cannot switch to bar.pos)')
+            if any('hang' in (k.get('bar') or {}) for k in ks) and 'hang' not in b0: err.append(f'{w}: bar.hang must start in key 0')
+            hanging = isinstance(b0.get('hang'), list)
             chains, ends, bars = set(), set(), set()
             fx0 = (ks[0].get('root') or {}).get('fix') if ks else None   # root.fix: the root follows a contact point (seg, at) placed at "to"
             if fx0 is not None:
@@ -358,10 +359,19 @@ if rig and os.path.exists(P('data', 'animations.json')):
                     for f in ('pos', 'rot'):
                         if f in b and not num3(b[f]): err.append(f'{kw}: bar.{f} must be [x,y,z]')
                     if 'w' in b and not (num(b['w']) and (0.08 if held and held.get('type') in ('rope', 'grip') else 0.15) <= b['w'] <= 1.6): err.append(f'{kw}: bar.w must be 0.15-1.6 m (rope, grip: from 0.08)')
+                    # a hanging bar may switch to a positioned one ("hang": null + pos = where the hanging bar is at that key) and back
+                    # ("hang": [f, tilt] + pos = where the positioned bar is when it starts to hang): the segment before the switch key keeps
+                    # the old mode, so the bar is continuous when pos matches (power clean: straight-arm pull, then the pull under and the catch)
                     if 'hang' in b:
                         hg = b['hang']
-                        if not (isinstance(hg, list) and len(hg) == 2 and all(num(v) for v in hg) and 0.8 <= hg[0] <= 1 and -180 <= hg[1] <= 180): err.append(f'{kw}: bar.hang is [reach fraction 0.8-1, tilt -180..180 degrees]')
-                        if 'pos' in b: err.append(f'{kw}: bar takes pos or hang, not both')
+                        if hg is None:
+                            if not ki or not hanging or not num3(b.get('pos')): err.append(f'{kw}: bar.hang null switches a hanging bar to bar.pos (needs pos, after key 0, while the bar hangs)')
+                            hanging = False
+                        else:
+                            if not (isinstance(hg, list) and len(hg) == 2 and all(num(v) for v in hg) and 0.8 <= hg[0] <= 1 and -180 <= hg[1] <= 180): err.append(f'{kw}: bar.hang is [reach fraction 0.8-1, tilt -180..180 degrees]')
+                            if 'pos' in b and (not ki or hanging): err.append(f'{kw}: bar takes pos or hang, not both (pos with hang only where a positioned bar starts to hang)')
+                            hanging = True
+                    elif 'pos' in b and hanging: err.append(f'{kw}: bar.pos is ignored while the bar hangs (switch with "hang": null)')
                     if [f for f in b if f not in ('pos', 'rot', 'w', 'hang')]: err.append(f'{kw}: bar takes pos, rot, w, hang')
                 for s, ik in k.get('ik', {}).items():
                     if s[:-1] not in CHAINS or s not in sn: err.append(f'{kw}: IK chain {s!r} must be thighL/R or armL/R'); continue
