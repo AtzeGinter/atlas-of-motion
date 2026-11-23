@@ -25,6 +25,7 @@
  },
  "Bulgarian split squat": {
   "dur": 3.4,
+  "side": "L",
   "camera": {"theta": 62, "phi": 84, "r": 1.25, "target": [0, 0.66, -0.12]},
   "props": [
    {"type": "bench", "size": [0.32, 0.06, 1.0], "top": 0.42, "pos": [-0.06, -0.82]},
@@ -528,6 +529,7 @@
  },
  "Reverse lunge": {
   "dur": 3.6,
+  "side": "L",
   "camera": {"theta": 80, "phi": 84, "r": 1.35, "target": [0, 0.75, -0.3]},
   "sym": false,
   "props": [
@@ -548,6 +550,7 @@
  },
  "Walking lunge": {
   "dur": 3.6,
+  "side": "L",
   "camera": {"theta": 80, "phi": 84, "r": 1.35, "target": [0, 0.75, 0.25]},
   "sym": false,
   "props": [
@@ -957,6 +960,7 @@
  },
  "Cable external rotation": {
   "dur": 2.8,
+  "side": "L",
   "camera": {"theta": 20, "phi": 72, "r": 1.0, "target": [0.05, 1.05, 0.05]},
   "sym": false,
   "props": [
@@ -975,6 +979,7 @@
  },
  "Cable internal rotation": {
   "dur": 2.8,
+  "side": "L",
   "camera": {"theta": 40, "phi": 72, "r": 1.0, "target": [0.05, 1.05, 0.05]},
   "sym": false,
   "props": [
@@ -993,6 +998,7 @@
  },
  "Cable lateral raise": {
   "dur": 3.0,
+  "side": "L",
   "camera": {"theta": 15, "phi": 84, "r": 1.4, "target": [0.05, 1.05, 0.05]},
   "sym": false,
   "props": [
@@ -1032,6 +1038,7 @@
  },
  "Pallof press": {
   "dur": 3.4,
+  "side": "L",
   "camera": {"theta": 25, "phi": 80, "r": 1.4, "target": [-0.15, 1.0, 0.1]},
   "props": [
    {"type": "machine", "seg": "handL", "at": "grip", "parts": [{"cyl": [0.016, 0.2], "pos": [0, -0.045, 0], "mat": "grip"}]},
@@ -1101,6 +1108,7 @@
  },
  "Cable woodchop": {
   "dur": 3.2,
+  "side": "L",
   "camera": {"theta": 40, "phi": 82, "r": 1.4, "target": [0, 1.1, 0.1]},
   "sym": false,
   "props": [
@@ -1123,6 +1131,7 @@
  },
  "Cable glute kickback": {
   "dur": 2.8,
+  "side": "L",
   "camera": {"theta": 90, "phi": 82, "r": 1.4, "target": [0, 0.8, 0.05]},
   "sym": false,
   "props": [
@@ -1139,6 +1148,7 @@
  },
  "Standing cable hip abduction": {
   "dur": 2.8,
+  "side": "L",
   "camera": {"theta": 10, "phi": 84, "r": 1.4, "target": [-0.1, 0.8, 0.05]},
   "sym": false,
   "props": [
@@ -1160,6 +1170,7 @@
  },
  "Standing cable hip flexion": {
   "dur": 2.8,
+  "side": "L",
   "camera": {"theta": 90, "phi": 82, "r": 1.4, "target": [0, 0.8, 0.0]},
   "sym": false,
   "props": [
@@ -1260,6 +1271,7 @@
  },
  "Landmine press": {
   "dur": 3.0,
+  "side": "L",
   "camera": {"theta": 70, "phi": 80, "r": 1.25, "target": [0.05, 1.2, 0.35]},
   "sym": false,
   "props": [
@@ -1371,6 +1383,7 @@
  },
  "Rotary torso machine": {
   "dur": 3.2,
+  "side": "L",
   "camera": {"theta": 55, "phi": 52, "r": 1.45, "target": [0, 0.9, 0.05]},
   "props": [
    {"type": "bench", "size": [0.4, 0.07, 0.42], "top": 0.445, "pos": [0, 0.02]},
@@ -1470,6 +1483,7 @@
  },
  "Dumbbell side bend": {
   "dur": 3.4,
+  "side": "L",
   "camera": {"theta": 10, "phi": 86, "r": 1.4, "target": [0, 1.0, 0]},
   "sym": false,
   "props": [
@@ -1537,6 +1551,7 @@
  },
  "Single-leg Romanian deadlift": {
   "dur": 4.0,
+  "side": "L",
   "camera": {"theta": 75, "phi": 80, "r": 1.55, "target": [0, 0.75, -0.25]},
   "sym": false,
   "props": [
@@ -1601,6 +1616,7 @@
  },
 "Meadows row": {
   "dur": 3.0,
+  "side": "L",
   "camera": {"theta": 25, "phi": 72, "r": 1.5, "target": [-0.25, 0.65, 0.1]},
   "sym": false,
   "props": [
@@ -1623,6 +1639,7 @@
  },
  "One-arm dumbbell row": {
   "dur": 3.0,
+  "side": "L",
   "camera": {"theta": 60, "phi": 74, "r": 1.35, "target": [0, 0.7, 0.15]},
   "sym": false,
   "props": [
@@ -1675,6 +1692,7 @@
  },
  "Concentration curl": {
   "dur": 3.0,
+  "side": "L",
   "camera": {"theta": 45, "phi": 78, "r": 1.2, "target": [0.1, 0.65, 0.25]},
   "sym": false,
   "props": [
@@ -1724,6 +1742,7 @@
  },
  "Radial deviation": {
   "dur": 2.4,
+  "side": "L",
   "camera": {"theta": 80, "phi": 80, "r": 1.0, "target": [0.1, 0.65, 0.35]},
   "sym": false,
   "props": [
@@ -1741,6 +1760,7 @@
  },
  "Forearm pronation and supination": {
   "dur": 3.2,
+  "side": "L",
   "camera": {"theta": 15, "phi": 72, "r": 0.9, "target": [0.12, 0.6, 0.45]},
   "sym": false,
   "props": [
@@ -1819,6 +1839,7 @@
  },
  "Step-up": {
   "dur": 3.6,
+  "side": "L",
   "camera": {"theta": 70, "phi": 82, "r": 1.5, "target": [0, 0.9, 0.15]},
   "sym": false,
   "props": [
@@ -1841,6 +1862,7 @@
  },
  "Lateral step-up": {
   "dur": 3.4,
+  "side": "L",
   "camera": {"theta": 15, "phi": 84, "r": 1.5, "target": [0.15, 0.9, 0]},
   "sym": false,
   "props": [
@@ -1908,6 +1930,7 @@
  },
  "Side plank": {
   "dur": 3.0,
+  "side": "L",
   "camera": {"theta": 10, "phi": 72, "r": 1.6, "target": [0, 0.3, 0]},
   "sym": false,
   "props": [],
@@ -1919,6 +1942,7 @@
  },
  "Side plank with hip abduction": {
   "dur": 2.6,
+  "side": "L",
   "camera": {"theta": 10, "phi": 72, "r": 1.6, "target": [0, 0.35, 0]},
   "sym": false,
   "props": [],
@@ -1932,6 +1956,7 @@
  },
  "Copenhagen plank": {
   "dur": 3.0,
+  "side": "L",
   "camera": {"theta": 15, "phi": 70, "r": 1.7, "target": [0.15, 0.3, 0]},
   "sym": false,
   "props": [
@@ -2047,6 +2072,7 @@
  },
  "Bird dog": {
   "dur": 3.6,
+  "side": "L",
   "camera": {"theta": 70, "phi": 72, "r": 1.8, "target": [0, 0.45, -0.1]},
   "sym": false,
   "props": [],
@@ -2060,6 +2086,7 @@
  },
  "Side-lying hip abduction": {
   "dur": 2.8,
+  "side": "L",
   "camera": {"theta": 5, "phi": 70, "r": 1.5, "target": [0.05, 0.25, 0]},
   "sym": false,
   "props": [],
@@ -2074,6 +2101,7 @@
  },
  "Clamshell": {
   "dur": 2.6,
+  "side": "L",
   "camera": {"theta": 20, "phi": 62, "r": 1.4, "target": [0.1, 0.25, 0.1]},
   "sym": false,
   "props": [],
@@ -2184,6 +2212,7 @@
  },
  "Single-leg box squat": {
   "dur": 3.6,
+  "side": "L",
   "camera": {"theta": 80, "phi": 82, "r": 1.4, "target": [0, 0.75, 0]},
   "sym": false,
   "props": [
@@ -2199,6 +2228,7 @@
  },
  "Lateral step-down": {
   "dur": 3.4,
+  "side": "L",
   "camera": {"theta": 15, "phi": 84, "r": 1.5, "target": [0.15, 0.9, 0]},
   "sym": false,
   "props": [
@@ -2214,6 +2244,7 @@
  },
  "Single-leg calf raise": {
   "dur": 2.6,
+  "side": "L",
   "camera": {"theta": 75, "phi": 84, "r": 1.5, "target": [0, 0.95, 0]},
   "sym": false,
   "props": [
@@ -2244,6 +2275,7 @@
  },
  "Hip airplane": {
   "dur": 4.0,
+  "side": "L",
   "camera": {"theta": 55, "phi": 72, "r": 1.7, "target": [0, 0.8, 0.05]},
   "sym": false,
   "props": [],
@@ -2279,6 +2311,7 @@
  },
  "Neck lateral flexion": {
   "dur": 2.8,
+  "side": "L",
   "camera": {"theta": 8, "phi": 84, "r": 0.8, "target": [-0.28, 1.4, 0]},
   "props": [
    {"type": "machine", "parts": [{"rod": [[-0.76, 0, -0.027], [-0.76, 1.85, -0.027]], "r": 0.025}, {"box": [0.3, 0.03, 0.3], "pos": [-0.76, 0.015, -0.027]}, {"rod": [[-0.76, 1.655, -0.027], [-0.71, 1.655, -0.027]], "r": 0.014}]},
@@ -2332,6 +2365,7 @@
  },
  "Seated hip external rotation": {
   "dur": 2.8,
+  "side": "L",
   "camera": {"theta": 14, "phi": 70, "r": 1.15, "target": [0.03, 0.62, 0.15]},
   "sym": false,
   "props": [
@@ -2421,6 +2455,7 @@
  },
  "Hand gripper": {
   "dur": 2.6,
+  "side": "L",
   "camera": {"theta": 35, "phi": 78, "r": 0.38, "target": [0.27, 1.1, 0.24]},
   "sym": false,
   "props": [
@@ -2438,6 +2473,7 @@
  },
  "Turkish get-up": {
   "dur": 22.2,
+  "side": "L",
   "camera": {"theta": 25, "phi": 72, "r": 1.75, "target": [-0.05, 0.55, 0.05]},
   "sym": false,
   "props": [

@@ -981,7 +981,7 @@ input.mvdate[hidden]{display:none;}
 .sxshare .bc{flex:1 1 220px;}
 .sxban{position:absolute;z-index:3;left:24px;bottom:56px;width:min(420px,calc(100% - 48px));background:var(--card);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);padding:10px 14px 10px;display:flex;flex-direction:column;gap:6px;}
 .sxban[hidden]{display:none;}
-.animbar{position:absolute;z-index:3;left:24px;bottom:22px;width:max-content;max-width:min(400px,calc(100% - 48px));background:var(--card);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);padding:9px 14px;display:flex;flex-direction:column;gap:7px;}
+.animbar{position:absolute;z-index:3;left:24px;bottom:22px;width:max-content;max-width:min(470px,calc(100% - 48px));background:var(--card);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);padding:9px 14px;display:flex;flex-direction:column;gap:7px;}
 .animbar[hidden]{display:none;}
 .vp.animating .hint{display:none;}
 .animbar .abt b{display:block;font:600 16px var(--f-disp);}
@@ -991,6 +991,12 @@ input.mvdate[hidden]{display:none;}
 .animbar .abspeed{grid-template-columns:repeat(3,auto);}
 .animbar .abspeed button{padding:5px 10px;}
 .animbar .abspeed button[aria-pressed="true"]{background:var(--chip);font-weight:600;}
+.animbar .abside{grid-template-columns:repeat(3,auto);}
+.animbar .abside[hidden]{display:none;}
+.animbar .abside button{padding:5px 10px;}
+.animbar .abside button[aria-pressed="true"]{background:var(--chip);font-weight:600;}
+.animbar .abside button[aria-current="true"]{box-shadow:inset 0 -2px 0 var(--accent);}
+@media (pointer:coarse){.animbar .abspeed button,.animbar .abside button{min-height:44px;}}
 .card .animrow{margin:10px 0 0;}
 .animbar input[type=range]{width:100%;margin:0;accent-color:var(--accent);}
 .sxban .sxbt b{display:block;font:600 16px var(--f-disp);}
@@ -1181,7 +1187,7 @@ input.mvdate[hidden]{display:none;}
     <div class="ver" id="ver" title="Atlas of Motion, version __VERSION__ (build __BUILDID__)">v__VERSION__ · __BUILDID__</div>
     <div class="hint" id="hint">Drag to rotate, scroll to zoom, right-drag to pan, click to inspect, H to hide</div>
     <div class="card" id="card" aria-live="polite"></div>
-    <div class="animbar" id="animBar" role="group" aria-label="Exercise movement" hidden><div class="abt"><b id="animName"></b><small id="animNote" role="status"></small></div><div class="abb"><button class="btn" id="animPP" type="button">Pause</button><div class="seg abspeed" id="animSpeed" role="group" aria-label="Speed"><button type="button" data-sp="0.5">0.5×</button><button type="button" data-sp="1">1×</button><button type="button" data-sp="1.5">1.5×</button></div><button class="btn" id="animStop" type="button">Stop</button></div><input type="range" id="animT" class="abt-range" min="0" max="1000" step="1" value="0" aria-label="Position in the movement"></div>
+    <div class="animbar" id="animBar" role="group" aria-label="Exercise movement" hidden><div class="abt"><b id="animName"></b><small id="animNote" role="status"></small></div><div class="abb"><button class="btn" id="animPP" type="button">Pause</button><div class="seg abspeed" id="animSpeed" role="group" aria-label="Speed"><button type="button" data-sp="0.5">0.5×</button><button type="button" data-sp="1">1×</button><button type="button" data-sp="1.5">1.5×</button></div><div class="seg abside" id="animSide" role="group" aria-label="Working side" title="Which side works: left, right, or both in turn (one repetition each)" hidden><button type="button" data-side="L">Left</button><button type="button" data-side="R">Right</button><button type="button" data-side="both">Both</button></div><button class="btn" id="animStop" type="button">Stop</button></div><input type="range" id="animT" class="abt-range" min="0" max="1000" step="1" value="0" aria-label="Position in the movement"></div>
     <section class="ov" id="ov" role="dialog" aria-label="Week overview" hidden>
       <div class="ovhead"><h2>Week overview</h2><div class="seg ovsw" id="ovSw" role="group" aria-label="Overview view"><button type="button" data-ovv="sch" aria-pressed="true">Schedule</button><button type="button" data-ovv="mus" aria-pressed="false">Muscles</button></div><button class="btn" id="ovClose" type="button">Show body</button></div>
       <p class="ovsum" id="ovSum"></p>
@@ -2188,6 +2194,44 @@ function animProps(i,def){   // the props of the chosen variation: an option may
   if(def.vars&&EX[i].v) EX[i].v.forEach((g,gi)=>{ const o=g[1][v[gi]||0], p=o&&def.vars[g[0]]&&def.vars[g[0]][o[0]]; if(p&&p.props) ps=p.props; });
   return ps;
 }
+// single-sided exercises (animations.json "side": "L" = the authored working side): the whole animation mirrored across the body's
+// sagittal plane (x -> -x) plays the other side. A mirror M = diag(-1,1,1) turns a rotation R into M R M: an Euler XYZ [a, b, c] becomes
+// [a, -b, -c], a point or direction negates x, left and right segments swap. Joint angles keep their values (localQ already mirrors the
+// DOF axes of right segments, twist / radius / finger axes are per side in rig.json), except the spine's side bend and rotation (unsided
+// segments), which change sign. Props follow the same rule in their own frames (positions in a part's or group's frame negate x, rotations
+// mirror), because a segment's, the held bar's and a grip handle's frame all turn into M F M. IK targets stay targets, so the slightly
+// asymmetric atlas still reaches them exactly; FK-only limbs land within ~1-2 cm of the mirror image.
+const SIDED=/^(clav|arm|fore|rad|hand|thigh|shank|foot|th[mpd]|f[2-5][pmd])[LR]$/;
+const swapSide=n=>typeof n==="string"&&SIDED.test(n)?n.slice(0,-1)+(n.slice(-1)==="L"?"R":"L"):n;
+const mirX=v=>Array.isArray(v)&&v.length===3?[-v[0],v[1],v[2]]:v, mirE=r=>Array.isArray(r)?[r[0],-r[1],-r[2]]:r;
+function mirKey(k){   // a prepared key (prepKeys) -> its mirror image
+  const o=Object.assign({},k,{pos:mirX(k.pos),rot:mirE(k.rot),j:{},ik:{},bar:Object.assign({},k.bar)});
+  if(k.fix) o.fix={seg:swapSide(k.fix.seg),at:mirX(k.fix.at),to:mirX(k.fix.to)};
+  Object.keys(k.j).forEach(n=>{ const a=Object.assign({},k.j[n]); if(!SIDED.test(n)) ["lat","rot"].forEach(d=>{ if(a[d]) a[d]=-a[d]; }); o.j[swapSide(n)]=a; });
+  Object.keys(k.ik).forEach(n=>{ const a=Object.assign({},k.ik[n]); ["target","pole","hax","hfd"].forEach(f=>{ if(a[f]) a[f]=mirX(a[f]); }); if(a.end) a.end=mirE(a.end); o.ik[swapSide(n)]=a; });
+  if(o.bar.pos) o.bar.pos=mirX(o.bar.pos); if(o.bar.rot) o.bar.rot=mirE(o.bar.rot);
+  return o;
+}
+function mirAnchor(a){
+  if(Array.isArray(a)) return mirX(a);
+  if(!a||typeof a!=="object") return a;
+  if(a.bar!==undefined) return {bar:a.bar==="L"?"R":a.bar==="R"?"L":Array.isArray(a.bar)?mirX(a.bar):a.bar};   // the hands swap on the mirrored bar
+  const o=Object.assign({},a,{seg:swapSide(a.seg)}); if(Array.isArray(a.at)) o.at=mirX(a.at); return o;
+}
+function mirPart(q){ const o=Object.assign({},q); if(q.pos) o.pos=mirX(q.pos); if(q.rot) o.rot=mirE(q.rot); if(q.rod) o.rod=q.rod.map(mirX); return o; }
+function mirProp(p){   // a prop definition -> its mirror image
+  const o=JSON.parse(JSON.stringify(p));
+  if(p.type==="bench"){ o.pos=[-p.pos[0],p.pos[1]]; if(p.yaw) o.yaw=-p.yaw; return o; }
+  if(p.type==="cable"){ o.pulley=mirX(p.pulley); if(p.stack) o.stack=[-p.stack[0],p.stack[1]]; if(p.to) o.to=mirAnchor(p.to); return o; }
+  if(p.type==="link"){ o.from=mirAnchor(p.from); o.to=mirAnchor(p.to); return o; }
+  if(p.seg) o.seg=swapSide(p.seg);
+  ["pos","toward","axis","base","normal"].forEach(f=>{ if(Array.isArray(p[f])) o[f]=mirX(p[f]); });
+  if(Array.isArray(p.at)) o.at=mirX(p.at);   // "grip" (a hand's handle frame) stays
+  if(p.rot) o.rot=mirE(p.rot); if(p.yaw) o.yaw=-p.yaw; if(p.aim) o.aim=mirAnchor(p.aim);
+  if(p.parts) o.parts=p.parts.map(mirPart);
+  return o;
+}
+const mirCam=c=>Object.assign({},c,{theta:c.theta!==undefined?-c.theta:c.theta,target:c.target?mirX(c.target):c.target});
 function prepKeys(keys){
   const cp=o=>JSON.parse(JSON.stringify(o));
   let prev={t:0,ease:"inOut",pos:SEGJ[0].toArray(),rot:[0,0,0],j:{},ik:{},bar:{}};
@@ -2442,7 +2486,7 @@ function partMesh(q){
   if(q.pad) m.userData.pad=q.box?{box:q.box.slice(),name:q.name||"pad"}:{cyl:q.cyl.slice(),name:q.name||"roller"};
   return m;
 }
-function buildProps(def,list){
+function buildProps(def,list,mir){   // mir: list is the mirrored props of def (single-sided exercise played on the other side)
   clearProps(); heldBar=null;
   (list||def.props||[]).forEach(p=>{
     if(p.type==="bench"){
@@ -2509,7 +2553,7 @@ function buildProps(def,list){
       const hb={obj:g,bar:1,w:p.w||0.6,pos:p.pos||[0,1,0.3],rope:g.userData.rope||null};
       if(p.seg){ hb.seg=SEGI[p.seg]; hb.at=new THREE.Vector3().fromArray(p.at); hb.q0=eulerQ(p.rot||[0,0,0],new THREE.Quaternion()); }
       if(p.type==="pullbar"&&p.posts){   // uprights to the floor (static, at the bar's key-0 position)
-        const k0=(def.keys[0].bar||{}).pos||hb.pos;
+        const k0=(def.keys[0].bar||{}).pos?(mir?mirX(def.keys[0].bar.pos):def.keys[0].bar.pos):hb.pos;
         [-1,1].forEach(sg=>{ const u=cyl(0.03,k0[1],P_FRAME); u.position.set(k0[0]+sg*(L/2+0.18),k0[1]/2,k0[2]); propGrp.add(u); props.push({obj:u}); const t=cyl(0.03,0.2,P_FRAME); t.rotation.z=Math.PI/2; t.position.set(k0[0]+sg*(L/2+0.09),k0[1],k0[2]); propGrp.add(t); props.push({obj:t}); });
       }
       heldBar=hb; props.push(hb);
@@ -2569,13 +2613,32 @@ function syncRope(rp){   // in the bar frame: the grips sit at x = +-barW/2; eac
     setRod(rp.rods[2*k],rp.ring,k_r0.set(x,0,0.05)); setRod(rp.rods[2*k+1],k_r0,k_r1.set(x,0,-0.065)); rp.knobs[k].position.set(x,0,-0.08); });
 }
 function clearProps(){ props.forEach(p=>{ if(p.obj.parent) p.obj.parent.remove(p.obj); p.obj.traverse(o=>{ if(o.geometry) o.geometry.dispose(); }); }); props=[]; heldBar=null; }
-// playback state: anim = null (static atlas) or {i, n, def, K, t (0..1 of a repetition), speed, playing, ready, pv (pose version), note}
-let anim=null, animSpeed=1, animFps=0, animFr=0, animFt=0, skDone=false;
+// playback state: anim = null (static atlas) or {i, n, def, K, KM (mirrored keys, lazily), side ("L" | "R": the working side shown now),
+// t (0..1 of a repetition), speed, playing, ready, pv (pose version), note, ps (props of the chosen variation), pb (the props built: ps or
+// their mirror image), cg (the camera goal the last framing set)}. animSideSel = the side chosen in the bar for single-sided exercises:
+// "L", "R" or "both" (default: one repetition each, in turn); kept across variation changes and exercises, like the speed.
+let anim=null, animSpeed=1, animSideSel="both", animFps=0, animFr=0, animFt=0, skDone=false;
 const mqRM=window.matchMedia?window.matchMedia("(prefers-reduced-motion: reduce)"):null, reducedMotion=()=>!!(mqRM&&mqRM.matches);
 const hasAnim=i=>!!(RIG&&i!==null&&i!==undefined&&EX[i]&&ANIM[EX[i].n]);
-function animPose(){ solvePose(poseAt(anim.K,anim.t)); syncProps(); anim.pv++; dirty=true; }
-function animCam(def){
-  const c=def.camera||{}; if(c.theta!==undefined) goal.theta=nearestAngle(orbit.theta,c.theta*D2R); if(c.phi!==undefined) goal.phi=c.phi*D2R;
+const animSided=def=>!!def&&(def.side==="L"||def.side==="R");
+const animMir=()=>!!(anim&&animSided(anim.def)&&anim.side!==anim.def.side);   // playing the mirror image of the authored motion
+function animKeysNow(){ if(!animMir()) return anim.K; if(!anim.KM) anim.KM=anim.K.map(mirKey); return anim.KM; }
+function animBuildProps(){ const m=animMir(); anim.pb=m?anim.ps.map(mirProp):anim.ps; buildProps(anim.def,anim.pb,m); }
+// the framing of the side shown now: the authored camera, or its mirror image (theta -> -theta, target x -> -x). alt (the side changed
+// by itself in "Both"): a side view (theta within 30 degrees of +-90) keeps its theta, so the camera does not swing around every repetition.
+function animCamFor(alt){ const c=anim.def.camera||{}; if(!animMir()) return c; const m=mirCam(c); if(alt&&c.theta!==undefined&&Math.abs(Math.abs(c.theta)-90)<=30) m.theta=c.theta; return m; }
+const camSnap=()=>[goal.theta,goal.phi,goal.r,goal.tx,goal.ty,goal.tz];
+function animFrame(alt){ animCam(animCamFor(alt)); anim.cg=camSnap(); }
+function animSetSide(s,alt){   // show side s ("L" | "R"); alt = the "Both" alternation (re-frames only when the user has not moved the camera)
+  if(!anim||!animSided(anim.def)||anim.side===s) return;
+  const keep=!alt||(anim.cg&&camSnap().every((v,k)=>Math.abs(v-anim.cg[k])<1e-6));
+  anim.side=s; if(!anim.ready) return;
+  animBuildProps(); if(keep) animFrame(alt); animPose(); syncAnimUI();
+}
+function animChooseSide(v){ animSideSel=v; if(anim&&animSided(anim.def)) animSetSide(v==="both"?anim.side:v); syncAnimUI(); }
+function animPose(){ solvePose(poseAt(animKeysNow(),anim.t)); syncProps(); anim.pv++; dirty=true; }
+function animCam(c){
+  c=c||{}; if(c.theta!==undefined) goal.theta=nearestAngle(orbit.theta,c.theta*D2R); if(c.phi!==undefined) goal.phi=c.phi*D2R;
   goal.r=clamp(baseRadius()*(c.r||1)*(isPhone()?0.8:1),0.3,rMax()); const t=c.target||[0,0.88,0];   // the default distance fits a standing body; these poses are wider than tall
   // desktop: the card covers the right of the viewport, so shift the framing into the free part (along the camera's right vector)
   const cw=!isPhone()&&card.classList.contains("show")?card.offsetWidth+24:0, H=vp.clientHeight||1, sh=0.4*cw*2*goal.r*Math.tan(camera.fov*D2R/2)/H;
@@ -2584,7 +2647,7 @@ function animCam(def){
 async function animStart(i){
   if(!hasAnim(i)) return;
   if(anim) animStop(true);
-  const def=ANIM[EX[i].n], A=anim={i:i,n:EX[i].n,def:def,K:prepKeys(animKeys(i,def)),t:0,speed:animSpeed,playing:!reducedMotion(),ready:false,last:0,pv:0,
+  const def=ANIM[EX[i].n], A=anim={i:i,n:EX[i].n,def:def,K:prepKeys(animKeys(i,def)),KM:null,side:animSided(def)&&animSideSel!=="both"?animSideSel:def.side||"L",t:0,speed:animSpeed,playing:!reducedMotion(),ready:false,last:0,pv:0,
     note:reducedMotion()?"Reduced motion is on, so the movement starts paused. Press Play to watch it.":""};
   if(!skDone){ skDone=true; skN=skBudget(); if(skN<NSEG){ skU.value=new Float32Array(skN*8); skIdentity(); } }   // decided once, before the first skin load and shader compile
   const F=SKINF[lod]; A.loadNote="Loading the movement data"+(F?" · "+mb(F.bytes):"")+"…"; syncAnimUI();
@@ -2593,7 +2656,7 @@ async function animStart(i){
   if(anim!==A) return;
   A.loadNote=""; skinMats();
   allMeshes.forEach(m=>{ m.frustumCulled=false; m.raycast=animRaycast; });   // bounding spheres are those of the atlas pose
-  A.ps=animProps(i,def); buildProps(def,A.ps); animCam(def); A.ready=true; animPose(); applyVisuals(); syncAnimUI(); hideTip();
+  A.ps=animProps(i,def); animBuildProps(); animFrame(false); A.ready=true; animPose(); applyVisuals(); syncAnimUI(); hideTip();
 }
 function animStop(quiet){
   if(!anim) return;
@@ -2610,8 +2673,13 @@ function animTick(now){   // called from tick() while an animation is active
   if(!anim.ready) return;
   if(!anim.playing||animFrozen()){ anim.last=0; return; }
   const dt=anim.last?Math.min(0.1,(now-anim.last)/1000):0; anim.last=now;
-  anim.t=(anim.t+dt*anim.speed/anim.def.dur)%1; animPose(); animTEl.value=Math.round(anim.t*1000);
+  animStep(dt);
   animFr++; if(now-animFt>1000){ animFps=Math.round(animFr*1000/(now-animFt||1)); animFr=0; animFt=now; $("#animBar").dataset.fps=animFps; }
+}
+function animStep(dt){   // advance the repetition by dt seconds; in "Both" a single-sided exercise switches sides at the end of every repetition
+  const t=anim.t+dt*anim.speed/anim.def.dur;
+  if(t>=1&&animSideSel==="both"&&animSided(anim.def)) animSetSide(anim.side==="L"?"R":"L",true);
+  anim.t=t%1; animPose(); animTEl.value=Math.round(anim.t*1000);
 }
 function syncAnimUI(){
   const b=$("#animBar"); b.hidden=!anim; vp.classList.toggle("animating",!!anim);
@@ -2621,6 +2689,8 @@ function syncAnimUI(){
   $("#animNote").textContent=anim.err||anim.loadNote||anim.note||(anim.playing?"":"Paused. Click a muscle to inspect it in this position.");
   const pp=$("#animPP"); pp.textContent=anim.playing?"Pause":"Play"; pp.disabled=!anim.ready; pp.setAttribute("aria-label",anim.playing?"Pause the movement":"Play the movement");
   $("#animSpeed").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(+x.dataset.sp===anim.speed)));
+  const sd=$("#animSide"), one=animSided(anim.def); sd.hidden=!one;   // single-sided exercises only; the working side shown now carries aria-current
+  if(one) sd.querySelectorAll("button").forEach(x=>{ x.setAttribute("aria-pressed",String(x.dataset.side===animSideSel)); if(x.dataset.side===anim.side) x.setAttribute("aria-current","true"); else x.removeAttribute("aria-current"); });
   animTEl.disabled=!anim.ready; animTEl.value=Math.round(anim.t*1000);
 }
 const animTEl=$("#animT");
@@ -2628,6 +2698,7 @@ animTEl.oninput=()=>{ if(!anim||!anim.ready) return; anim.playing=false; anim.t=
 $("#animPP").onclick=animPlayPause;
 $("#animStop").onclick=()=>animStop();
 $("#animSpeed").querySelectorAll("button").forEach(x=>{ x.onclick=()=>animSetSpeed(+x.dataset.sp); });
+$("#animSide").querySelectorAll("button").forEach(x=>{ x.onclick=()=>animChooseSide(x.dataset.side); });
 
 const ptrs=new Map(); let downPos=null, moved=false, pinch=null, dragThr=5, lastTap=null;
 const _r=new THREE.Vector3(), _u=new THREE.Vector3();
@@ -2939,7 +3010,7 @@ card.addEventListener("click",e=>{
   if(act==="cmp"){cmpPick=true; syncBanner(); openTab("ex"); cardAway=true; peekToHalf(); return renderCard();}
   if(act==="add"){addToPlan(selEx,exVars[selEx]); return renderCard();}
   if(act==="back"){sel=null;view=mode==="cmp"?"cmp":"ex";applyVisuals();renderCard();syncList();return;}
-  if(t.dataset.var){const a=t.dataset.var.split(":"); const v=(exVars[selEx]=(exVars[selEx]||[]).slice()); v[+a[0]]=+a[1]; setMode("ex"); if(anim&&anim.i===selEx&&anim.ready){ const ps=animProps(selEx,anim.def); if(ps!==anim.ps){ anim.ps=ps; buildProps(anim.def,ps); } anim.K=prepKeys(animKeys(selEx,anim.def)); animPose(); } return renderCard();}   // the movement follows the chosen variation
+  if(t.dataset.var){const a=t.dataset.var.split(":"); const v=(exVars[selEx]=(exVars[selEx]||[]).slice()); v[+a[0]]=+a[1]; setMode("ex"); if(anim&&anim.i===selEx&&anim.ready){ const ps=animProps(selEx,anim.def); if(ps!==anim.ps){ anim.ps=ps; animBuildProps(); } anim.K=prepKeys(animKeys(selEx,anim.def)); anim.KM=null; animPose(); } return renderCard();}   // the movement follows the chosen variation
   if(t.dataset.ex!==undefined) return openEx(t.dataset);
   if(t.dataset.nerve) return select("nerve",t.dataset.nerve,true);
   if(t.dataset.key) return select("muscle",t.dataset.key,true);

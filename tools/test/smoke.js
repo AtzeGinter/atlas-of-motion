@@ -2139,7 +2139,7 @@ async function animRun(){
  ok(ANIMS.every(n=>A[n])&&names.every(n=>META.ex.some(e=>e.n===n)&&A[n].keys[0].t===0&&A[n].keys[A[n].keys.length-1].t===1),'META.anim: '+names.length+' animations, all existing exercises, keys from t=0 to 1 ('+names.join(', ')+')');
  ok(names.every(n=>A[n].keys.every(k=>!('use' in k)))&&A['Back squat'].keys[0].ik.thighR&&A['Back squat'].keys[0].ik.thighR.target[0]===-A['Back squat'].keys[0].ik.thighL.target[0]&&A['Back squat'].keys[0].ik.armR.bar==='over','presets are resolved at build time and left entries are mirrored to the right (Back squat: right foot = mirrored left foot, both hands overhand on the bar)');
  ok(names.length>=140,'META.anim: at least 140 animated exercises ('+names.length+')');
- const exp='window.__an={get anim(){return anim},skU,segPos,segQ,SEGI,SEGJ,RIG,cpuSkin,allMeshes,boneMeshes,muscleMeshes,byKey,HM,propGrp,nerveMeshes,solvePose,poseAt,prepKeys,barC,barA,get barW(){return barW},get heldBar(){return heldBar},get skN(){return skN},get skinLv(){return skinLv}};';
+ const exp='window.__an={get anim(){return anim},skU,segPos,segQ,SEGI,SEGJ,RIG,cpuSkin,allMeshes,boneMeshes,muscleMeshes,byKey,HM,propGrp,nerveMeshes,solvePose,poseAt,prepKeys,barC,barA,get barW(){return barW},get heldBar(){return heldBar},get skN(){return skN},get skinLv(){return skinLv},animStep,get animSideSel(){return animSideSel}};';
  const mk=o=>boot(Object.assign({store:{}},o,{js:js.replace('//@licexport',exp)}));
  const x=mk({}),xd=x.document,xq=s=>xd.querySelector(s),xqa=s=>[...xd.querySelectorAll(s)];
  await waitFor(()=>!xd.getElementById('loading'),60000,'animation test instance');
@@ -2264,6 +2264,63 @@ async function animRun(){
   xq('#animStop').click();
  }
  ok(allOk,'all '+names.length+' animations play through 25 sampled moments with finite transforms'+(allOk?'':' ('+why+')'));
+ // single-sided exercises ("side" in animations.json): the side control in the bar and the runtime mirror image of the whole animation
+ const SIDE=names.filter(n=>A[n].side);
+ ok(SIDE.length>=30&&SIDE.every(n=>A[n].side==='L')&&['One-arm dumbbell row','Bulgarian split squat','Cable lateral raise','Turkish get-up','Side plank','Meadows row'].every(n=>SIDE.includes(n))&&['Cossack squat',"Farmer's carry",'Suitcase carry','Dead bug','Banded side walk','Back squat','Lateral raise'].every(n=>!A[n].side),
+  SIDE.length+' single-sided exercises are flagged (side "L"); bilateral and self-alternating ones (Cossack squat, carries, dead bug, banded side walk) are not');
+ const sideB=v=>xq('#animSide [data-side="'+v+'"]'),press=v=>sideB(v).getAttribute('aria-pressed')==='true',cur=()=>{const b=xqa('#animSide button').find(b=>b.getAttribute('aria-current')==='true');return b&&b.dataset.side;};
+ const playEx=async nmx=>{ if(!btn()||xq('#card h2').textContent!==nmx) exI(nmx).click(); if(!X.anim||X.anim.n!==nmx) btn().click(); await waitFor(()=>X.anim&&X.anim.ready&&X.anim.n===nmx,30000,nmx); if(X.anim.playing) xq('#animPP').click(); };
+ const scrub=t=>{sl.value=String(Math.round(t*1000));sl.dispatchEvent(new x.Event('input',{bubbles:true}));};
+ const NB2=R.nbody,swp=n=>/^(clav|arm|fore|rad|hand|thigh|shank|foot)[LR]$/.test(n)?n.slice(0,-1)+(n.slice(-1)==='L'?'R':'L'):n;
+ const propC=()=>{X.propGrp.updateMatrixWorld(true);return X.propGrp.children.map(o=>{const b=new T.Box3().setFromObject(o);return b.isEmpty()?null:b.getCenter(new T.Vector3());});};
+ const snapS=()=>({seg:X.segPos.slice(0,NB2).map(v=>v.clone()),pc:propC()});
+ const mirDev=(l,r)=>{let seg=0,ends=0,pc=0;nm.slice(0,NB2).forEach((n,i)=>{const m=l.seg[i].clone();m.x=-m.x;const d=r.seg[nm.indexOf(swp(n))].distanceTo(m);seg=Math.max(seg,d);if(/^(hand|foot)/.test(n)) ends=Math.max(ends,d);});
+  if(l.pc.length!==r.pc.length) pc=9; else l.pc.forEach((c,k)=>{if(c&&r.pc[k]){const m=c.clone();m.x=-m.x;pc=Math.max(pc,r.pc[k].distanceTo(m));}});return {seg,ends,pc};};
+ await playEx('Back squat');
+ ok(xq('#animSide').hidden,'a bilateral exercise (Back squat) has no side control in the movement bar');
+ await playEx('One-arm dumbbell row');
+ ok(!xq('#animSide').hidden&&xqa('#animSide button').map(b=>b.textContent).join()==='Left,Right,Both'&&xq('#animSide').getAttribute('role')==='group'&&press('both')&&!press('L')&&!press('R')&&X.animSideSel==='both'&&X.anim.side==='L'&&cur()==='L',
+  'single-sided (One-arm dumbbell row): a "Left | Right | Both" group in the bar, Both pressed by default (aria-pressed), the authored left side plays first (aria-current)');
+ const TS=[0.1,0.42,0.8],LS=TS.map(t=>{scrub(t);return snapS();}),th0=A['One-arm dumbbell row'].camera.theta;
+ sideB('R').click();
+ ok(X.animSideSel==='R'&&X.anim.side==='R'&&press('R')&&!press('both')&&cur()==='R'&&Math.abs(Math.sin(X.anim.cg[0])+Math.sin(th0*Math.PI/180))<1e-6,'Right: pressed, the right side plays and the camera turns to the mirrored view (theta '+th0+' -> '+(-th0)+')');
+ const RS=TS.map(t=>{scrub(t);return snapS();}),dv=TS.map((t,k)=>mirDev(LS[k],RS[k]));
+ const dS=Math.max(...dv.map(d=>d.seg)),dE=Math.max(...dv.map(d=>d.ends)),dP=Math.max(...dv.map(d=>d.pc));
+ ok(dE<0.006&&dS<0.01&&dP<0.01,'mirrored pose: every joint is the x-mirror of the left-side pose (worst '+(dS*1000).toFixed(1)+' mm, hands and feet '+(dE*1000).toFixed(1)+' mm; the atlas is not perfectly symmetric) and the bench and the dumbbell mirror with it (prop centres within '+(dP*1000).toFixed(1)+' mm)');
+ const dbP=X.propGrp.children.map(o=>new T.Vector3().setFromMatrixPosition(o.matrix));
+ ok(dbP.some(p=>p.distanceTo(gpt('R'))<0.01)&&!dbP.some(p=>p.distanceTo(gpt('L'))<0.05),'the held dumbbell rides in the right hand when the right side works');
+ sideB('both').click();
+ ok(press('both')&&X.anim.side==='R'&&cur()==='R','Both: the side shown stays until the repetition ends');
+ X.anim.t=0.995;X.animStep(0.05*X.anim.def.dur/X.anim.speed);
+ const sw1=X.anim.side==='L'&&cur()==='L'&&X.anim.t<0.1;scrub(0.42);const s2=snapS(),same=LS[1].seg.every((v,i)=>v.distanceTo(s2.seg[i])<1e-9)&&LS[1].pc.length===s2.pc.length&&LS[1].pc.every((c,k)=>!c||c.distanceTo(s2.pc[k])<1e-9);
+ X.anim.t=0.995;X.animStep(0.05*X.anim.def.dur/X.anim.speed);
+ ok(sw1&&same&&X.anim.side==='R'&&cur()==='R'&&press('both'),'Both alternates: the end of a repetition switches to the other side (right -> left: the original pose and props exactly; then left -> right again)');
+ sideB('R').click();
+ await playEx('Bulgarian split squat');
+ ok(X.anim.side==='R'&&press('R'),'the chosen side carries over to the next single-sided exercise (Bulgarian split squat starts on the right)');
+ xqa('#card [data-var]').find(b=>b.textContent.trim()==='Forward lean').click();
+ ok(X.anim&&X.anim.side==='R'&&X.animSideSel==='R'&&press('R')&&!xq('#animSide').hidden,'a variation change (Torso: Forward lean) keeps the right side');
+ scrub(0.6);const bR=snapS();sideB('L').click();scrub(0.6);const bL=snapS(),bd=mirDev(bL,bR);
+ ok(bd.ends<0.006&&bd.seg<0.012&&bd.pc<0.01,'the mirrored keys follow the variation: Forward lean on the right is the mirror image of Forward lean on the left (worst joint '+(bd.seg*1000).toFixed(1)+' mm)');
+ xqa('#card [data-var]').find(b=>b.textContent.trim()==='Upright').click();sideB('R').click();
+ // every single-sided animation, mirrored: finite, held bars in both hands, planted feet on their mirrored targets, nothing through the floor
+ let mOk=true,mWhy='',mWorst=0,mFeet=0,mBars=0;
+ for(const nmx of SIDE){
+  await playEx(nmx);
+  if(X.anim.side!=='R'){mOk=false;mWhy=nmx+' not mirrored';}
+  const def=A[nmx],k0=def.keys[0],fixed=['thighL','thighR'].filter(c=>(k0.ik||{})[c]&&def.keys.every(k=>!k.ik||!k.ik[c]||!k.ik[c].target||k.ik[c].target.join()===k0.ik[c].target.join()));
+  const bar=X.heldBar&&(k0.ik||{}).armL&&k0.ik.armL.bar;if(bar) mBars++;mFeet+=fixed.length?1:0;
+  for(let s=0;s<=24;s++){
+   scrub(s/24*0.999);
+   if(Array.from(X.skU.value).some(v=>!isFinite(v))){mOk=false;mWhy=nmx+' not finite';}
+   if(bar) ['L','R'].forEach(sd=>{const e=gpt(sd).distanceTo(X.barC.clone().addScaledVector(X.barA,(sd==='L'?1:-1)*X.barW/2));mWorst=Math.max(mWorst,e);if(e>0.005){mOk=false;mWhy=nmx+' grip '+sd+' '+(e*1000).toFixed(1)+' mm';}});
+   fixed.forEach(c=>{const t=k0.ik[c].target;if(!near(X.segPos[X.SEGI['foot'+(c.slice(-1)==='L'?'R':'L')]].toArray(),[-t[0],t[1],t[2]],0.002)){mOk=false;mWhy=nmx+' planted '+c;}});
+   ['footL','footR','handL','handR'].forEach(sn=>{if(X.segPos[X.SEGI[sn]].y<0.03){mOk=false;mWhy=nmx+' '+sn+' below the floor';}});
+  }
+  xq('#animStop').click();
+ }
+ ok(mOk&&mBars>=1&&mFeet>=10,'all '+SIDE.length+' single-sided animations pass the per-frame checks mirrored to the right ('+mBars+' with a held bar, worst grip '+(mWorst*1000).toFixed(1)+' mm; '+mFeet+' with planted feet on their mirrored targets; hands and feet above the floor)'+(mOk?'':' ('+mWhy+')'));
+ await playEx('One-arm dumbbell row');sideB('both').click();xq('#animStop').click();
  // technique checks for the machine and cable exercises (joint numbers sampled in the loop above)
  const mx=(n,f)=>Math.max(...MET[n].map(f)),mn=(n,f)=>Math.min(...MET[n].map(f)),drift=(n,k)=>mx(n,m=>V3(m[k]).distanceTo(V3(MET[n][0][k]))),still=n=>MET[n].every(m=>m.pel.every((v,i)=>Math.abs(v-MET[n][0].pel[i])<1e-9)&&m.pq.every((v,i)=>Math.abs(v-MET[n][0].pq[i])<1e-9));
  const degs=x=>x.toFixed(0),cm=x=>(x*100).toFixed(1)+' cm';
@@ -2432,6 +2489,14 @@ async function animRun(){
  ok(!r.__an.anim.playing&&r.__an.anim.t===rt&&/Reduced motion/.test(rq('#animNote').textContent)&&rq('#animPP').textContent==='Play','prefers-reduced-motion: the movement starts paused with a note; Play starts it');
  rq('#animPP').click();await sleep(250);
  ok(r.__an.anim.playing&&r.__an.anim.t>rt,'reduced motion: pressing Play animates');
+ ok(!rq('#animSide').hidden&&rq('#animSide [data-side="both"]').getAttribute('aria-pressed')==='true'&&r.__an.anim.side==='L','the single-sided Bulgarian split squat shows Left | Right | Both (Both pressed, left side first)');
+ // phone: the side control sits in the movement bar and works by tap
+ const ph=mk({phone:true}),pd=ph.document,pq=s=>pd.querySelector(s);
+ await waitFor(()=>!pd.getElementById('loading'),60000,'phone animation instance');
+ pq('[data-tab="ex"]').click();[...pd.querySelectorAll('#exlist .item')].find(b=>b.textContent==='One-arm dumbbell row').click();pq('#card [data-act="anim"]').click();
+ await waitFor(()=>ph.__an.anim&&ph.__an.anim.ready,30000,'phone play');
+ pq('#animSide [data-side="R"]').click();
+ ok(!pq('#animSide').hidden&&pq('#animBar').contains(pq('#animSide'))&&ph.__an.anim.side==='R'&&pq('#animSide [data-side="R"]').getAttribute('aria-pressed')==='true'&&pq('#animSide [data-side="R"]').getAttribute('aria-current')==='true','phone: the side control is in the movement bar and a tap on Right plays the right side');
 }
 async function boardRun(){
  const ovOpen=()=>{if(q('#ov').hidden)q('#ovOpen').click();};

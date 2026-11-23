@@ -15,7 +15,10 @@ contact point: toes, knees, a heel, a hip, a shoulder), flat hands (negative `ha
 floor-contact report in `animcheck.js` and 30 bodyweight exercises on the floor, on a bar and for the legs (131 in all); batch 7 added
 the switch between a hanging and a positioned bar (`"hang": null`), machine parts and link anchors on finger segments (the hand
 gripper's finger handle), up to 32 keys and 30 s per repetition, and 9 more exercises: thruster, power clean, Turkish get-up (up and
-back down), three neck exercises, seated hip external rotation, wrist roller and hand gripper (140 in all, list at the end).
+back down), three neck exercises, seated hip external rotation, wrist roller and hand gripper (140 in all, list at the end). A polish
+round after v3.2 reworked the skin weights of the shoulder sheets (latissimus, pectoralis, teres major no longer fan out with the arms
+overhead; deltoid and rotator cuff blend only shoulder blade and humerus) and plays the 36 single-sided exercises on either side: the
+right side is a runtime mirror image of the authored left side ("Left | Right | Both" in the movement bar).
 
 ## Overview
 
@@ -82,14 +85,33 @@ for single-axis joints, an axis. The segment transform is a rotation `q` about t
      bands at L5/S1 (+-4.5 cm), T12/L1 (+-6 cm) and T6/T7 (+-5.5 cm, plane tilted so it drops 0.6 cm per cm toward the front
      where the sternum and ribs 1-7 reach lower); the **forearm** (ulna + radius) by the position along elbow -> wrist
      (smoothstep from 4 % to 96 %), so pronation is spread along the forearm.
-  5. The three largest influences are kept and renormalised; the first two weights are quantised to 0..255, the third gets the rest.
+  5. **Shoulder sheets** (`INSERT_ARM`: latissimus dorsi, pectoralis major, teres major): weighted by the nearest bone, the parts of
+     these sheets near the armpit got a large humerus weight, and with the arm overhead the dual-quaternion blend swung them on arcs about
+     the shoulder: the latissimus fanned out like a cape (chest-wall vertices up to 9-12 cm off the ribs in the pull-up, dead hang,
+     overhead press, thruster, get-up), sank 5 cm into the pullover bench, and the pectoralis peeled off the chest. Now only the insertion
+     follows the arm: the vertices within 10-12 mm of the humerus are the insertion zone, the arm weight is 1 there and falls off with the
+     distance to the zone (smoothstep 6 -> 45 mm; teres major 4 -> 35 mm), and for the latissimus and pectoralis it is also faded out on
+     vertices that lie on the chest wall (distance to the nearest non-arm bone below 20 mm, fading by 45 mm). The other columns keep their
+     proportions and share the rest. The band between origin and insertion is then stretched (long thin triangles at the armpit, as a
+     real posterior / anterior axillary fold) instead of swung out.
+  6. **Deltoid and rotator cuff** (deltoid, supraspinatus, infraspinatus, teres minor, teres major, subscapularis) blend only the shoulder
+     blade (`clav`) and the humerus (`KEY_SEGS`): with the thoracic segments allowed, posterior-deltoid and cuff vertices over the ribs
+     stayed with the trunk while their neighbours followed the arm overhead (single edges stretched 40-80x).
+  7. The three largest influences are kept and renormalised; the first two weights are quantised to 0..255, the third gets the rest.
+
+  Effect (Low meshes, 9 sampled frames per exercise; "gap" = how far vertices that lie on the chest wall at rest (< 25 mm from a trunk bone)
+  move away from it): latissimus gap max 90-115 mm -> 2-3 mm (pull-up, dead hang, lat pulldown, overhead press, thruster, pullover,
+  Y raise), pectoralis major abdominal part 30-47 -> 1-5 mm, pullover bench sink -52 -> -3 mm, posterior deltoid worst edge stretch
+  33-51x -> 3-5x, teres major 42-82x -> 6-14x. Costs: the bench presses' posterior deltoid now rests ~10 mm into the bench at the bottom
+  (was ~5), and the rotator cuff follows the shoulder blade, which (no scapulothoracic gliding) lifts off the ribs by up to ~3 cm when
+  the clavicle elevates in a hang.
 * `geo/skin-<level>.bin` (gzip): per mesh in META order five planes of `nv` bytes: segment a, b, c, weight a, weight b.
 
 | level | vertices | skin v1 (beta, 2 influences) | skin v2 (gzip) | raw | mesh file |
 |---|---|---|---|---|---|
-| low | 263,589 | 150 kB | 356 kB | 1.32 MB | 2.3 MB |
-| medium | 623,156 | 319 kB | 741 kB | 3.12 MB | 5.2 MB |
-| high | 1,035,695 | 493 kB | 1,126 kB | 5.18 MB | 9.9 MB |
+| low | 263,589 | 150 kB | 353 kB | 1.32 MB | 2.3 MB |
+| medium | 623,156 | 319 kB | 725 kB | 3.12 MB | 5.2 MB |
+| high | 1,035,695 | 493 kB | 1,107 kB | 5.18 MB | 9.9 MB |
 
 ## Runtime: dual-quaternion skinning on the existing meshes
 
@@ -177,6 +199,31 @@ for single-axis joints, an axis. The segment transform is a rotation `q` about t
   patches); `animProps(i, def)` picks them and a variation change while playing rebuilds the props (Lat pulldown Close neutral
   swaps the lat bar for a V-handle).
 * `#animT` (range 0..1000 in the bar) scrubs: it pauses and shows that moment of the repetition.
+* **Single-sided exercises: the other side is a runtime mirror image.** An animation flagged `"side": "L"` (the working side its keys
+  are written for) gets a segmented control `#animSide` "Left | Right | Both" (`role="group"`, `aria-pressed` on the choice,
+  `aria-current` on the side playing now) in the bar; bilateral and self-alternating motions (Cossack squat, carries, dead bug, banded
+  side walk) have no flag and no control. The choice `animSideSel` ("L", "R", default "both") is kept across variation changes and
+  exercises, like the speed. **Both** plays one repetition per side in turn (`animStep()`: when t wraps, `animSetSide()` switches);
+  scrubbing shows the side playing now. The mirror is across the sagittal plane, M = diag(-1, 1, 1), which turns a rotation R into
+  M R M, so:
+  * keys (`mirKey()`, on the prepared keys; cached as `anim.KM`, rebuilt on a variation change): root `pos` and every IK `target`,
+    `pole`, `hax`, `hfd` negate x; root `rot`, IK `end` and `bar.rot` Euler `[a, b, c]` -> `[a, -b, -c]`; `root.fix` swaps its segment
+    and negates x of `at` and `to`; `bar.pos` negates x (`hang` [f, tilt] is sagittal and stays); left and right segments swap
+    (`armL` <-> `armR`, `thighL`, `foreL`, fingers ...). Joint angles keep their values: `localQ` already mirrors the DOF axes of right
+    segments, and the twist, radius and finger axes in rig.json are per side, mirror images of each other. Only the unsided spine
+    segments (lumbar, thorax, chest, neck, head) change the sign of `lat` and `rot`.
+  * props (`mirProp()`, built by `animBuildProps()` into `anim.pb`): every frame a prop lives in (a segment's, the held bar's, a hand's
+    grip frame, a machine group's) turns into M F M, so the same rule applies inside it: positions negate x, Euler rotations mirror,
+    `yaw` negates, sided segments swap; benches `pos [x, z]`, cable `pulley` / `stack` / `to`, links `from` / `to`, machine `parts`,
+    `aim`, rail `axis` / `base` / `normal`, rope `toward`. Bar anchors `{bar: "L"}` and `{bar: "R"}` swap: on the mirrored bar the left
+    hand grips where the mirror image of the right hand was (the bar's +x turns into -M x). A grip frame (`at: "grip"`) stays as it is;
+    dumbbell `off` is already mirrored by side.
+  * camera (`animCamFor()`): `theta` -> `-theta`, target x negated. In Both, a side view (theta within 30 degrees of +-90) keeps its
+    theta so the camera does not swing around the body every repetition, and the framing changes at a side switch only when the user
+    has not moved the camera since the last framing (`anim.cg`).
+  IK targets stay targets, so the slightly asymmetric atlas still reaches them exactly (grip errors and planted feet as on the authored
+  side); FK-only limbs land within ~4-8 mm of the exact mirror image (the left and right joint centres differ by up to 1.5 cm). The
+  heat colours already light both sides (one key per muscle).
 * **Variations**: `animKeys(i, def)` merges `def.vars[group][option]` into the base keys for the options chosen on the card; changing
   a variation while the movement plays re-keys it at once (`anim.K = prepKeys(...)`).
 
@@ -185,7 +232,10 @@ for single-axis joints, an axis. The segment transform is a rotation `q` about t
 Per exercise name (must exist in `exercises.py`):
 
 * `dur` seconds per repetition (looped); `camera` `{theta, phi, r, target}` (orbit angles in degrees, theta 90 = from the subject's
-  left; r = times the default distance, x0.8 on phones); `props` (above); `sym` (default true, see presets); `vars` (variations).
+  left; r = times the default distance, x0.8 on phones); `props` (above); `sym` (default true, see presets); `vars` (variations);
+  `side` (`"L"` or `"R"`, only for single-sided exercises: the working side the keys are written for; the app plays the other side as
+  the mirror image and shows the Left | Right | Both control, see Runtime). Write single-sided motions for the left side with
+  `"side": "L"`.
 * `keys`: 3-32 keyframes, `t` rising from 0 to 1 (`dur` up to 30 s: the Turkish get-up has 31 keys over 22 s). Each key inherits whatever it does not set from the previous key; `ease`
   (`inOut` default, `in`, `out`, `linear`) shapes the segment that ends at this key.
   * `root`: `pos` (world position of the pelvis pivot; standing = `[0, 0.8842, -0.0268]`) and `rot` (world Euler XYZ, degrees;
@@ -284,8 +334,8 @@ Per exercise name (must exist in `exercises.py`):
 
 ## Checking a motion (dev helpers in tools/test, not part of the app or CI)
 
-* `node animcheck.js ["Exercise" ...] [--var Group=Option] [--frames 24] [--lod low|medium|high] [--summary] [--fast]` boots
-  index.html in jsdom (Low meshes by default) with the motions read FRESH from `data/animations.json` through animlib.py (no
+* `node animcheck.js ["Exercise" ...] [--var Group=Option] [--side L|R] [--frames 24] [--lod low|medium|high] [--summary] [--fast]` boots
+  index.html in jsdom (Low meshes by default; `--side R` plays a single-sided exercise mirrored) with the motions read FRESH from `data/animations.json` through animlib.py (no
   assemble.py needed while tuning keys; template changes still need it), plays the exercise and prints per sampled frame: grip
   error per hand (mm; > 5 fails the smoke test), reach (shoulder -> grip point / straight reach, %; ~99.5 = elbow locked),
   elbow flexion L/R (3D angle shoulder-elbow-wrist; the atlas pose has ~12), forearm rotation L/R (90 = neutral), knee flexion,
@@ -299,9 +349,9 @@ Per exercise name (must exist in `exercises.py`):
   ~0, a lifted limb rises, and nothing should sink below ~-10. `--summary` = one line per exercise with the worst values; no names
   = every animated exercise. As a module (`bootAnim()`) it also serves quick tuning scripts: solve a key's root position for a
   wanted bar position, grid-search a pole, fit FK arm angles to a point.
-* `node animshot.js "Exercise" --t 0,0.5 [--var Group=Option] [--turn px] [--zoom n] [--out dir] [--url http://127.0.0.1:8799/]`
+* `node animshot.js "Exercise" --t 0,0.5 [--var Group=Option] [--side Left|Right|Both] [--turn px] [--zoom n] [--out dir] [--url http://127.0.0.1:8799/]`
   takes screenshots in headless Edge / Chrome (Node >= 22; `$BROWSER` overrides the browser path) through the page's UI only
-  (deep link, Play, variation buttons, the position slider; `--turn` orbits by dragging, `--zoom` wheels in). Serve the repo
+  (deep link, Play, variation buttons, the side buttons, the position slider; `--turn` orbits by dragging, `--zoom` wheels in). Serve the repo
   first (`python -m http.server 8799`). Use it when no visible browser is at hand: the app waits for an animation frame before
   loading, so a hidden browser pane never finishes loading.
 
@@ -452,8 +502,10 @@ elbows forward, forearms ~90), Lat pulldown Grip Close neutral (V-handle via var
 
 ## Known artefacts and limits
 
-* Pectoralis major and latissimus dorsi fan out as broad sheets under the arm at full overhead flexion (overhead press lockout,
-  pull-up dead hang, lateral raise at the top) - partly real, but the sheets leave the chest wall more than they should.
+* Arms overhead: the latissimus, pectoralis and teres major sheets stay on the chest wall and only their insertions follow the arm
+  (Skin weights, 5), so the axillary folds are stretched bands of long thin triangles (edges up to ~10-20x their rest length on the
+  coarse Low meshes) rather than smooth muscle; teres major (shoulder blade to humerus) stretches most. The shoulder blade only
+  elevates and protracts (no upward rotation), so the rotator cuff, which follows it, lifts off the ribs by up to ~3 cm in a hang.
 * Muscles do not bulge or shorten actively; they are only carried and stretched by the bones. Dual quaternions can bulge slightly
   at the inside of a deeply flexed joint (rear knee of the split squat, elbow at the top of the curl).
 * The thumb uses fixed angles and does not always wrap around the bar exactly; fingers curl to one handle size (32 mm).
@@ -474,12 +526,13 @@ elbows forward, forearms ~90), Lat pulldown Grip Close neutral (V-handle via var
 * The face-pull rope is drawn as straight strands (no sag); at the end position the ring sits a few centimetres in front of the face. The front-rack elbow (~138 degrees) and the Zercher bar resting on the biceps are at the limit of the skinning.
 
 * Batch 5: carries walk in place (the feet lift and set down on the same spot; no forward travel). The pullover's latissimus sheet
-  flares into the bench at full overhead stretch (-52 mm; the upper back itself rests within 1 cm). The kettlebell ball passes
+  used to flare into the bench at full overhead stretch (-52 mm, fixed by the skin weights: now -3 mm). The kettlebell ball passes
   12 mm from the inner thighs at its closest; forearms meet at the midline between the thighs at the bottom. The trap bar start is a
   deep pull (knees 102 degrees) because the handles sit at plate radius. Wrist exercises use the single wrist segment: flexion and
   deviation rotate the whole hand about the wrist centre. The one-end-loaded dumbbell (forearm rotation, radial deviation) is a short
-  machine prop in the hand. Single-arm / single-leg exercises (concentration curl, one-arm row, Meadows row, suitcase carry, single-leg
-  RDL, step-ups, wrist rotation / deviation) animate the left side. Bench / pad contact: seats -13..-8 mm, incline backrest -19 mm,
+  machine prop in the hand. Single-arm / single-leg exercises (concentration curl, one-arm row, Meadows row, single-leg RDL, step-ups,
+  wrist rotation / deviation) are written for the left side and play the right side as the mirror image (`"side": "L"`); the suitcase
+  carry stays left-handed (carries walk, so it is not flagged). Bench / pad contact: seats -13..-8 mm, incline backrest -19 mm,
   chest pad -10 mm, boxes 0 mm (feet planted on the box top), one-arm row hand fingertips -7 mm, knee joint 5 cm above the pad.
 
 * Batch 6 (bodyweight): no skin or floor mesh is drawn, so contact is measured on muscles and bones (`animcheck.js` floor contact: planted
@@ -487,8 +540,7 @@ elbows forward, forearms ~90), Lat pulldown Grip Close neutral (V-handle via var
   ~1.5 cm above the floor so its deltoid does not sink in). No toe joints: push-ups and planks stand on the tips of rigid toes (the foot points down instead of
   the toes bending), the sissy squat and calf raises stand with the balls of the feet on a block edge so the toes overhang. Hands lie
   flat by straightening the fingers (negative grip); the thumb keeps its atlas angle. The bird dog and dead bug work one diagonal pair
-  per half rep; the side-lying, side-plank and Copenhagen exercises lie on the right side and move the left leg. The latissimus sheet
-  flares at the overhead arm (dead hang, ab-wheel extension), as in the pull-up. Skipped: Diaphragmatic breathing, Pelvic floor
+  per half rep; the side-lying, side-plank and Copenhagen exercises lie on the right side and move the left leg. Skipped: Diaphragmatic breathing, Pelvic floor
   contraction and Short foot (no skeletal motion the rig can show: breathing and the pelvic floor are soft tissue, short foot needs toe
   and arch joints).
 
@@ -506,7 +558,8 @@ elbows forward, forearms ~90), Lat pulldown Grip Close neutral (V-handle via var
 * Batch 4: ropes are drawn as straight strands; the woodchop cable crosses the front of the chest at the end of the chop and the
   cable crunch rope's virtual bar axis passes through the head (only the strands are drawn). Two hands on one handle (Pallof press)
   are stacked with the palms facing each other. Single-arm and single-leg exercises (cable lateral raise, external / internal
-  rotation, kickback, standing hip abduction and flexion, landmine press) animate the left side; the other side rests. The
+  rotation, kickback, standing hip abduction and flexion, landmine press) are written for the left side; the right side is their mirror
+  image (Left | Right | Both in the bar). The
   glute-ham raise knee pad is a fixed roller: the thighs float up to ~2 cm above it or sink ~1.5 cm into it during the descent
   (a real pad deforms and the knees slide). The landmine and T-bar bars keep their length within a few millimetres because the
   hand / handle path is authored on the sphere around the pivot. Machine pads in batch 4: -16..+22 mm (glute-ham raise), otherwise

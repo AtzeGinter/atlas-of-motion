@@ -270,6 +270,7 @@ if rig and os.path.exists(P('data', 'animations.json')):
         return all(num3(q[f]) for f in ('pos', 'rot') if f in q) and q.get('mat', 'frame') in PMATS
     def check_anim(w, a):
             if not num(a.get('dur')) or not 0.5 <= a['dur'] <= 30: err.append(f'{w}: dur must be 0.5-30 seconds')
+            if 'side' in a and a['side'] not in ('L', 'R'): err.append(f'{w}: side (single-sided exercise: the working side the keys are written for) must be "L" or "R"')
             c = a.get('camera', {})
             if not (num(c.get('theta')) and num(c.get('phi')) and 5 <= c['phi'] <= 175 and num(c.get('r')) and 0.3 <= c['r'] <= 2 and num3(c.get('target'))):
                 err.append(f'{w}: camera needs theta, phi (5-175), r (0.3-2, times the default distance), target [x,y,z]')

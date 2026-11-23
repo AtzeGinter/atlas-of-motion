@@ -2,13 +2,14 @@
 // visible browser is at hand (docs/animation-design.md, "Checking a motion"). Not part of the app or of CI. Needs Node >= 22 (WebSocket)
 // and Edge or Chrome (path in $BROWSER, else the usual Windows / macOS / Linux locations), and the repo served over http, e.g.
 //   cd <repo> && python -m http.server 8799
-//   cd tools/test && node animshot.js "Conventional deadlift" --t 0,0.25,0.42 [--var Grip=Neutral] [--turn 300] [--zoom 3] [--out dir] [--url http://127.0.0.1:8799/]
+//   cd tools/test && node animshot.js "Conventional deadlift" --t 0,0.25,0.42 [--var Grip=Neutral] [--side Right] [--turn 300] [--zoom 3] [--out dir] [--url http://127.0.0.1:8799/]
 // Drives the page only through its UI (exercise deep link, "Play movement", the variation buttons, the position slider #animT);
-// --turn drags the view horizontally by that many pixels (orbit), --zoom N wheels N steps in (negative: out) before the shots. Writes <out>/<exercise>[-<option>]-t<t>.png.
+// --side Left|Right|Both presses that button of a single-sided exercise (#animSide); --turn drags the view horizontally by that many pixels
+// (orbit), --zoom N wheels N steps in (negative: out) before the shots. Writes <out>/<exercise>[-<option>][-<side>]-t<t>.png.
 const {spawn}=require('child_process'),fs=require('fs'),path=require('path'),os=require('os');
 const a=process.argv.slice(2),flag=(f,d)=>{const i=a.indexOf(f);if(i<0) return d;const v=a[i+1];a.splice(i,2);return v;};
 const vars=[];let v;while((v=flag('--var',null))) vars.push(v.split('='));
-const ts=flag('--t','0,0.5').split(',').map(Number),turn=+flag('--turn','0'),zoom=+flag('--zoom','0'),out=flag('--out','.'),url=flag('--url','http://127.0.0.1:8799/'),name=a[0];
+const side=flag('--side',null),ts=flag('--t','0,0.5').split(',').map(Number),turn=+flag('--turn','0'),zoom=+flag('--zoom','0'),out=flag('--out','.'),url=flag('--url','http://127.0.0.1:8799/'),name=a[0];
 if(!name){console.error('usage: node animshot.js "Exercise" [--t 0,0.5] [--var Group=Option] [--turn px] [--out dir] [--url base]');process.exit(2);}
 const cands=[process.env.BROWSER,'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Google/Chrome/Application/chrome.exe',
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge','/usr/bin/google-chrome','/usr/bin/chromium','/usr/bin/microsoft-edge'].filter(Boolean);
@@ -32,12 +33,13 @@ const br=spawn(exe,['--headless=new','--remote-debugging-port='+port,'--user-dat
   await ev('document.querySelector(\'#card [data-act="anim"]\').click()');
   await until('!document.getElementById("animPP").disabled',60000,'movement data');
   await ev('(()=>{const p=document.getElementById("animPP");if(p.textContent==="Pause")p.click();})()');
+  if(side){ const ok=await ev(`(()=>{const b=[...document.querySelectorAll('#animSide button')].find(x=>x.textContent.trim()===${JSON.stringify(side)});if(b&&!document.getElementById('animSide').hidden){b.click();return true;}return false;})()`); if(!ok) throw new Error('no side button '+side+' (is the exercise flagged "side" in animations.json?)'); }
   if(turn){ const x=700,y=450;await cmd('Input.dispatchMouseEvent',{type:'mousePressed',x,y,button:'left',clickCount:1});for(let k=1;k<=10;k++) await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',x:x+turn*k/10,y,button:'left',buttons:1});await cmd('Input.dispatchMouseEvent',{type:'mouseReleased',x:x+turn,y,button:'left'}); }
   if(zoom){ for(let k=0;k<Math.abs(zoom);k++) await cmd('Input.dispatchMouseEvent',{type:'mouseWheel',x:700,y:450,deltaX:0,deltaY:zoom>0?-100:100}); }
   fs.mkdirSync(out,{recursive:true});
   // the shot covers the 3D view left of the exercise card
   const clip=await ev('(()=>{const v=document.getElementById("vp").getBoundingClientRect(),c=document.getElementById("card").getBoundingClientRect();const r=c.width&&c.left>v.left?c.left-8:v.right;return {x:v.left,y:v.top,width:r-v.left,height:v.height,scale:1};})()');
-  const tag=(name+(vars.length?'-'+vars.map(z=>z[1]).join('-'):'')).replace(/[^A-Za-z0-9]+/g,'-').replace(/-+$/,'');
+  const tag=(name+(vars.length?'-'+vars.map(z=>z[1]).join('-'):'')+(side?'-'+side:'')).replace(/[^A-Za-z0-9]+/g,'-').replace(/-+$/,'');
   for(const t of ts){
     await ev(`(()=>{const s=document.getElementById("animT");s.value=String(Math.round(${t}*1000));s.dispatchEvent(new Event("input",{bubbles:true}));})()`);
     await sleep(1800);   // camera damping

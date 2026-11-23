@@ -16,12 +16,12 @@
 //   floor contact (after each exercise) the lowest vertex per body region (hand, forearm, upper arm, thigh, shin, foot L / R, trunk,
 //           head; by the segment of the vertex's first skin influence) for the regions that come within 3 cm of the floor, as the range
 //           over the repetition (mm): a resting contact stays at ~0, a lifted one rises, nothing should sink below ~-10
-// Usage (from tools/test):  node animcheck.js ["Exercise name" ...] [--var Group=Option] [--frames 24] [--lod low|medium|high] [--summary] [--fast]
+// Usage (from tools/test):  node animcheck.js ["Exercise name" ...] [--var Group=Option] [--side L|R] [--frames 24] [--lod low|medium|high] [--summary] [--fast]
 //   no names = every animated exercise; --summary prints one line per exercise (worst values); --fast skips the clearances and the floor
 // As a module: const {bootAnim} = require('./animcheck.js'); const A = await bootAnim({lod:'low'}); A.play(name, vars); A.at(t); A.measure();
 const fs=require('fs'),path=require('path'),cp=require('child_process');const {JSDOM,VirtualConsole}=require('jsdom');
 const ROOT=path.join(__dirname,'..','..');
-const EXPORT='window.__an={get anim(){return anim},animStart,animStop,animPose,animKeys,prepKeys,EX,exVars,skU,segPos,segQ,SEGI,SEGJ,RIG,cpuSkin,allMeshes,barC,barA,get barW(){return barW},get heldBar(){return heldBar},get props(){return props},ANIM,propGrp,solvePose,poseAt,frameQ};';
+const EXPORT='window.__an={get anim(){return anim},animStart,animStop,animPose,animChooseSide,animKeys,prepKeys,EX,exVars,skU,segPos,segQ,SEGI,SEGJ,RIG,cpuSkin,allMeshes,barC,barA,get barW(){return barW},get heldBar(){return heldBar},get props(){return props},ANIM,propGrp,solvePose,poseAt,frameQ};';
 function freshAnim(){   // tools/data/animations.json resolved exactly like assemble.py does
   const r=cp.spawnSync('python',['-c','import json,sys,animlib;a,e=animlib.resolve(json.load(open("data/animations.json",encoding="utf-8")));sys.stderr.write("\\n".join(e));print(json.dumps(a))'],{cwd:path.join(ROOT,'tools'),encoding:'utf8',maxBuffer:64<<20});
   if(r.status!==0) throw new Error('animlib failed: '+r.stderr);
@@ -57,10 +57,11 @@ async function bootAnim(opts){
     return RG[b]?RG[b]+' '+n.slice(-1):/^(neck|head)$/.test(n)?'head':'trunk'; });
   let pos=null;
   const A={w,X,T,errs,
-    play:async(name,vars)=>{   // vars: {group: option} names
+    play:async(name,vars,side)=>{   // vars: {group: option} names; side: "L" | "R" (single-sided exercises: the working side; the other one is the mirror image)
       const i=X.EX.findIndex(e=>e.n===name);if(i<0||!X.ANIM[name]) throw new Error('not animated: '+name);
       X.exVars[i]=(X.EX[i].v||[]).map(g=>{const o=vars&&vars[g[0]];const k=o?g[1].findIndex(x=>x[0]===o):0;if(k<0) throw new Error('no option '+o+' in '+g[0]);return k;});
       await X.animStart(i);const t1=Date.now();while(!(X.anim&&X.anim.ready)){if(Date.now()-t1>60000) throw new Error('animation did not start: '+(X.anim&&X.anim.err));await new Promise(r=>setTimeout(r,30));}
+      if(side) X.animChooseSide(side);
       X.anim.playing=false;return X.anim;
     },
     at:t=>{X.anim.t=t;X.animPose();pos=null;},
@@ -85,11 +86,11 @@ async function bootAnim(opts){
       if(hb){
         const gw=X.barW/2,e=sd=>X.barC.clone().addScaledVector(X.barA,(sd==='L'?1:-1)*gw);
         if(k0.ik.armL&&k0.ik.armL.bar){ r.grip=['L','R'].map(sd=>A.gripPt(sd).distanceTo(e(sd))*1000); r.reach=['L','R'].map(sd=>e(sd).distanceTo(X.segPos[X.SEGI['arm'+sd]])/(reachOf(sd)+V(X.RIG.pt['grip'+sd]).distanceTo(J('hand'+sd)))*100); }
-        const grip=(X.anim.ps||X.anim.def.props||[]).some(q=>q.type==='grip');   // an invisible handle: its shaft line means nothing (the kettlebell ball is measured with the dumbbells)
+        const grip=(X.anim.pb||X.anim.def.props||[]).some(q=>q.type==='grip');   // an invisible handle: its shaft line means nothing (the kettlebell ball is measured with the dumbbells)
         r.barP=[X.barC.y,X.barC.z];const half=Math.max(gw+0.06,0.3);if(!fast&&!grip) r.bar=A.clear(X.barC.clone().addScaledVector(X.barA,-half),X.barC.clone().addScaledVector(X.barA,half),()=>0.014,hand,[A.gripPt('L'),A.gripPt('R')]);
       }
       r.db=fast?[]:X.props.filter(p=>p.db).map((p,k)=>{
-        const def=X.anim.def.props.filter(q=>q.type==='dumbbell')[k]||{len:0.3,r:0.05},m=p.obj.matrix,c=new T.Vector3().setFromMatrixPosition(m),ay=new T.Vector3().setFromMatrixColumn(m,1).normalize(),h=def.len/2;
+        const def=(X.anim.pb||X.anim.def.props).filter(q=>q.type==='dumbbell')[k]||{len:0.3,r:0.05},m=p.obj.matrix,c=new T.Vector3().setFromMatrixPosition(m),ay=new T.Vector3().setFromMatrixColumn(m,1).normalize(),h=def.len/2;
         return A.clear(c.clone().addScaledVector(ay,-h),c.clone().addScaledVector(ay,h),u=>Math.abs(u-0.5)*def.len>h-0.05?def.r:0.0145,hand,[c]);
       });
       // spheres carried by the held bar (kettlebell): clearance between the ball and the nearest body vertex outside the hands
@@ -102,7 +103,7 @@ async function bootAnim(opts){
       {let l2=1e9,w2='';X.allMeshes.forEach((m,mi)=>{if(!/^(Back|Shoulder|Chest|Neck|Skull|Thorax|Spine|Face|Upper arm|Arm|Abdomen|Hip)$/.test(m.userData.group)) return;const p=P[mi];for(let k=1;k<p.length;k+=3) if(p[k]<l2){l2=p[k];w2=m.userData.key;}});r.floorUp={y:l2,who:w2};}   // lowest vertex of trunk, head, upper arms and hips (lying exercises: the back on the floor)
       // benches: signed distance of body vertices over the pad to its top surface (seat, and the backrest of an inclined bench); the
       // smallest value above -8 cm = how deep the body sinks in (< 0) or how far it floats above the pad (> 0)
-      r.bench=(X.anim.ps||X.anim.def.props||[]).filter(q=>q.type==='bench').map(q=>{
+      r.bench=(X.anim.pb||X.anim.def.props||[]).filter(q=>q.type==='bench').map(q=>{
         const w=q.size[0],L=q.size[2],x0=q.pos[0],z0=q.pos[1],top=q.top,inc=(q.incline||0)*Math.PI/180,seat=q.incline?Math.min(L-0.2,q.seat||0.42):L,z1=z0+L/2,hz=z1-seat,Lb=L-seat,yw=-(q.yaw||0)*Math.PI/180,cy=Math.cos(yw),sy=Math.sin(yw);
         let best=1e9,who='',bb=1e9,bw='';
         X.allMeshes.forEach((m,mi)=>{const p=P[mi];for(let k=0;k<p.length;k+=3){
@@ -129,13 +130,14 @@ module.exports={bootAnim};
 if(require.main===module)(async()=>{
   const a=process.argv.slice(2),flag=(f,d)=>{const i=a.indexOf(f);if(i<0) return d;const v=a[i+1];a.splice(i,2);return v;};
   const vars={};let v;while((v=flag('--var',null))){const [g,o]=v.split('=');vars[g]=o;}
+  const side=flag('--side',null);
   const frames=+flag('--frames',24),lod=flag('--lod','low'),sum=a.includes('--summary'),fast=a.includes('--fast');const names=a.filter(x=>!/^--(summary|fast)$/.test(x));
   const A=await bootAnim({lod});
   const list=names.length?names:Object.keys(A.X.ANIM);
   const f1=x=>x.toFixed(1),f0=x=>Math.round(x),mm=c=>c.d>=1e8?'-':f0(c.d*1000)+' '+c.who;
   for(const n of list){
-    await A.play(n,vars);const W={grip:0,reach:0,elbow:0,bar:1e9,db:1e9,floor:1e9,bench:1e9,pad:1e9,reg:{}};let wb='',wd='',wf='',wbe='',wpd='';
-    if(!sum) console.log('\n'+n+(Object.keys(vars).length?' '+JSON.stringify(vars):'')+'\n    t   grip mm L/R   reach % L/R   elbow L/R   pron L/R    knee L/R   bar y,z  clearance mm             dumbbells mm            floor');
+    await A.play(n,vars,side);const W={grip:0,reach:0,elbow:0,bar:1e9,db:1e9,floor:1e9,bench:1e9,pad:1e9,reg:{}};let wb='',wd='',wf='',wbe='',wpd='';
+    if(!sum) console.log('\n'+n+(side?' (side '+side+')':'')+(Object.keys(vars).length?' '+JSON.stringify(vars):'')+'\n    t   grip mm L/R   reach % L/R   elbow L/R   pron L/R    knee L/R   bar y,z  clearance mm             dumbbells mm            floor');
     for(let s=0;s<=frames;s++){
       A.at(Math.min(0.999,s/frames));const r=A.measure(fast);
       if(r.grip){W.grip=Math.max(W.grip,...r.grip);W.reach=Math.max(W.reach,...r.reach);}
