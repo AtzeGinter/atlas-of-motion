@@ -332,11 +332,26 @@ if rig and os.path.exists(P('data', 'animations.json')):
             if held and 'seg' not in held and not num3(b0.get('pos')) and 'hang' not in b0 and not num3(held.get('pos')): err.append(f'{w}: the held bar needs bar.pos or bar.hang in key 0 (or seg + at on the prop)')
             if any('hang' in (k.get('bar') or {}) for k in ks) and 'hang' not in b0: err.append(f'{w}: bar.hang must start in key 0 (a hanging bar cannot switch to bar.pos)')
             chains, ends, bars = set(), set(), set()
+            fx0 = (ks[0].get('root') or {}).get('fix') if ks else None   # root.fix: the root follows a contact point (seg, at) placed at "to"
+            if fx0 is not None:
+                if not (isinstance(fx0, dict) and fx0.get('seg') in sn and segk(fx0['seg']) != 'finger' and num3(fx0.get('at')) and num3(fx0.get('to')) and not set(fx0) - {'seg', 'at', 'to'}):
+                    err.append(f'{w} key 0: root.fix needs seg (a body segment), at [x,y,z] (bind pose) and to [x,y,z] (world)')
+                else:
+                    anc, k = set(), sn.index(fx0['seg'])
+                    while k > 0: anc.add(sn[k]); k = rig['seg'][k]['p']
+                    for c in (ks[0].get('ik') or {}):
+                        if c in sn and c[:-1] in CHAINS and anc & {c, CHAINS[c[:-1]][0] + c[-1], CHAINS[c[:-1]][1] + c[-1]}: err.append(f'{w}: root.fix on {fx0["seg"]} cannot hang below the IK chain {c} (the contact point needs forward kinematics)')
             for ki, k in enumerate(ks):
                 kw = f'{w} key {ki}'
                 if k.get('ease', 'inOut') not in ('linear', 'inOut', 'in', 'out'): err.append(f"{kw}: unknown ease {k.get('ease')!r}")
                 for f in ('pos', 'rot'):
                     if f in k.get('root', {}) and not num3(k['root'][f]): err.append(f'{kw}: root.{f} must be [x,y,z]')
+                fx = (k.get('root') or {}).get('fix')
+                if ki and fx is not None:
+                    if fx0 is None: err.append(f'{kw}: root.fix must start in key 0')
+                    elif not (isinstance(fx, dict) and num3(fx.get('to', [0, 0, 0])) and all(fx.get(f, fx0.get(f)) == fx0.get(f) for f in ('seg', 'at')) and not set(fx) - {'seg', 'at', 'to'}): err.append(f'{kw}: a later root.fix may only move "to" [x,y,z] (seg and at stay those of key 0)')
+                if fx0 is not None and 'pos' in (k.get('root') or {}): err.append(f'{kw}: root.pos is computed from root.fix (leave it out)')
+                if [f for f in (k.get('root') or {}) if f not in ('pos', 'rot', 'fix')]: err.append(f'{kw}: root takes pos, rot, fix')
                 b = k.get('bar')
                 if b is not None:
                     if not held or ('seg' in held and set(b) - {'w'}): err.append(f'{kw}: bar keys need a held bar prop (one attached to a segment takes only w)')
@@ -373,7 +388,7 @@ if rig and os.path.exists(P('data', 'animations.json')):
                     for d, v in dv.items():
                         if d not in DOFS[kd]: err.append(f'{kw}: {s} has no degree of freedom {d!r} ({"/".join(DOFS[kd])})')
                         if not num(v) or abs(v) > 180: err.append(f'{kw}: {s}.{d} must be a number of degrees')
-                        if d == 'grip' and not (num(v) and 0 <= v <= 1): err.append(f'{kw}: {s}.grip must be 0..1')
+                        if d == 'grip' and not (num(v) and -1 <= v <= 1): err.append(f'{kw}: {s}.grip must be -1..1 (negative = fingers straightened: a flat hand on the floor)')
                         if d == 'pron' and not (num(v) and -20 <= v <= 180): err.append(f'{kw}: {s}.pron must be -20..180 degrees')
                     for c in chains:
                         sd = c[-1]; mid, end = CHAINS[c[:-1]]

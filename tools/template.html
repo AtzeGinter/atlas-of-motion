@@ -2193,7 +2193,7 @@ function prepKeys(keys){
   let prev={t:0,ease:"inOut",pos:SEGJ[0].toArray(),rot:[0,0,0],j:{},ik:{},bar:{}};
   return keys.map(k=>{
     const c=cp(prev); c.t=k.t; c.ease=k.ease||"inOut";
-    if(k.root){ if(k.root.pos) c.pos=k.root.pos.slice(); if(k.root.rot) c.rot=k.root.rot.slice(); }
+    if(k.root){ if(k.root.pos) c.pos=k.root.pos.slice(); if(k.root.rot) c.rot=k.root.rot.slice(); if(k.root.fix) c.fix=Object.assign({},c.fix||{},cp(k.root.fix)); }
     Object.keys(k.j||{}).forEach(s=>{ c.j[s]=Object.assign(c.j[s]||{},k.j[s]); });
     Object.keys(k.ik||{}).forEach(s=>{ c.ik[s]=Object.assign(c.ik[s]||{},cp(k.ik[s])); });
     if(k.bar) Object.assign(c.bar,cp(k.bar));
@@ -2206,7 +2206,7 @@ const lerpO=(a,b,s)=>a?lerpA(a,b||a,s):null;
 function poseAt(K,t){
   let i=0; while(i<K.length-2&&t>K[i+1].t) i++;
   const A=K[i], B=K[i+1]||A, span=B.t-A.t, s=span>0?(EASE[B.ease]||EASE.inOut)(Math.min(1,Math.max(0,(t-A.t)/span))):0;
-  const P={pos:lerpA(A.pos,B.pos,s),rot:lerpA(A.rot,B.rot,s),j:{},ik:{},bar:{pos:lerpO(A.bar.pos,B.bar.pos,s),rot:lerpO(A.bar.rot,B.bar.rot,s),hang:lerpO(A.bar.hang,B.bar.hang,s),w:A.bar.w!==undefined?A.bar.w+((B.bar.w!==undefined?B.bar.w:A.bar.w)-A.bar.w)*s:null}};
+  const P={pos:lerpA(A.pos,B.pos,s),rot:lerpA(A.rot,B.rot,s),fix:A.fix?{seg:A.fix.seg,at:A.fix.at,to:lerpO(A.fix.to,(B.fix||A.fix).to,s)}:null,j:{},ik:{},bar:{pos:lerpO(A.bar.pos,B.bar.pos,s),rot:lerpO(A.bar.rot,B.bar.rot,s),hang:lerpO(A.bar.hang,B.bar.hang,s),w:A.bar.w!==undefined?A.bar.w+((B.bar.w!==undefined?B.bar.w:A.bar.w)-A.bar.w)*s:null}};
   new Set(Object.keys(A.j).concat(Object.keys(B.j))).forEach(n=>{ const a=A.j[n]||{}, b=B.j[n]||{}, o=P.j[n]={}; new Set(Object.keys(a).concat(Object.keys(b))).forEach(d=>{ o[d]=(a[d]||0)+((b[d]||0)-(a[d]||0))*s; }); });
   Object.keys(A.ik).forEach(n=>{ const a=A.ik[n], b=B.ik[n]||a; P.ik[n]={target:lerpO(a.target,b.target,s),pole:lerpA(a.pole,b.pole,s),end:lerpO(a.end,b.end,s),hax:lerpO(a.hax,b.hax,s),hfd:lerpO(a.hfd,b.hfd,s),bar:a.bar||null,wext:(a.wext||0)+((b.wext||0)-(a.wext||0))*s}; });
   return P;
@@ -2316,8 +2316,22 @@ function solveArm(s,ik,P){
 }
 const k_tv=new THREE.Vector3();
 function segMatrix(s,out){ out.makeRotationFromQuaternion(segQ[s]); k_tv.copy(SEGJ[s]).applyQuaternion(segQ[s]); out.setPosition(segPos[s].x-k_tv.x,segPos[s].y-k_tv.y,segPos[s].z-k_tv.z); return out; }
+// root.fix = {seg, at, to}: the root is placed so that the bind-pose point at, carried by segment seg (forward kinematics from the root;
+// lint keeps IK chains out of the way), lands on the world point to (lerped between keys). The body then turns about that contact point
+// exactly in every frame (push-up toes, Nordic curl knees, the standing hip of the hip airplane) instead of moving on the chord between keys.
+const k_fq=new THREE.Quaternion(), k_fq2=new THREE.Quaternion(), k_fp=new THREE.Vector3(), k_fv=new THREE.Vector3();
+function fixRoot(P){
+  const f=P.fix, s=SEGI[f.seg], ch=[]; for(let k=s;k>0;k=SEGPAR[k]) ch.unshift(k);
+  k_fq.copy(segQ[0]); k_fp.set(0,0,0);
+  ch.forEach(k=>{ const p=SEGPAR[k], n=RIG.seg[k][0];
+    k_fp.add(k_fv.copy(SEGJ[k]).sub(SEGJ[p]).applyQuaternion(k_fq));
+    k_fq.multiply(SEGAX[k]?axQ(k,k>=NBODY?SEGG[k]*gripOf(P,n.slice(-1)):pronOf(P,n.slice(-1)),k_fq2):localQ(n,P.j[n],k_fq2)); });
+  k_fp.add(k_fv.fromArray(f.at).sub(SEGJ[s]).applyQuaternion(k_fq));   // the contact point with the root pivot at the origin
+  segPos[0].fromArray(f.to).sub(k_fp);
+}
 function solvePose(P){
   segPos[0].fromArray(P.pos); eulerQ(P.rot,segQ[0]);
+  if(P.fix&&P.fix.to) fixRoot(P);
   const hang=heldBar&&heldBar.seg===undefined&&P.bar.hang;
   if(heldBar&&heldBar.seg===undefined&&!hang) solveBar(P);
   const done=new Uint8Array(NSEG); done[0]=1;
