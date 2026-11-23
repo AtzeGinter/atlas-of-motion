@@ -8,7 +8,9 @@ grips on parallel handles and a V-handle, per-variation props, body-held dumbbel
 added generic machine props (static frames and pads, groups that follow a segment, sleds on rails, lever links), cable bars, a rope,
 cables to any anchor, machine handles held by IK (`ik.hax` / `ik.hfd`) and 20 machine and cable exercises; batch 4 added an arm /
 thigh `twist` DOF (rotation about the bone's own axis), machine groups that pivot toward an anchor (`aim`: landmine and T-bar bars),
-the presets `kneel` and `arms-crossed` and 25 more cable and machine exercises (78 in all, list at the end).
+the presets `kneel` and `arms-crossed` and 25 more cable and machine exercises; batch 5 added the invisible held handle `grip` (what is
+held - trap bar, kettlebell, weight plate, a dumbbell in both hands - is built from machine parts riding on the bar), sphere parts, a
+full-circle `bar.hang` tilt and 23 dumbbell, free-weight and carry exercises (101 in all, list at the end).
 
 ## Overview
 
@@ -105,17 +107,18 @@ for single-axis joints, an axis. The segment transform is a rotation `q` about t
   `thigh*` (`solveLeg`) and `arm*` (`solveArm`). The arm IK targets the wrist *after* the forearm rotation (the wrist is off the
   rotation axis). When the hand orientation is given (`ik.end`, or a bar grip) the pronation is computed from the twist between
   hand and ulna about the rotation axis (`wrapPron`, -20..190 degrees) and the solve is iterated four times.
-* **Held bar** (barbell, pull-up bar, lat bar, V-handle; at most one): centre and axis come from the key field `bar` (`pos`, `rot`,
+* **Held bar** (barbell, pull-up bar, lat bar, V-handle, cable bar, rope, grip; at most one): centre and axis come from the key field `bar` (`pos`, `rot`,
   `w` = grip width, interpolated) or, with `seg` + `at` on the prop, from a segment (the back and front squat, good morning and
   Zercher bars ride on `chest`, the hip-thrust bar on `pelvis`). An arm with `"bar": "over" | "under"` puts its grip point at
   centre +- w/2 along the bar; the thumb points to the bar centre (overhand) or away (underhand); `"neutral"` keeps the grip
   points but turns the handle across the bar (thumbs toward -z of the bar frame, palms facing each other: parallel pull-up
   handles, V-handle); the finger direction is the forearm direction projected off the handle, tipped by `wext` (wrist
   extension, degrees; up to 90 for a front rack).
-* **Hanging bar** (`bar.hang: [f, tilt]`, deadlifts): instead of a position the bar hangs from straight arms. Once the chest and
+* **Hanging bar** (`bar.hang: [f, tilt]`, deadlifts, trap bar, kettlebell swing, pullover): instead of a position the bar hangs from straight arms. Once the chest and
   both clavicles are posed (`hangBar`, before the arm IK), both grip points are placed at `f` x the straight reach (shoulder ->
   elbow -> wrist -> grip point of the atlas pose, `HREACH`) from their shoulders, the bar centre below the shoulder midpoint,
-  tilted by `tilt` degrees in the sagittal plane (+ = in front of the shoulders, - = behind). The body motion then drives the bar
+  tilted by `tilt` degrees in the sagittal plane (+ = in front of the shoulders, - = behind; -180..180, so -180 points straight up from
+  a supine body: the dumbbell pullover sweeps -180 -> -84 with f 0.975, i.e. a constant ~20-degree elbow bend). The body motion then drives the bar
   and the elbows can never bend: `f` 0.995 gives ~4 degrees of elbow flexion (locked), and the bar path follows the shoulders
   even between keys (a bar authored by position moves on a straight line while the shoulders move on an arc, so the arms bend
   or overreach between keys). Keys interpolate `f` and `tilt`; key 0 must set `hang` when any key does. The hand frame (`frameQ` from `dir.gfd`/`dir.gax`) then fixes the wrist target
@@ -128,6 +131,12 @@ for single-axis joints, an axis. The segment transform is a rotation `q` about t
   `w`, optional `seg` + `at`), `pullbar` (`len`, `posts`, optional `handles: [distance, length]` = two parallel neutral-grip
   handles across the bar), `latbar`, `vhandle` (close neutral grip: two parallel grips `w` apart joined to a cable ring),
   `straightbar` (straight cable bar `len` with end caps and a swivel sleeve: pushdown, cable curl, straight-arm pulldown),
+  `grip` (an invisible held handle of width `w`, from 0.08: only the frame the hands grip; what is held comes from a `machine` with
+  `"seg": "bar"`: the trap bar's hexagon, neutral handles, sleeves and plates; the kettlebell's handle, horns and `sph` ball; the
+  Russian-twist plate (the grip rides on `chest`, `rot [90, 0, 0]` so the disc faces forward and neutral thumbs point up); the
+  pullover dumbbell held by both hands under its top plate. `bar.rot` turns the frame: `[180, 0, 0]` makes the trap bar's neutral
+  thumbs point forward (default: toward -z of the bar, as on pull-up handles), `[-tilt, 0, 0]` keeps the kettlebell in line with the
+  arms, `[180 - tilt, 0, 0]` keeps the pullover dumbbell along the forearms),
   `rope` (held bar of grip width `w` down to 0.08, gripped `"neutral"`: from a ring two strands of length `len` run to the fists,
   through them along the bar frame's z and end in knobs; the ring points toward `toward`, normally the pulley, and is rebuilt
   every frame from `barW`, so the rope opens into a V as the hands spread), `cable` (`pulley`, `stack [x, z]`, optional `top` =
@@ -135,7 +144,7 @@ for single-axis joints, an axis. The segment transform is a rotation `q` about t
 * **Anchors** (points props attach to): `[x, y, z]` fixed in the world; `{seg, at}` a bind-pose point carried by a segment;
   `{seg: "handL", grip: d}` the hand's grip point moved `d` along the handle axis (toward the thumb); `{bar: [x, y, z]}` a point in
   the held bar's frame, `{bar: "L" | "R"}` that hand's grip point on it, `{bar: "ring"}` the rope's ring.
-* **Machines** (`machine`): a group of `parts`, each `{box: [sx, sy, sz]}` | `{cyl: [r, length]}` (along local y) |
+* **Machines** (`machine`): a group of `parts`, each `{box: [sx, sy, sz]}` | `{cyl: [r, length]}` (along local y) | `{sph: r}` |
   `{rod: [[x,y,z], [x,y,z]], r}` with `pos`, `rot` (Euler degrees), `mat` (`pad` | `frame` | `iron` | `grip` | `cable`) and
   `pad: true` (+ `name`) for a contact pad (box: its local +y face; roller: its surface; `animcheck.js` reports how deep the body
   sinks into it). Without `seg` the group is static (`pos`, `yaw`). With `seg` it follows a body segment: `"follow": "rigid"`
@@ -182,7 +191,7 @@ Per exercise name (must exist in `exercises.py`):
     Chains are declared in key 0. Joints a chain drives cannot also get `j` angles (lint); exceptions:
     `fore.pron` when the hand orientation is free, `hand.grip` always.
   * `bar`: `{pos | hang, rot, w}` for a held bar that is not attached to a segment (attached ones take only `w`); `hang: [f, tilt]`
-    = hanging from straight arms (above; tilt -45..150 degrees, past 90 the bar is in front of and above the shoulders: the
+    = hanging from straight arms (above; tilt -180..180 degrees, past 90 the bar is in front of and above the shoulders: the
     straight-arm pulldown sweeps it from 105 to -2).
 * `_presets`: `{name: fragment}`; a fragment is a partial key (`root`, `j`, `ik`, `bar`, and `use` for other presets). A key's
   `use` (name or list) merges the presets in order (dicts recursively, numbers and lists replace), then the key's own fields.
@@ -258,7 +267,8 @@ Per exercise name (must exist in `exercises.py`):
   bar centre height / depth and its clearance to the nearest body vertex outside the hands (mm, negative = inside a muscle or
   bone, with that structure), the same for dumbbells, the lowest body vertex (floor) and, per bench, how deep the body sinks
   into the seat / backrest (< 0) or floats above it (> 0), and the same for every machine pad (`pad: true`; only vertices within
-  the pad's thickness count, so a torso behind a thin pad is not reported). `--summary` = one line per exercise with the worst values; no names
+  the pad's thickness count, so a torso behind a thin pad is not reported); spheres riding on a `grip` (the kettlebell ball) are reported with
+  the dumbbells, and the shaft-line clearance is skipped for a `grip` (an invisible handle). `--summary` = one line per exercise with the worst values; no names
   = every animated exercise. As a module (`bootAnim()`) it also serves quick tuning scripts: solve a key's root position for a
   wanted bar position, grid-search a pole, fit FK arm angles to a point.
 * `node animshot.js "Exercise" --t 0,0.5 [--var Group=Option] [--turn px] [--zoom n] [--out dir] [--url http://127.0.0.1:8799/]`
@@ -347,6 +357,27 @@ Per exercise name (must exist in `exercises.py`):
 | Reverse hyperextension | torso prone on a high pad with the hips at its edge, hands on front handles, pelvis fixed; legs swing from hanging (hip flexion 84) to in line with the torso; ankle strap on pendulum links from hubs on the hip axis (constant length) |
 | Glute-ham raise | GHD: knees fixed in front of the knee pad, shins on the shin pad, feet against the plate under the ankle roller; the body lowers as one straight line from the knees to 72 degrees and back (root on the circle around the knee, 12 keys: knee drift < 1 cm) |
 | Landmine press | left arm (`sym: false`), 15-degree lean; the bar pivots on the floor 2.1 m in front (`aim` at the grip point), neutral grip on the sleeve end (`hax` along the bar), from the front of the shoulder (elbow ~125) up and forward to near lockout on the bar's arc |
+| Arnold press | seated like the dumbbell press; arm IK with `fore.pron` keyed 0 -> 50 -> 93: dumbbells in front of the face with the palms facing in, the elbows open to the sides while the palms turn forward, pressed overhead |
+| Cuban press | FK arms: upright row to elbows at shoulder height with the forearms hanging (humeral `twist` 88, pron 100), external rotation to forearms vertical (`twist` -82), press overhead (abd 142), and back |
+| Concentration curl | seated on a flat bench, feet wide, torso leaned ~75 degrees, upper arm hanging with the elbow against the inner left thigh 12 cm from the knee (FK, elbow fixed), supinated curl 17 -> 133 degrees; the right forearm rests on the right thigh (`sym: false`) |
+| Incline dumbbell curl | 50-degree incline bench (narrow, 26 cm, so the arms hang beside it), arms hanging behind the torso line (flex -45, abd 14, `twist` -15 so the dumbbells clear the ribs), supinated curl, elbows fixed |
+| Dumbbell pullover | upper back across a bench (crosswise, hips at bench height, feet flat), one dumbbell held by both hands on a `grip` under its top plate; `bar.hang` tilt -180 -> -84 with f 0.975 (elbows a constant ~20 degrees), the dumbbell stays along the forearms (`bar.rot` = 180 - tilt) |
+| Dumbbell side bend | dumbbell in the left hand, lumbar / thoracic / chest `lat` 10 / 12 / 7 to the left and 4 / 4 / 2 back past neutral, the arms counter-abducted so the dumbbell hangs vertically along the leg, pelvis fixed |
+| Farmer's carry / Suitcase carry | walking in place: each foot lifts ~10 cm and sets down on its spot, the pelvis shifts 1.8 cm over the stance leg, dumbbells hang neutral (both hands / left only, right arm relaxed, shoulder slightly depressed) |
+| Forearm pronation and supination | seated, left forearm on the thigh with the hand past the knee, a dumbbell loaded at one end (machine on the hand) rotated by `fore.pron` 90 -> 165 -> 90 -> 20 -> 90; variation Direction Pronation only / Supination only |
+| Radial deviation | same setup, thumb up; hand `dev` -25 -> 22, the loaded end tips forward and back up past vertical |
+| Wrist curl / Reverse wrist curl | seated, both forearms on the thighs (elbow pole down so the forearm rests on the distal thigh), palms up (pron 0) / down (pron 165), hand `flex` -45 -> 55 / 45 -> -40 |
+| Jefferson curl | standing on a 30 cm box, light dumbbells; the spine rolls down one segment at a time (neck, chest, thorax, lumbar, then the hips: root 88 degrees, knees soft ~30) until the hands pass below the box top in front of it, then rolls back up (12 keys, 7 s) |
+| Step-up | left foot planted on a 40 cm box, right foot from the floor behind: drive up to a straight left knee, the right foot comes up past the box edge and lands beside the left, then steps back down (keys keep the toes clear of the box edge) |
+| Lateral step-up | box on the left (25 cm), left foot planted on it, the body rises sideways over the left foot while the right foot leaves the floor and hangs beside the box, then lowers to touch the floor |
+| One-arm dumbbell row | right knee and right hand on a flat bench (hand flat, `end` [90, 0, 180]), left foot on the floor, torso near level; the left arm rows a neutral-grip dumbbell from hanging to beside the hip with the elbow rising 12 cm above the back (`sym: false`) |
+| Prone Y-T-W raise | chest on a 40-degree pad (machine pad on a post), feet on the floor behind; Y = arms overhead in line with the trunk, 38 degrees apart, thumbs up; variation Shape T (abd 86, external `twist` -80, pron 0 so the thumbs point to the ceiling) / W (elbows bent 95, `twist` -70) |
+| Rear-delt fly | 60-degree hip hinge (`hip-hinge`), soft elbows, neutral grip; FK keys keep the arms in the frontal plane from hanging to level with the shoulders |
+| Single-leg Romanian deadlift | standing on the left leg (planted IK), the right leg FK (hovering at the start) swings back in line with the trunk as the pelvis hinges 78 degrees; dumbbells hang from both hands to mid-shin, hips square (`sym: false`) |
+| Trap bar deadlift | hexagonal bar on a `grip` (w 0.56, `bar.rot` [180, 0, 0], neutral handles at the sides), plates on the floor at the start (handles at plate radius), `bar.hang` keeps the elbows locked; hips lower and torso more upright than the conventional pull (52 degrees, knee 102 -> 74 -> 49 -> 4) |
+| Meadows row | landmine bar to the lifter's right (`aim` at the grip point, pivot 2.1 m away and slightly forward), staggered stance with the right leg forward and the right hand on the right knee, ~60-degree hinge; the left hand grips the sleeve end overhand (`hax` toward the pivot, plates on the thumb side) and rows on the bar's arc from a straight arm to beside the hip with the elbow high |
+| Kettlebell swing | two hands on one handle (`grip` w 0.12, overhand, `bar.hang` f 0.99), wide stance; hinge to 58 degrees with the bell hiked back between the legs (tilt -26), hips snap through to a float at chest height (tilt 72, hands at 1.2 m) with the bell in line with the arms |
+| Russian twist | seated on the floor, torso 40 degrees back, feet lifted (V-sit), a plate held at its rim (`grip` riding on `chest`, neutral grip); spine rotation 8 / 15 / 15 to each side (81 degrees in all) while the pelvis stays still |
 
 Conventional deadlift, Romanian deadlift and Sumo deadlift use `bar.hang` (elbows ~4 degrees all the way; before, the bar
 positions left the deadlift elbows bent up to 46 degrees and the RDL up to 32). New variation motions: Romanian deadlift
@@ -375,6 +406,15 @@ elbows forward, forearms ~90), Lat pulldown Grip Close neutral (V-handle via var
 * Machine levers are links from a fixed pivot to the moving handle: the handle paths follow the arc in a few keys, so a lever
   changes its length by a few millimetres between keys. Machine handles and D-handles follow the hand (always in the grip).
 * The face-pull rope is drawn as straight strands (no sag); at the end position the ring sits a few centimetres in front of the face. The front-rack elbow (~138 degrees) and the Zercher bar resting on the biceps are at the limit of the skinning.
+
+* Batch 5: carries walk in place (the feet lift and set down on the same spot; no forward travel). The pullover's latissimus sheet
+  flares into the bench at full overhead stretch (-52 mm; the upper back itself rests within 1 cm). The kettlebell ball passes
+  12 mm from the inner thighs at its closest; forearms meet at the midline between the thighs at the bottom. The trap bar start is a
+  deep pull (knees 102 degrees) because the handles sit at plate radius. Wrist exercises use the single wrist segment: flexion and
+  deviation rotate the whole hand about the wrist centre. The one-end-loaded dumbbell (forearm rotation, radial deviation) is a short
+  machine prop in the hand. Single-arm / single-leg exercises (concentration curl, one-arm row, Meadows row, suitcase carry, single-leg
+  RDL, step-ups, wrist rotation / deviation) animate the left side. Bench / pad contact: seats -13..-8 mm, incline backrest -19 mm,
+  chest pad -10 mm, boxes 0 mm (feet planted on the box top), one-arm row hand fingertips -7 mm, knee joint 5 cm above the pad.
 
 * Batch 4: ropes are drawn as straight strands; the woodchop cable crosses the front of the chest at the end of the chop and the
   cable crunch rope's virtual bar axis passes through the head (only the strands are drawn). Two hands on one handle (Pallof press)
