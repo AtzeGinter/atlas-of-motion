@@ -2108,5 +2108,33 @@
    {"t": 0.65},
    {"t": 1, "j": {"neck": {"flex": 4}, "head": {"flex": -4}}}
   ]
+ },
+ "Dead hang": {
+  "dur": 3.0,
+  "camera": {"theta": 35, "phi": 86, "r": 1.65, "target": [0, 1.15, 0]},
+  "props": [
+   {"type": "pullbar", "len": 1.2, "posts": true}
+  ],
+  "keys": [
+   {"t": 0, "use": ["hang", "bar-over"], "root": {"rot": [0, 0, 0], "fix": {"seg": "clavL", "at": [0.1619, 1.3894, -0.0307], "to": [0.158, 1.545, 0.06]}}, "j": {"clavL": {"elev": 14}}, "ik": {"armL": {"pole": [1, 0, 0.4]}}, "bar": {"pos": [0, 2.12, 0.08], "w": 0.6}},
+   {"t": 0.15},
+   {"t": 0.45, "root": {"fix": {"to": [0.157, 1.545, 0.06]}}, "j": {"clavL": {"elev": -2, "prot": -4}}},
+   {"t": 0.75},
+   {"t": 1, "root": {"fix": {"to": [0.158, 1.545, 0.06]}}, "j": {"clavL": {"elev": 14, "prot": 0}}}
+  ]
+ },
+ "Hanging leg raise": {
+  "dur": 3.2,
+  "camera": {"theta": 62, "phi": 82, "r": 1.65, "target": [0, 1.2, 0.25]},
+  "props": [
+   {"type": "pullbar", "len": 1.2, "posts": true}
+  ],
+  "keys": [
+   {"t": 0, "use": ["hang", "bar-over"], "root": {"rot": [0, 0, 0], "fix": {"seg": "clavL", "at": [0.1619, 1.3894, -0.0307], "to": [0.157, 1.545, 0.06]}}, "j": {"clavL": {"elev": -2, "prot": -4}, "thighL": {"flex": 6}, "shankL": {"flex": 8}, "footL": {"flex": -15}}, "ik": {"armL": {"pole": [1, 0, 0.4]}}, "bar": {"pos": [0, 2.12, 0.08], "w": 0.6}},
+   {"t": 0.1},
+   {"t": 0.45, "root": {"rot": [-24, 0, 0]}, "j": {"lumbar": {"flex": 14}, "thorax": {"flex": 8}, "thighL": {"flex": 72}, "shankL": {"flex": 10}}},
+   {"t": 0.58},
+   {"t": 1, "root": {"rot": [0, 0, 0]}, "j": {"lumbar": {"flex": 0}, "thorax": {"flex": 0}, "thighL": {"flex": 6}, "shankL": {"flex": 8}}}
+  ]
  }
 }
