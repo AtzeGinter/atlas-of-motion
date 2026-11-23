@@ -120,6 +120,10 @@ KEY_SEGS = {
     'trapezius': ['thorax', 'chest', 'neck', 'head', 'clavS'], 'levator scapulae': ['neck', 'clavS'], 'rhomboid major': ['chest', 'clavS'],
     'rhomboid minor': ['chest', 'neck', 'clavS'], 'sternocleidomastoid': ['chest', 'neck', 'head', 'clavS'],
     'omohyoid': ['neck', 'clavS'],
+    # shoulder blade -> humerus only: with the thoracic segments allowed, posterior-deltoid and rotator-cuff vertices that lie over the ribs
+    # stayed with the trunk while their neighbours followed the arm overhead (edges stretched up to 40x)
+    'deltoid': ['clavS', 'armS'], 'supraspinatus': ['clavS', 'armS'], 'infraspinatus': ['clavS', 'armS'], 'teres minor': ['clavS', 'armS'],
+    'teres major': ['clavS', 'armS'], 'subscapularis': ['clavS', 'armS'],
 }
 
 
@@ -285,6 +289,15 @@ for s in 'LR':
                   'thigh' + s: 'hip' + s, 'shank' + s: 'knee' + s, 'foot' + s: 'ankle' + s})
 
 
+# Muscles that run from the trunk / shoulder blade to the humerus. Weighted by the nearest bone, their sheets near the axilla get a large
+# humerus weight, and with the arm overhead dual-quaternion blending swings those vertices on arcs about the shoulder (up to ~10 cm off the
+# chest wall, the pullover's latissimus 5 cm into the bench). Here only the insertion follows the arm: arm weight = 1 near the vertices that
+# touch the humerus (within INS_D) and falls off with the distance to them (smoothstep from INS_FALL[0] to INS_FALL[1]); the rest of the
+# sheet keeps its trunk / shoulder-blade weights, so the band between origin and insertion is stretched instead of swung out.
+# wall: vertices that lie on the chest wall or the shoulder blade (distance to the nearest non-arm bone below wall[0], fading out by wall[1])
+# keep their trunk weights even close to the insertion, so the sheet does not peel off the ribs at the armpit.
+INSERT_ARM = {'latissimus dorsi': (0.012, (0.006, 0.045), (0.02, 0.045)), 'pectoralis major': (0.012, (0.006, 0.045), (0.02, 0.045)),
+              'teres major': (0.010, (0.004, 0.035), None)}
 SIGMA = 0.018          # soft-min width (m): the blend band is where the distances to two bones differ by less than ~2 sigma
 SIGMA_HAND = 0.007     # narrower for the hand and finger segments (bones only millimetres apart)
 BAND = {'l5s1': 0.045, 't12l1': 0.06, 't6t7': 0.055}   # half widths of the trunk bands
@@ -294,6 +307,24 @@ T67_TILT = -0.6        # the T6/T7 split plane drops toward the front (the stern
 def smooth01(x):
     x = np.clip(x, 0, 1)
     return x * x * (3 - 2 * x)
+
+
+def insert_weights(E, ia, D, pos, ins_d, fall, wall):
+    """E (columns x vertices, sums 1) with the arm column ia replaced by the insertion falloff (see INSERT_ARM); the other columns keep
+    their proportions and share the rest. D = distances of every vertex to the bones of each column (row ia = the humerus)."""
+    dh = D[ia]
+    ins = pos[dh < ins_d]
+    if len(ins) == 0: ins = pos[[int(np.argmin(dh))]]
+    d = cKDTree(ins).query(pos)[0]
+    wa = 1 - smooth01((d - fall[0]) / (fall[1] - fall[0]))
+    if wall: wa = wa * smooth01((np.delete(D, ia, 0).min(0) - wall[0]) / (wall[1] - wall[0]))
+    rest = np.delete(E, ia, 0); s = rest.sum(0)
+    if (s <= 1e-12).any():   # a vertex weighted only to the arm: give its share to the nearest other column (uniform if none)
+        rest[:, s <= 1e-12] = 1.0 / max(1, len(rest)); s = rest.sum(0)
+    E = E.copy()
+    E[np.arange(len(E)) != ia] = rest / s * (1 - wa)
+    E[ia] = wa
+    return E
 
 
 def skin_level(geo, trees, J):
@@ -327,6 +358,8 @@ def skin_level(geo, trees, J):
         D = np.array(D); sig = np.array(sig)[:, None]
         E = np.exp(-(D - D.min(0)) / sig)
         E /= E.sum(0)
+        if row[1] in INSERT_ARM and side and SI['arm' + side] in cols:
+            E = insert_weights(E, cols.index(SI['arm' + side]), D, pos, *INSERT_ARM[row[1]])
         for c, e in zip(cols, E):
             if c == 'T':
                 y, z = pos[:, 1], pos[:, 2]
