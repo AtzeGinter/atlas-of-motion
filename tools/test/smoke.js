@@ -2134,10 +2134,11 @@ async function animRun(){
   'Prone Y-T-W raise','Radial deviation','Rear-delt fly','Reverse wrist curl','Single-leg Romanian deadlift','Step-up','Wrist curl','Suitcase carry','Trap bar deadlift','Meadows row','Kettlebell swing','Russian twist',
   'Push-up','Diamond push-up','Scapular push-up','Plank','Side plank','Side plank with hip abduction','Copenhagen plank','Bench dip','Inverted row','Ab wheel rollout',
   'Crunch','Sit-up','Dead bug','Bird dog','Lying leg raise','Side-lying hip abduction','Clamshell','Prone head lift','Chin tuck','Dead hang','Hanging leg raise',
-  'Cossack squat','Sissy squat','Nordic curl','Single-leg box squat','Lateral step-down','Single-leg calf raise','Tibialis raise','Hip airplane','Banded side walk'],FLOOR=ANIMS.slice(ANIMS.indexOf('Push-up'));
+  'Cossack squat','Sissy squat','Nordic curl','Single-leg box squat','Lateral step-down','Single-leg calf raise','Tibialis raise','Hip airplane','Banded side walk',
+  'Thruster','Power clean','Turkish get-up','Neck lateral flexion','Neck extension','Weighted neck flexion','Seated hip external rotation','Wrist roller','Hand gripper'],FLOOR=ANIMS.slice(ANIMS.indexOf('Push-up'));
  ok(ANIMS.every(n=>A[n])&&names.every(n=>META.ex.some(e=>e.n===n)&&A[n].keys[0].t===0&&A[n].keys[A[n].keys.length-1].t===1),'META.anim: '+names.length+' animations, all existing exercises, keys from t=0 to 1 ('+names.join(', ')+')');
  ok(names.every(n=>A[n].keys.every(k=>!('use' in k)))&&A['Back squat'].keys[0].ik.thighR&&A['Back squat'].keys[0].ik.thighR.target[0]===-A['Back squat'].keys[0].ik.thighL.target[0]&&A['Back squat'].keys[0].ik.armR.bar==='over','presets are resolved at build time and left entries are mirrored to the right (Back squat: right foot = mirrored left foot, both hands overhand on the bar)');
- ok(names.length>=131,'META.anim: at least 131 animated exercises ('+names.length+')');
+ ok(names.length>=140,'META.anim: at least 140 animated exercises ('+names.length+')');
  const exp='window.__an={get anim(){return anim},skU,segPos,segQ,SEGI,SEGJ,RIG,cpuSkin,allMeshes,boneMeshes,muscleMeshes,byKey,HM,propGrp,nerveMeshes,solvePose,poseAt,prepKeys,barC,barA,get barW(){return barW},get heldBar(){return heldBar},get skN(){return skN},get skinLv(){return skinLv}};';
  const mk=o=>boot(Object.assign({store:{}},o,{js:js.replace('//@licexport',exp)}));
  const x=mk({}),xd=x.document,xq=s=>xd.querySelector(s),xqa=s=>[...xd.querySelectorAll(s)];
@@ -2146,6 +2147,8 @@ async function animRun(){
  xq('[data-tab="ex"]').click();
  exI('Diaphragmatic breathing').click();
  ok(xq('#card h2').textContent==='Diaphragmatic breathing'&&!btn(),'no animation: the exercise card has no "Play movement" button');
+ const noPlay=['Plate pinch','Band finger extension','Towel scrunch'].every(n=>{exI(n).click();return xq('#card h2').textContent===n&&!btn()&&xq('#card .exhead,#card h2');});
+ ok(noPlay,'the other exercises left unanimated (plate pinch, band finger extension, towel scrunch) also open their cards without a Play button');
  exI('Bulgarian split squat').click();
  ok(btn()&&btn().textContent==='▶ Play movement'&&btn().getAttribute('aria-pressed')==='false'&&xq('#animBar').hidden,'animated exercise: "▶ Play movement" on the card, the movement bar is hidden');
  ok(!x.__fetched.some(u=>/skin/.test(u))&&ident(),'skin weights are not fetched before the first play; every segment transform is the identity');
@@ -2253,7 +2256,7 @@ async function animRun(){
     C7:new T.Vector3().fromArray(J('neck')).sub(X.SEGJ[X.SEGI.chest]).applyQuaternion(X.segQ[X.SEGI.chest]).add(X.segPos[X.SEGI.chest]).toArray(),
     WR:X.segPos[X.SEGI.handR].toArray(),AR:X.segPos[X.SEGI.footR].toArray(),pr:pronAt('L'),wq:X.segQ[X.SEGI.radL].clone().invert().multiply(X.segQ[X.SEGI.handL]).toArray(),
     A:X.segPos[X.SEGI.footL].toArray(),T:bindAt('footL',[0.105,0.015,0.125]).toArray(),SM:mid('arm'),HM:mid('thigh'),AM:mid('foot'),knr:kneeAt('R'),SR:X.segPos[X.SEGI.armR].toArray(),H:X.segPos[X.SEGI.thighL].toArray(),HR:X.segPos[X.SEGI.thighR].toArray(),
-    fp:Math.asin(-new T.Vector3(0,0,1).applyQuaternion(X.segQ[X.SEGI.footL]).y)*180/Math.PI,low:FLOOR.includes(nmx)&&s%3===0?lowest():null});
+    fp:Math.asin(-new T.Vector3(0,0,1).applyQuaternion(X.segQ[X.SEGI.footL]).y)*180/Math.PI,hq:X.segQ[X.SEGI.head].toArray(),tip:tipOf("L").distanceTo(gpt("L")),low:FLOOR.includes(nmx)&&s%3===0?lowest():null});
    if(s===0&&/deadlift/.test(nmx)&&nmx!=='Romanian deadlift') elbowMax[nmx+' floor']=X.barC.y;
    ['footL','footR','handL','handR'].forEach(sn=>{if(X.segPos[X.SEGI[sn]].y<0.03){floorOk=false;why=nmx+' '+sn;}});
    if(X.heldBar&&X.barC.y<0.2&&nmx!=='Ab wheel rollout'){floorOk=false;why=nmx+' bar';}
@@ -2334,6 +2337,22 @@ async function animRun(){
  ok(ss.kn>100&&ss.K[2]>ss.T[2]+0.1&&MET['Sissy squat'].every(m=>m.fp>20)&&drift('Sissy squat','T')<0.001&&rngOf('Sissy squat',nLine)<3,'sissy squat: at the bottom the knees ('+degs(ss.kn)+' degrees) are '+cm(ss.K[2]-ss.T[2])+' in front of the toes, the heels stay up (foot pitched at least '+degs(mn('Sissy squat',m=>m.fp))+' degrees) and knee-hip-shoulder stay one line');
  ok(drift('Hip airplane','H')<0.001&&rngOf('Hip airplane',m=>m.HR[1]-m.H[1])>0.1,'hip airplane: the stance hip stays put while the pelvis opens and closes over it (the free hip moves '+cm(rngOf('Hip airplane',m=>m.HR[1]-m.H[1]))+' up and down)');
  ok(rngOf('Single-leg calf raise',m=>m.pl)>=40&&rngOf('Tibialis raise',m=>m.fp)>20&&mx('Single-leg box squat',m=>m.kn)>95&&rngOf('Banded side walk',m=>m.pel[0])>0.15,'single-leg calf raise ('+degs(rngOf('Single-leg calf raise',m=>m.pl))+' degrees of ankle range), tibialis raise (toes up '+degs(rngOf('Tibialis raise',m=>m.fp))+'), single-leg box squat (knee '+degs(mx('Single-leg box squat',m=>m.kn))+'), banded side walk (steps '+cm(rngOf('Banded side walk',m=>m.pel[0]))+' sideways and back)');
+ // batch 7: Olympic-style lifts, the get-up, neck, hip rotation, forearm and grip
+ const hz=m=>Math.hypot(m.W[0]-m.S[0],m.W[2]-m.S[2]),dB=m=>V3(m.bar).distanceTo(V3(m.C7)),eMax=m=>Math.max(m.el,m.er);
+ const thTop=MET['Thruster'].reduce((a,m)=>m.bar[1]>a.bar[1]?m:a),thSq=MET['Thruster'].filter(m=>m.t<0.48),midF=m=>(m.A[2]+m.AR[2])/2+0.045;
+ ok(thTop.bar[1]>1.95&&eMax(thTop)<10&&Math.abs(thTop.bar[2]-midF(thTop))<0.06&&mx('Thruster',m=>m.kn)>110&&Math.max(...thSq.map(dB))-Math.min(...thSq.map(dB))<0.02,'thruster: the bar rides on the front rack through the squat (bar-to-C7 distance within '+cm(Math.max(...thSq.map(dB))-Math.min(...thSq.map(dB)))+', knees to '+degs(mx('Thruster',m=>m.kn))+') and ends overhead at '+thTop.bar[1].toFixed(2)+' m over the mid-foot ('+cm(thTop.bar[2]-midF(thTop))+') with locked elbows ('+degs(eMax(thTop))+' degrees)');
+ const pc=MET['Power clean'],pcPull=pc.filter(m=>m.t<=0.32),pcCatch=pc.filter(m=>m.t>=0.45&&m.t<=0.52),pcLow=Math.max(...pcPull.map(eMax));
+ ok(Math.abs(pc[0].bar[1]-0.23)<0.01&&pcLow<10&&pcPull[pcPull.length-1].bar[1]>pcPull[pcPull.length-1].H[1]-0.05&&pcCatch.every(m=>m.bar[2]>m.S[2]+0.03&&m.bar[1]<m.S[1]+0.06&&m.bar[1]>m.S[1]-0.08&&eMax(m)>100)&&Math.max(...pcCatch.map(m=>m.kn))>40&&Math.max(...pcCatch.map(m=>m.kn))<90&&mx('Power clean',m=>Math.abs(m.bar[2]))<0.2,'power clean: the bar starts on the floor ('+pc[0].bar[1].toFixed(3)+' m), the elbows stay locked (< '+degs(pcLow+1)+' degrees) until the bar has passed the hips, it is caught in the front rack (in front of and level with the shoulders, elbows up) in a quarter squat (knees '+degs(Math.max(...pcCatch.map(m=>m.kn)))+') and stays within '+cm(mx('Power clean',m=>Math.abs(m.bar[2])))+' of the body line');
+ const tg=MET['Turkish get-up'];
+ ok(tg.every(m=>m.el<10&&hz(m)<0.1)&&mn('Turkish get-up',m=>m.pel[1])<0.15&&mx('Turkish get-up',m=>m.pel[1])>0.85,'Turkish get-up: from lying (pelvis at '+mn('Turkish get-up',m=>m.pel[1]).toFixed(2)+' m) to standing ('+mx('Turkish get-up',m=>m.pel[1]).toFixed(2)+' m) and back with the left elbow locked (< '+degs(mx('Turkish get-up',m=>m.el)+1)+' degrees) and the kettlebell hand above the shoulder (within '+cm(mx('Turkish get-up',hz))+' horizontally) in every frame');
+ const qAng=(a,b)=>2*Math.acos(Math.min(1,Math.abs(a[0]*b[0]+a[1]*b[1]+a[2]*b[2]+a[3]*b[3])))*180/Math.PI,wrR=mx('Wrist roller',m=>qAng(m.wq,MET['Wrist roller'][0].wq));
+ const NK=['Neck lateral flexion','Neck extension','Weighted neck flexion'],hTurn=n=>mx(n,m=>angV(upOf(m.hq),upOf(MET[n][0].hq))),cTurn=n=>mx(n,m=>angV(upOf(m.cq),upOf(MET[n][0].cq)));
+ ok(NK.every(n=>still(n)&&cTurn(n)<0.5&&hTurn(n)>30),'neck exercises: pelvis and chest stay still (chest turns < 0.5 degrees) while the head moves '+NK.map(n=>degs(hTurn(n))).join(' / ')+' degrees (lateral flexion / extension / flexion)');
+ ok(still('Seated hip external rotation')&&drift('Seated hip external rotation','K')<0.005&&rngOf('Seated hip external rotation',m=>m.A[0])>0.12,'seated hip external rotation: seated still, the knee stays put (drift '+(drift('Seated hip external rotation','K')*1000).toFixed(1)+' mm) while the shin sweeps the ankle '+cm(rngOf('Seated hip external rotation',m=>m.A[0]))+' inward and back');
+ ok(drift('Wrist roller','S')<0.001&&drift('Wrist roller','E')<0.05&&rngOf('Wrist roller',m=>m.bar[1])>0.15&&wrR>50,'wrist roller: shoulders still and elbows within '+cm(drift('Wrist roller','E'))+' while the wrists flex and extend (the hand turns up to '+degs(wrR)+' degrees against the forearm) and the plate rises '+cm(rngOf('Wrist roller',m=>m.bar[1]))+' and lowers again');
+ ok(drift('Hand gripper','E')<1e-6&&rngOf('Hand gripper',m=>m.tip)>0.02,'hand gripper: the forearm stays still while the fingers close the gripper (middle fingertip '+cm(mx('Hand gripper',m=>m.tip))+' -> '+cm(mn('Hand gripper',m=>m.tip))+' from the grip point)');
+ const SKIP=['Diaphragmatic breathing','Pelvic floor contraction','Short foot','Banded ankle eversion','Banded ankle inversion','Band finger extension','Plate pinch','Towel scrunch'];
+ ok(SKIP.every(n=>META.ex.some(e=>e.n===n)&&!A[n]),'left unanimated on purpose (no skeletal motion the rig can show): '+SKIP.join(', '));
  ok(STRAIGHT.every(n=>elbowMax[n]<10),'straight arms: the elbows stay locked (< 10 degrees of flexion) in every sampled frame of '+STRAIGHT.map(n=>n+' '+elbowMax[n].toFixed(1)).join(', '));
  ok(['Conventional deadlift','Sumo deadlift','Trap bar deadlift'].every(n=>Math.abs(elbowMax[n+' floor']-0.225)<0.004),'deadlifts start from the floor: bar centre (trap bar: handles) at plate radius ('+['Conventional deadlift','Sumo deadlift','Trap bar deadlift'].map(n=>(elbowMax[n+' floor']*1000).toFixed(0)+' mm').join(', ')+') with straight arms (bar.hang)');
  ok(barOk&&barNames.length>=18,'two-hand bar constraint: both grip points stay on the bar at grip width in every sampled frame of '+barNames.length+' bar exercises (worst '+(worst*1000).toFixed(1)+' mm)'+(barOk?'':' ('+why+')'));

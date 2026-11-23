@@ -12,7 +12,10 @@ the presets `kneel` and `arms-crossed` and 25 more cable and machine exercises; 
 held - trap bar, kettlebell, weight plate, a dumbbell in both hands - is built from machine parts riding on the bar), sphere parts, a
 full-circle `bar.hang` tilt and 23 dumbbell, free-weight and carry exercises (101 in all); batch 6 added `root.fix` (the root follows a
 contact point: toes, knees, a heel, a hip, a shoulder), flat hands (negative `hand.grip`), the presets `pushup` and `supine-floor`, a
-floor-contact report in `animcheck.js` and 30 bodyweight exercises on the floor, on a bar and for the legs (131 in all, list at the end).
+floor-contact report in `animcheck.js` and 30 bodyweight exercises on the floor, on a bar and for the legs (131 in all); batch 7 added
+the switch between a hanging and a positioned bar (`"hang": null`), machine parts and link anchors on finger segments (the hand
+gripper's finger handle), up to 32 keys and 30 s per repetition, and 9 more exercises: thruster, power clean, Turkish get-up (up and
+back down), three neck exercises, seated hip external rotation, wrist roller and hand gripper (140 in all, list at the end).
 
 ## Overview
 
@@ -123,7 +126,12 @@ for single-axis joints, an axis. The segment transform is a rotation `q` about t
   a supine body: the dumbbell pullover sweeps -180 -> -84 with f 0.975, i.e. a constant ~20-degree elbow bend). The body motion then drives the bar
   and the elbows can never bend: `f` 0.995 gives ~4 degrees of elbow flexion (locked), and the bar path follows the shoulders
   even between keys (a bar authored by position moves on a straight line while the shoulders move on an arc, so the arms bend
-  or overreach between keys). Keys interpolate `f` and `tilt`; key 0 must set `hang` when any key does. The hand frame (`frameQ` from `dir.gfd`/`dir.gax`) then fixes the wrist target
+  or overreach between keys). Keys interpolate `f` and `tilt`; key 0 must set `hang` when any key does. A hanging bar can switch to
+  a positioned one and back: `"hang": null` + `pos` in a key = from this key on the bar follows `pos` (the segment ending at the switch key
+  still hangs with the previous key's `[f, tilt]`, so `pos` must be where the hanging bar is at that key, read with `animcheck.js`);
+  `"hang": [f, tilt]` + `pos` = the positioned bar moves to `pos` and hangs from there on (lint checks both). The power clean pulls
+  with straight arms (`hang`) to the triple extension, switches to positions for the pull under and the catch in the front rack, and
+  switches back to `hang` once the bar is lowered to the thighs. The hand frame (`frameQ` from `dir.gfd`/`dir.gax`) then fixes the wrist target
   `grip point - hand offset`, so both hands sit exactly on the bar whenever it is within reach (the smoke test samples every bar
   exercise: worst error 2.8 mm).
 * **Props**: `bench` (`size [w, thickness, length]`, `top`, `pos [x, z]`, optional `incline` 0-85 with `seat`, `yaw`; a decline
@@ -155,7 +163,10 @@ for single-axis joints, an axis. The segment transform is a rotation `q` about t
   handles, D-handles), `"follow": "move"` only translates the group with the anchor `at` (orientation `rot` stays: the leg
   press sled under the feet, the hack squat carriage on the chest, the calf machine's shoulder pads), optionally constrained to
   a rail: `axis` (+ `base`, a point on the rail line) keeps only the motion along the axis, and with `normal` it slides as far as
-  keeps the anchor on that contact plane. `"seg": "bar"` rides on the held bar. A static group with `aim` (an anchor) pivots at `pos`
+  keeps the anchor on that contact plane. `"seg": "bar"` rides on the held bar. A rigid group (and a `{seg, at}` anchor) may also
+  ride on a finger segment: the hand gripper's finger handle sits on the middle phalanx of the middle finger (`f3mL`, `at: [0, 0, 0]`
+  with the parts in that segment's bind coordinates, computed for grip 1 so that it closes against the palm handle); when the fingers
+  are not skinned (small uniform budget) `propSeg()` puts such a part on the hand instead. A static group with `aim` (an anchor) pivots at `pos`
   so that its local +y points at the anchor every frame: the landmine press bar aims at the hand's grip point (`{seg: "handL",
   grip: 0}`), the T-bar row bar at the held crossbar (`{bar: [0, 0, 0]}`); parts are laid out along local y (sleeve, plates), and the
   hand / handle path is authored on the sphere around the pivot so the bar keeps its length (the test allows 2 cm).
@@ -175,7 +186,7 @@ Per exercise name (must exist in `exercises.py`):
 
 * `dur` seconds per repetition (looped); `camera` `{theta, phi, r, target}` (orbit angles in degrees, theta 90 = from the subject's
   left; r = times the default distance, x0.8 on phones); `props` (above); `sym` (default true, see presets); `vars` (variations).
-* `keys`: 3-12 keyframes, `t` rising from 0 to 1. Each key inherits whatever it does not set from the previous key; `ease`
+* `keys`: 3-32 keyframes, `t` rising from 0 to 1 (`dur` up to 30 s: the Turkish get-up has 31 keys over 22 s). Each key inherits whatever it does not set from the previous key; `ease`
   (`inOut` default, `in`, `out`, `linear`) shapes the segment that ends at this key.
   * `root`: `pos` (world position of the pelvis pivot; standing = `[0, 0.8842, -0.0268]`) and `rot` (world Euler XYZ, degrees;
     `[-90, 0, 0]` = supine, `[90, 0, 0]` = prone, positive x = lean forward), or `fix` instead of `pos`: `{seg, at, to}` places the
@@ -424,6 +435,15 @@ Per exercise name (must exist in `exercises.py`):
 | Tibialis raise | leaning back against a wall (the head and upper back on it), feet 37 cm forward; the feet turn about the heels 25 degrees toes-up (ankle IK targets computed about the heel point) |
 | Hip airplane | standing on the left leg, hinged 65 degrees, the right leg in line behind, arms out; the pelvis turns about its long axis over the fixed left hip (`root.fix` on the pelvis at the hip centre: rot [65, -35, 0] open, [65, 18, 0] closed) |
 | Banded side walk | half squat, a band (two link strands) around the thighs above the knees; the left foot steps out and the right follows (pelvis 18 cm to the left), then back the same way, so the loop stays in place |
+| Thruster | front squat into an overhead press in one motion: the bar is keyed by position, during the squat on the front-rack point the front squat's bar rides on (`chest` at [0, 1.425, 0.055], computed per key: bar-to-C7 distance constant within ~1 cm), knees to ~120, then driven up past the chin (head back) to lockout over the mid-foot with the shoulders shrugged; lowered back to the rack |
+| Power clean | from the floor with straight arms (`bar.hang`, clean grip 0.56): first pull to the knees, scoop (knees forward under the bar, torso 28 degrees), triple extension on the toes with a shrug (bar at the hips); then `"hang": null` and keyed positions: the pull under with the elbows high and out, the elbows whip around and the bar is caught in the front rack (wrists extended 80) in a quarter squat (knees ~64), stand, lower to the thighs (back to `hang`) and to the floor |
+| Turkish get-up | kettlebell in the left hand, the left arm IK aims at a point 5 m above its shoulder so it stays locked and vertical; keys designed by a fitting script (contacts solved for the root): supine with the right arm and leg out, onto the right elbow (forearm on the floor), onto the right hand (tall sit), high bridge (right heel down), the right leg lifts and sweeps under (right leg as IK with fitted ankle targets, so the foot travels on straight lines above the floor), the right knee down in line with the hand, the torso up to a half kneel, windshield wiper of the right shin, rise on the right toes, the right foot swings forward to standing; then every step in reverse (31 keys, 22 s). Left foot planted throughout, right hand planted from the start to the kneel |
+| Neck lateral flexion | standing, a band from a post on the right around the head (link loop on `head`); neck / head `lat` -4 / -2 -> 24 / 12, trunk still |
+| Neck extension | hinged 58 degrees with the knees bent and the hands on the lower thighs; head harness (rigid on `head`) with a chain and plate hanging from the forehead (`follow: move`, always vertical); neck / head flexion 16 / 10 -> -40 / -16 |
+| Weighted neck flexion | supine on a short bench with the head off the end; a plate on the forehead (a `grip` riding on `head`, both hands neutral on its rim); neck / head -24 / -8 -> 38 / 14 (chin to chest) |
+| Seated hip external rotation | seated on a high bench, feet off the floor, a band from a post on the left to the left ankle; thigh `twist` 16 -> -26 swings the shin inward with the knee in place (FK, `sym: false`) |
+| Wrist roller | arms forward at shoulder height, overhand on a fixed stick (arm IK with `hax` / `hfd`: the hands roll about the stick), the hands flex and extend in turn (finger direction -55 / +20 degrees); the plate is a `grip` that no hand holds, keyed by position, its rope a link that shortens: up 17 cm in five strokes and down again |
+| Hand gripper | elbow at the side, forearm forward, thumb up; palm handle rigid on the hand, finger handle rigid on the middle finger's middle phalanx, spring arm = link to a coil; grip 0.1 -> 1 closes the handles together |
 
 Conventional deadlift, Romanian deadlift and Sumo deadlift use `bar.hang` (elbows ~4 degrees all the way; before, the bar
 positions left the deadlift elbows bent up to 46 degrees and the RDL up to 32). New variation motions: Romanian deadlift
@@ -471,6 +491,17 @@ elbows forward, forearms ~90), Lat pulldown Grip Close neutral (V-handle via var
   flares at the overhead arm (dead hang, ab-wheel extension), as in the pull-up. Skipped: Diaphragmatic breathing, Pelvic floor
   contraction and Short foot (no skeletal motion the rig can show: breathing and the pelvic floor are soft tissue, short foot needs toe
   and arch joints).
+
+* Batch 7: the power clean's elbow turnover is fast (the forearm rotation sweeps ~55 degrees within ~50 ms between the pull under and
+  the rack) and the bar passes up to ~1 cm into the biceps / chest at the catch; the thruster's bar sits on the rack point within ~1 cm
+  between keys (positions, not a segment). The get-up's right foot passes ~5 cm above the floor during the sweep and the kneeling knee,
+  heel and toes rest at -9..+3 mm; the right hand floats up to ~7 mm in the tall sit and bridge (arm at full reach); the bell is a
+  sphere on the back of the forearm (no deformation). The wrist roller's stick is fixed while the hands roll around it (elbows move
+  ~2 cm); the rope does not wind visibly. The gripper's finger handle rides on one phalanx, so it tilts slightly with the finger; the
+  thumb keeps its atlas angle. Neck exercises move only the neck and head segments (C7 to the skull), not individual vertebrae.
+  Left unanimated: Diaphragmatic breathing and Pelvic floor contraction (soft tissue, no skeletal motion), Short foot and Towel scrunch
+  (need toe and arch joints), Banded ankle eversion / inversion (the foot has only flexion), Band finger extension (fingers spread
+  sideways; the rig only curls them) and Plate pinch (an isometric thumb pinch; the thumb has fixed angles).
 
 * Batch 4: ropes are drawn as straight strands; the woodchop cable crosses the front of the chest at the end of the chop and the
   cable crunch rope's virtual bar axis passes through the head (only the strands are drawn). Two hands on one handle (Pallof press)
