@@ -4,7 +4,10 @@
 //   cd <repo> && python -m http.server 8801
 //   cd tools/test && node uishot.js --out <dir> [--url http://127.0.0.1:8801/] [--only phone|desktop] [--desk 1100x800] [--dark] [--scenes anat,ex,card,wk,st,...]
 // Scenes: anat, ex, card (Back squat card), wk (Workout tab), wkfull (Workout tab, sheet full / scrolled on desktop), st (Settings),
-// anim-<exercise> (playing, paused at t=0.15 / 0.5 / 0.85; several: anim-Pull-up,anim-Push-up). Writes <out>/<size>[-dark]-<scene>.png.
+// anim-<exercise> (playing, paused at t=0.15 / 0.5 / 0.85; several: anim-Pull-up,anim-Push-up), first (first visit: empty storage),
+// muscle (gluteus maximus card), best (Exercises tab, "Best exercises for a muscle" open), today (today's session started in the Today view,
+// two sets logged), ov (week overview), sx (Statistics), more (Workout tab, today's session card with "⋯ More" open).
+// Writes <out>/<size>[-dark]-<scene>.png.
 const {spawn}=require('child_process'),fs=require('fs'),path=require('path'),os=require('os');
 const a=process.argv.slice(2),flag=(f,d)=>{const i=a.indexOf(f);if(i<0) return d;const v=a[i+1];a.splice(i,2);return v;},has=f=>{const i=a.indexOf(f);if(i<0) return false;a.splice(i,1);return true;};
 const out=flag('--out','.'),url=flag('--url','http://127.0.0.1:8801/'),only=flag('--only',null),dark=has('--dark'),desk=flag('--desk','1440x900').split('x').map(Number);
@@ -43,9 +46,10 @@ async function run(size){
     if(ph) await cmd('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
     await cmd('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:dark?'dark':'light'},{name:'prefers-reduced-motion',value:'no-preference'}]});
     const S=seed(); fs.mkdirSync(out,{recursive:true});
-    const load=async hash=>{
+    const load=async(hash,empty)=>{
       await cmd('Page.navigate',{url:url+'?shot'});await until('document.readyState==="complete"',30000,'blank load');
-      await ev('(()=>{localStorage.clear();const s='+JSON.stringify(S)+';Object.keys(s).forEach(k=>localStorage.setItem(k,s[k]));return true;})()');
+      const S0=empty?{'aom.set.v1':S['aom.set.v1']}:S;
+      await ev('(()=>{localStorage.clear();const s='+JSON.stringify(S0)+';Object.keys(s).forEach(k=>localStorage.setItem(k,s[k]));return true;})()');
       await cmd('Page.navigate',{url:url+'?shot'+(hash||'')});
       await until('!document.getElementById("loading")',120000,'page load');await sleep(700);
     };
@@ -61,6 +65,18 @@ async function run(size){
           await sleep(500); await ev('(()=>{const s=document.getElementById("sbody");s.scrollTop=s.scrollHeight*0.45;return true;})()'); }
         await shot(sc); }
       else if(sc==='st'){ await load('#settings'); await shot('st'); }
+      else if(sc==='first'){ await load('',true); await shot('first'); }
+      else if(sc==='muscle'){ await load('#m='+encodeURIComponent('gluteus maximus')); await shot('muscle'); }
+      else if(sc==='best'){ await load(); await tab('ex');
+        await ev('(()=>{const f=document.getElementById("bestFold");f.open=true;if(f.scrollIntoView) f.scrollIntoView({block:"start"});return true;})()'); await shot('best'); }
+      else if(sc==='today'||sc==='more'){ await load(); await tab('wk');
+        if(sc==='more'){ await ev('(()=>{document.querySelector("#sessList .scard [data-sact=\\"more\\"]").click();const c=document.querySelector("#sessList .scard");if(c.scrollIntoView) c.scrollIntoView({block:"center"});return true;})()'); }
+        else { await ev('(()=>{document.querySelector("#sessList .scard .strain").click();return true;})()');
+          await until('!document.getElementById("td").hidden',10000,'Today view');
+          await ev('(()=>{[...document.querySelectorAll("#td [data-f=done]")].slice(0,2).forEach(c=>c.click());return true;})()'); }
+        await shot(sc); }
+      else if(sc==='ov'){ await load(); await tab('wk'); await ev('(()=>{document.getElementById("ovOpen").click();return true;})()'); await shot('ov'); }
+      else if(sc==='sx'){ await load('#stats'); await shot('sx'); }
       else if(sc.startsWith('anim-')){
         const n=sc.slice(5); await load('#ex='+encodeURIComponent(n));
         await until('!!document.querySelector(\'#card [data-act="anim"]\')',10000,'Play button');

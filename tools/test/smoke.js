@@ -83,6 +83,7 @@ async function paletteRun(){
  ok(/@font-face\{font-family:"Fraunces"[^}]*fraunces-latin\.woff2/.test(css)&&/--f-disp:"Fraunces"/.test(css)&&['.brand h1','.card h2','.ovhead h2','.loading strong'].every(s=>/var\(--f-disp\)/.test(rule(s)))&&fs.existsSync(path.join(ROOT,'fonts','fraunces-latin.woff2'))&&fs.existsSync(path.join(ROOT,'fonts','OFL-Fraunces.txt'))&&/fonts\/fraunces-latin\.woff2/.test(fs.readFileSync(path.join(ROOT,'sw.js'),'utf8')),'Fraunces: @font-face, headings use it (--f-disp), file + OFL licence shipped and precached by the service worker');
  const ochre=(re)=>{const m=css.match(re);return m?m[1]:null;};
  const oL=ochre(/:root\{[^}]*--ochre:(#[0-9A-Fa-f]{6})/),oD=ochre(/:root\[data-theme="dark"\]\{[^}]*--ochre:(#[0-9A-Fa-f]{6})/);
+ ok(/:root\{\s*color-scheme:light;/.test(css)&&/:root:not\(\[data-theme="light"\]\)\{\s*color-scheme:dark;/.test(css)&&/:root\[data-theme="dark"\]\{\s*color-scheme:dark;/.test(css),'color-scheme follows the theme, so native widgets (the date picker icon, select popups) stay visible in dark mode');
  const x=boot({store:{},url:'https://example.test/#m=deltoid'}),xd=x.document,xq=s=>xd.querySelector(s),xqa=s=>[...xd.querySelectorAll(s)],ex=(el,t)=>el.dispatchEvent(new x.Event(t,{bubbles:true}));
  await waitFor(()=>!xd.getElementById('loading'),60000,'palette test instance');
  const lin=h=>new x.THREE.Color(h).convertSRGBToLinear(),same=(c,h)=>{const t=lin(h);return Math.abs(c.r-t.r)<1e-5&&Math.abs(c.g-t.g)<1e-5&&Math.abs(c.b-t.b)<1e-5;};
@@ -97,8 +98,14 @@ async function paletteRun(){
  ok(['l3:h3','l2:h2','l1:h1','ca2:a2','ca1:a1','ceq:eq','cb1:b1','cb2:b2','v0:v0','v1:v1','v2:v2','v3:v3','sw.fat:fat','sw.end:end'].every(r=>{const a=r.split(':');return css.includes('.'+a[0]+'{background:var(--m-'+a[1]+')')&&/^#[0-9A-Fa-f]{6}$/.test(P(a[1]));}),'every legend swatch class (.l3 .l2 .l1 .ca2 .cb2 .v0-.v3 .fat .end ...) takes its colour from the --m-* palette property');
  xqa('[data-tab="ex"]')[0].click();
  const it=xqa('#exlist .item').find(b=>b.textContent==='Back squat');it.click();
- ok(xq('#card details.cfold[data-cf="howto"]').open&&!xq('#bestFold').open&&/^Gluteus maximus: /.test(xq('#bestFs').textContent)&&xqa('#best li').length===8&&xq('#bestSec').compareDocumentPosition(xq('#exlist'))===x.Node.DOCUMENT_POSITION_PRECEDING&&!xq('#bnav').contains(xq('.tabs'))&&xq('#shead').contains(xq('.tabs')),'desktop: the exercise list comes first, "Best exercises for a muscle" is a collapsed row with a summary (rendered inside), the cue of the card is open; the tabs stay in the sidebar');
+ ok(xq('#card details.cfold[data-cf="howto"]').open&&!xq('#bestFold').open&&/^Gluteus maximus: /.test(xq('#bestFs').textContent)&&xqa('#best li').length===8&&xq('#bestSec').compareDocumentPosition(xq('#exlist'))===x.Node.DOCUMENT_POSITION_FOLLOWING&&xq('#bestSec').compareDocumentPosition(xq('#qe'))===x.Node.DOCUMENT_POSITION_FOLLOWING&&!xq('#bnav').contains(xq('.tabs'))&&xq('#shead').contains(xq('.tabs')),'desktop: "Best exercises for a muscle" is a collapsed row with a summary ABOVE the search and the long exercise list (rendered inside), the cue of the card is open; the tabs stay in the sidebar');
  ok(['#tplFold','#patFold','#histSet','#balFold','#sugFold','#volFold'].every(s=>!xq(s).open)&&x.localStorage.getItem('aom.ui.v1')===null,'desktop: the Workout sections start collapsed too, and nothing is stored until the viewer toggles one');
+ ok(xq('#winFold').tagName==='DETAILS'&&xq('#winFold').open&&xq('#winFold').contains(xq('#winbar'))&&xq('#winFold').contains(xq('#winNext'))&&/ – .*· last 7 days$/.test(xq('#winSum').textContent),'desktop: the 7-day window controls are open, under a summary naming the dates ('+xq('#winSum').textContent+')');
+ // first visit (no templates, no sessions): a one-line orientation at the top of the Index until "Got it"
+ ok(!xq('#intro').hidden&&xq('#paneAnat').firstElementChild===xq('#intro')&&/Exercises/.test(xq('#intro').textContent)&&/Workout/.test(xq('#intro').textContent)&&xq('#intro .ia').textContent==='Select','first visit: the Index starts with a short "New here?" line that names the three sections');
+ xq('#introOk').click();
+ ok(xq('#intro').hidden&&JSON.parse(x.localStorage.getItem('aom.ui.v1')).f.intro===false,'"Got it" hides it for good (aom.ui.v1 intro:false)');
+ x.localStorage.removeItem('aom.ui.v1');
  const hc=[...new Set(meshes('muscle').filter(m=>m.visible).map(m=>m.material).filter(m=>!m.transparent).map(m=>m.color.getHexString()))];
  const heat=['h3','h2','h1'].map(n=>lin(P(n)).getHexString());
  ok(heat.every(h=>hc.includes(h)),'exercise heat: prime / synergist / stabiliser materials have exactly the legend colours ('+heat.map(h=>'#'+h).join(' ')+')');
@@ -227,7 +234,7 @@ async function weekRun(){
  const sname=i=>sess(D(i)).map(x=>x.name).join('|');
  q('[data-tab="wk"]').click();if(!q('#ov').hidden)q('#ovClose').click();clearAll();selDay(0);
  // date strip
- ok(qa('#wstrip [data-day]').length===7&&qa('#wstrip [data-day]').map(b=>b.firstChild.textContent).join()==='Mon,Tue,Wed,Thu,Fri,Sat,Sun'&&qa('#wstrip [data-day] .dd').map(b=>b.textContent).join()==='12 Oct · today,13 Oct,14 Oct,15 Oct,16 Oct,17 Oct,18 Oct','date strip: seven cards Mon 12 Oct (today) .. Sun 18 Oct');
+ ok(qa('#wstrip [data-day]').length===7&&qa('#wstrip [data-day]').map(b=>b.firstChild.textContent).join()==='Mon,Tue,Wed,Thu,Fri,Sat,Sun'&&qa('#wstrip [data-day] .dd').map(b=>b.textContent).join()==='12 Oct,13 Oct,14 Oct,15 Oct,16 Oct,17 Oct,18 Oct'&&qa('#wstrip .tdt').length===1&&q('#wstrip [data-day="0"] .tdt').textContent==='today'&&/\(today\)/.test(q('#wstrip [data-day="0"]').getAttribute('aria-label')),'date strip: seven cards Mon 12 Oct (today) .. Sun 18 Oct; today is a tab on the card border, so the date line is never cut ("12 Oct · …")');
  ok(dayBtn(0).getAttribute('aria-pressed')==='true'&&dayBtn(0).classList.contains('today')&&qa('#wstrip .rest').length===7&&/Monday 12 October/.test(q('#dayLbl').textContent)&&!/\bDay [1-7]\b/.test(q('#wstrip').textContent+q('#dayLbl').textContent),'today is selected and marked, all seven dates are rest days (dashed), no "Day N" naming');
  // adding to the selected date
  selDay(2);addEx('Barbell bench press');
@@ -826,14 +833,26 @@ async function calRun(){
  {const I=sc()[0].querySelector('[data-sdate]');I.value='2026-10-16';ev(I,'change');}
  ok(sess('2026-10-16').length===1&&sess('2026-10-16')[0].pid===wk().pattern[1].id&&sess('2026-10-16')[0].items[0].sets===4&&raw('2026-10-14').length===1&&raw('2026-10-14')[0].status==='removed'&&/Moved Legs to Fri 16 Oct/.test(q('#dayMsg').textContent),'moving a session to another date keeps its edits and leaves a tombstone on the old date ('+q('#dayMsg').textContent+')');
  ok(card('2026-10-14').classList.contains('rest')&&/Legs/.test(card('2026-10-16').textContent),'the strip follows: Wed empty, Fri has Legs');
+ // moving a pattern session onto a date where the same pattern row plays: it becomes a manual session there AND leaves the tombstone (earlier the
+ // tombstone was lost, so the virtual session came back on the old date with the same id as the moved one)
+ q('[data-win="7"]').click();q('[data-win="7"]').click();pickDate('2026-10-28');
+ ok(scNames()==='Legs'&&sc()[0].dataset.id.startsWith('v-'),'Wed 28 Oct: Legs from the pattern (virtual)');
+ {const I=sc()[0].querySelector('[data-sdate]');I.value='2026-11-04';ev(I,'change');}
+ {const S=raw('2026-10-28'),N=sess('2026-11-04'),ids=qa('#sessList .scard').map(c=>c.dataset.id);
+  ok(S.length===1&&S[0].status==='removed'&&S[0].pid===wk().pattern[1].id&&scNames()===''&&N.length===1&&!N[0].pid&&N[0].name==='Legs','moving it onto Wed 4 Nov (where the Legs row also plays) leaves a tombstone on 28 Oct; it is a manual session on 4 Nov');}
+ q('[data-win="-7"]').click();q('[data-win="-7"]').click();
  // skipping a session removes it from the volume; unskip brings it back
  pickDate('2026-10-12');
  ok(rowVal('Mid and lower chest')===5,'Mon: Push (virtual) counts: bench 5 sets');
+ const vid=sc()[0].dataset.id;btn(sc()[0],'more').click();
+ ok(vid.startsWith('v-')&&!sc()[0].querySelector('.sc5').hidden,'"⋯ More" opens on the virtual (not yet stored) pattern session '+vid);
  btn(sc()[0],'skip').click();
+ ok(sc()[0].dataset.id===vid&&sess('2026-10-12')[0].id===vid&&!sc()[0].querySelector('.sc5').hidden&&btn(sc()[0],'more').getAttribute('aria-expanded')==='true'&&d.activeElement===btn(sc()[0],'skip'),'Skip stores the session under the same id; its "⋯ More" row stays open and the focus stays on Skip / Unskip');
  {const S=sess('2026-10-12');
   ok(S.length===1&&S[0].status==='skipped'&&S[0].pid&&rowVal('Mid and lower chest')===0&&card('2026-10-12').querySelector('.pl.se.s-skipped')&&card('2026-10-12').classList.contains('rest')&&/Unskip/.test(sc()[0].textContent),'Skip stores the session as skipped: it adds nothing to the 7 days, the chip is struck through, the button says Unskip');}
  btn(sc()[0],'skip').click();
- ok(sess('2026-10-12')[0].status==='planned'&&rowVal('Mid and lower chest')===5,'Unskip brings it back');
+ ok(sess('2026-10-12')[0].status==='planned'&&rowVal('Mid and lower chest')===5&&!sc()[0].querySelector('.sc5').hidden&&d.activeElement===btn(sc()[0],'skip'),'Unskip brings it back (the row stays open)');
+ btn(sc()[0],'more').click();
  // several sessions on one date
  q('#addTpl').value=tpls()[2].id;ev(q('#addTpl'),'change');q('#addSess').click();
  ok(sc().length===2&&scNames()==='Push|Pull'&&sess('2026-10-12').length===2&&sess('2026-10-12')[1].tid===tpls()[2].id&&sess('2026-10-12')[1].items[0].n==='Pull-up'&&!sess('2026-10-12')[1].pid,'"+ Add session" with a template adds a second session to the date (a copy of the template, no pattern id)');
@@ -1616,6 +1635,16 @@ async function pastMoveRun(){
  const d=JSON.parse(x.localStorage.getItem('aom.cal.v1')).days;
  ok((d['2026-10-05']||[]).some(t=>t.pid==='p1'&&t.status==='removed'&&!t.id)&&(d['2026-10-07']||[]).some(t=>t.id==='i9'),'moving a past pattern session leaves a tombstone on its old date (so statistics do not count it as missed)');
  x.close();
+ // prefill from the last time: a log that stores the default variation as [] (older logs) still matches ["",""] of an exercise with two variation groups
+ {const cal2={v:1,seq:5,pattern:[],days:{'2026-10-09':[{id:'i1',name:'Legs',items:[{n:'Back squat',sets:2,v:[]},{n:'Romanian deadlift',sets:1,v:[]}],ses:[],status:'done',finishedAt:2,
+   lg:{ex:[{n:'Back squat',v:[],o:0,sets:[{r:5,w:100,done:true},{r:4,w:105,done:true}]},{n:'Romanian deadlift',v:[],o:1,sets:[{r:8,w:80,done:true}]}],ses:[]}}],
+   '2026-10-12':[{id:'i2',name:'Legs',items:[{n:'Back squat',sets:3,v:['','']},{n:'Romanian deadlift',sets:1,v:['']}],ses:[],status:'planned'}]}};
+  const y=boot({store:{'aom.cal.v1':JSON.stringify(cal2)},win:TODAY}),yd=y.document,yq=s=>yd.querySelector(s),yqa=s=>[...yd.querySelectorAll(s)];
+  await waitFor(()=>!yd.getElementById('loading'),60000,'prefill instance');
+  yq('[data-tab="wk"]').click();yq('#sessList .scard [data-sact="train"]').click();
+  const v=yqa('#tdBody .tx').map(b=>[...b.querySelectorAll('.tset')].map(r=>[...r.querySelectorAll('input[type="number"]')].map(i=>i.value).join('x')).join(','));
+  ok(v[0]==='5x100,4x105,4x105'&&v[1]==='8x80','Start prefills reps and weight from the last time, also when that log stored the default variation as [] (Back squat '+v[0]+', RDL '+v[1]+')');
+  y.close();}
 }
 async function statsRun(){
  const lg=(ex,ses)=>({ex:ex.map((e,i)=>({n:e[0],v:[],o:i,sets:e[1].map(s=>({r:s[0],w:s[1],done:s[2]!==false}))})),ses:ses||[]});
@@ -1896,6 +1925,7 @@ async function phoneRun(){
  const psw=n=>pq('#wstrip [data-day="'+n+'"]'),pdk=n=>addDays(TODAY,n),psess=dk=>((JSON.parse(p.localStorage.getItem('aom.cal.v1')||'null')||{days:{}}).days[dk]||[]).filter(x=>x.id);
  nb('wk').click();if(sheet()==='peek') nb('wk').click();
  ok(pqa('#wstrip [data-day]').length===7&&pq('#winbar')&&pqa('#winbar button').length===4&&pq('#winNext')&&pq('#winLast')&&pq('#addSess')&&pq('#wstrip').scrollWidth>=0,'phone: the Workout tab has the window bar (4 arrows, date input, Last/Next 7 days), the date strip and "+ Add session"');
+ ok(!pq('#winFold').open&&pq('#winFold').contains(pq('#winbar'))&&/ – /.test(pq('#winSum').textContent)&&pq('#winFold').compareDocumentPosition(pq('#wstrip'))===p.Node.DOCUMENT_POSITION_FOLLOWING,'phone: the window controls start collapsed under a one-line "Dates" summary ('+pq('#winSum').textContent+'), so the date cards and the session (with Start) come first');
  pq('#winNext').click();
  ok(pqa('#wstrip [data-day]').map(b=>b.dataset.date).join()===[0,1,2,3,4,5,6].map(pdk).join()&&pq('#dayLbl').textContent.includes('Monday 12 October'),'phone: "Next 7 days" starts the window today');
  pq('#qa').value='barbell bench';pq('#qa').dispatchEvent(new p.Event('input',{bubbles:true}));
@@ -1919,6 +1949,13 @@ async function phoneRun(){
  more.click();
  ok(!pq('#sessList .scard .sc5').hidden&&pq('#sessList .scard [data-sact="more"]').getAttribute('aria-expanded')==='true','phone: "⋯ More" reveals the secondary actions (aria-expanded)');
  pq('#sessList .scard [data-sact="more"]').click();
+ {// the board (a swipe strip on phones) opens at the selected date: stub a 7 x 100 px strip in a 100 px viewport
+  const bd=pq('#ovBoard'),HP=p.HTMLElement.prototype,oR=HP.getBoundingClientRect,R=l=>({left:l,right:l+100,top:0,bottom:400,width:100,height:400,x:l,y:0});
+  Object.defineProperty(bd,'scrollWidth',{configurable:true,get:()=>700});Object.defineProperty(bd,'clientWidth',{configurable:true,get:()=>100});bd.scrollLeft=0;
+  HP.getBoundingClientRect=function(){ if(this===bd) return R(0); if(this.classList&&this.classList.contains('bcol')) return R(+this.dataset.d*100-bd.scrollLeft); return oR.call(this); };
+  pq('#ovOpen').click();
+  ok(bd.scrollLeft===94&&pq('#wstrip .dbtn.sel').dataset.day==='1','phone: the week overview opens with the selected date (Tue, slot 1) as the first column in view (scrollLeft '+bd.scrollLeft+')');
+  HP.getBoundingClientRect=oR;delete bd.scrollWidth;delete bd.clientWidth;bd.scrollLeft=0;pq('#ovClose').click();}
  pq('#ovOpen').click();
  ok(!pq('#ov').hidden&&pq('#vp').contains(pq('#ov'))&&pqa('#ovGrid tr.g').length===27&&pqa('#ovGrid tr.g').every(r=>r.querySelectorAll('.cb').length===7),'phone: the overview opens (full-screen overlay in the viewport) with the 27 x 7 grid');
  ok(pq('#ovGrid tr.g[data-g="1"] .cb[data-d="1"]').dataset.c==='1'&&/Recovery conflicts <b>1<\/b>/.test(pq('#ovSum').innerHTML),'phone: the conflict cell is flagged');

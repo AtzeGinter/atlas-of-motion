@@ -22,6 +22,7 @@
 /* Atlas palette. Light = "paper", dark = "night library". Colours of the 3D materials and of their legends live in the PAL object in the script
    (exported as --m-* custom properties at start-up), except --ochre / --accent-based selection colours, which the script mirrors per theme. */
 :root{
+  color-scheme:light;   /* native widgets (date picker icon, select popups, scrollbars) follow the theme */
   --bg:#F3EEE4; --panel:#EAE3D6; --card:#F8F4EC; --ink:#2A211B; --muted:#66584B; --line:#D8CDBB;
   --accent:#8E2A1E; --accent-soft:#EBD3CB; --ochre:#B8862E; --sage:#5F7F57; --plum:#6B3A5A; --slate-teal:#3F7F7A; --amber-warn:#B5651D; --teal-ink:#2E6A65;
   --chip:#E2D9C8; --onacc:#FBF6EE; --bad:#A3281C; --inkblue:#3B5873;
@@ -32,6 +33,7 @@
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
+    color-scheme:dark;
     --bg:#17120E; --panel:#201913; --card:#241C15; --ink:#EDE4D6; --muted:#A89886; --line:#3A2E24;
     --accent:#D86F59; --accent-soft:#3A1F18; --ochre:#D9A84E; --sage:#8DB07F; --plum:#B07AA0; --slate-teal:#6FB3AC; --amber-warn:#E08A3C; --teal-ink:#6FB3AC;
     --chip:#2E2419; --onacc:#1B120C; --bad:#EE7A62; --inkblue:#8FB0CC;
@@ -41,6 +43,7 @@
   }
 }
 :root[data-theme="dark"]{
+  color-scheme:dark;
   --bg:#17120E; --panel:#201913; --card:#241C15; --ink:#EDE4D6; --muted:#A89886; --line:#3A2E24;
   --accent:#D86F59; --accent-soft:#3A1F18; --ochre:#D9A84E; --sage:#8DB07F; --plum:#B07AA0; --slate-teal:#6FB3AC; --amber-warn:#E08A3C; --teal-ink:#6FB3AC;
   --chip:#2E2419; --onacc:#1B120C; --bad:#EE7A62; --inkblue:#8FB0CC;
@@ -266,6 +269,7 @@ select.search{appearance:auto;}
 .ext small.stm{display:inline-block;margin-right:6px;font:600 11px var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.08em;}
 .banner{margin:0;padding:10px 12px;border-radius:3px;background:var(--accent-soft);border:1px solid var(--accent);font:italic 400 15px/1.4 var(--f-read);display:flex;justify-content:space-between;align-items:center;gap:10px;}
 .banner[hidden]{display:none;}
+.banner>.linkbtn{flex:none;white-space:nowrap;}
 .prow{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);}
 .prow small{display:block;color:var(--muted);font:italic 400 13px var(--f-read);}
 .step{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:3px;overflow:hidden;background:var(--card);}
@@ -325,7 +329,7 @@ select.sv{font:inherit;font-size:12px;padding:3px 4px;border:1px solid var(--lin
 .prim:hover{filter:brightness(1.12);color:var(--onacc);}
 .prim small{font-weight:500;opacity:.92;text-align:right;}
 .prim>span{white-space:nowrap;}
-.wstrip{position:relative;display:flex;gap:5px;margin:8px -2px 6px;padding:2px 2px 6px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:thin;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;}
+.wstrip{position:relative;display:flex;gap:5px;margin:2px -2px 6px;padding:8px 2px 6px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:thin;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;}
 .dbtn{position:relative;flex:0 0 84px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:stretch;gap:3px;padding:6px 5px 7px;border:1px solid var(--line);border-radius:3px;background:var(--card);cursor:pointer;line-height:1.15;min-width:0;text-align:left;min-height:96px;}
 .dbtn:hover{border-color:var(--muted);}
 .dbtn b{font:600 13px var(--f-disp);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 1px;}
@@ -422,11 +426,11 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
 .endform select{font:inherit;font-size:13px;padding:5px 6px;border:1px solid var(--line);background:var(--bg);border-radius:3px;color:var(--ink);}
 .endform .ea{grid-column:1/-1;display:flex;gap:8px;justify-content:flex-end;align-items:center;}
 /* collapsible sidebar sections (v3.4): a numbered h2 + a one-line summary in the header; the open state is remembered per viewer (aom.ui.v1) */
-.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:10px;padding-bottom:6px;border-bottom:1px solid var(--line);}
+.fold>summary{position:relative;list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;padding:0 24px 6px 0;border-bottom:1px solid var(--line);}
 .fold>summary::-webkit-details-marker{display:none;}
 .fold>summary h2{flex:none;margin:0;}
-.fold>summary .fsum{flex:1;min-width:0;text-align:right;font:italic 400 13.5px var(--f-read);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.fold>summary::after{content:"+";flex:none;width:14px;text-align:center;font:400 17px/1 var(--f-ui);color:var(--accent);}
+.fold>summary .fsum{flex:1 0 auto;max-width:100%;min-width:0;text-align:right;font:italic 400 13.5px var(--f-read);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.fold>summary::after{content:"+";position:absolute;right:0;top:50%;margin-top:-12px;width:14px;text-align:center;font:400 17px/1 var(--f-ui);color:var(--accent);}   /* out of the flow: a summary that wraps keeps its +/- on the right */
 .fold[open]>summary::after{content:"\2212";}
 .fold>summary:hover h2,.fold>summary:hover::after{color:var(--accent);}
 .fold[open]>summary{margin-bottom:10px;}
@@ -780,9 +784,21 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
 .winquick{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 0;margin:2px 0 0;}
 .winquick .linkbtn:first-child{padding-left:0;}
 .winquick small{margin-left:auto;font:italic 400 13px var(--f-read);color:var(--muted);}
+/* the window controls fold (open on desktop, collapsed on phones); its summary names the 7 days, so #winLbl stays hidden */
+.wfold{margin:8px 0 0;}
+.wfold>summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;gap:8px;min-width:0;}
+.wfold>summary::-webkit-details-marker{display:none;}
+.wfold>summary .wsl{flex:none;font:600 10.5px var(--f-ui);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+.wfold>summary .wsr{flex:1;min-width:0;font:italic 400 13.5px var(--f-read);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wfold>summary::after{content:"+";flex:none;width:14px;text-align:center;font:400 17px/1 var(--f-ui);color:var(--accent);}
+.wfold[open]>summary::after{content:"\2212";}
+.wfold>summary:hover .wsl{color:var(--accent);}
+.wfold .winbar{margin-top:6px;}
+.wfold .winquick small{display:none;}
 .dbtn.today{border-color:var(--ochre);}
 .dbtn .dd{font:italic 400 12px var(--f-read);color:var(--muted);padding:0 1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.dbtn.warn .dd{padding-right:14px;}
+/* today: a tab on the top border, so weekday and date keep the full card width (the ⚠ sits on the weekday line only) */
+.dbtn .tdt{position:absolute;top:-7px;left:5px;font:600 9px/12px var(--f-ui);letter-spacing:.08em;text-transform:uppercase;font-style:normal;color:#1E1610;background:var(--ochre);padding:0 4px;border-radius:2px;pointer-events:none;}
 .pl.se{position:relative;}
 .pl.se.s-planned{background:none;border:1px solid var(--line);color:var(--ink);}
 .pl.se.s-doing{background:var(--pt-bg);color:var(--pt-fg);}
@@ -827,6 +843,8 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
 .edsave[hidden]{display:none;}
 .edsave .btn{padding:5px 11px;font-size:12.5px;}
 #migNote{margin:6px 0;}
+.intro{margin:0 0 14px;font-size:14px;}
+.intro b{font-style:normal;font-weight:600;font-family:var(--f-ui);font-size:13px;}
 #tplList .trow{display:flex;flex-direction:column;gap:2px;padding:8px 6px;border-bottom:1px solid var(--line);}
 .trow.ed{background:var(--accent-soft);}
 .tmain{display:flex;align-items:center;gap:2px;min-width:0;}
@@ -904,7 +922,8 @@ input.mvdate[hidden]{display:none;}
 }
 /* statistics overlay (v2.2): atlas look, charts are inline SVG styled here (colours from tokens, so light / dark follow) */
 .ovrow{display:flex;gap:8px;align-items:stretch;}
-.ovrow .prim{flex:1 1 auto;width:auto;min-width:0;}
+.ovrow .prim{flex:1 1 auto;width:auto;min-width:0;flex-wrap:wrap;row-gap:1px;}
+.ovrow .prim small{white-space:nowrap;}
 .ovrow #sxOpen{flex:none;}
 .ov.sx{z-index:42;}
 .sxw{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;width:100%;max-width:1000px;margin:0 auto;}
@@ -1110,6 +1129,7 @@ input.mvdate[hidden]{display:none;}
     <div id="cslot"></div>
 
     <div class="pane" id="paneAnat">
+    <p class="banner intro" id="intro" hidden><span><b>New here?</b> <span class="ia">Select</span> a muscle to see what it does. <b>Exercises</b>: what each lift trains, and how it moves. <b>Workout</b>: plan and log your week.</span><button class="linkbtn" id="introOk" type="button">Got it</button></p>
     <div class="sec">
       <div class="chip-row idxhd"><h2>Index of structures</h2><span><button class="linkbtn" id="showAll">Show all</button><button class="linkbtn" id="hideAll">Hide all</button><button class="linkbtn" id="unhide" disabled>Show hidden (0)</button></span></div>
       <input class="search" id="q" type="search" placeholder="Search muscles and bones" aria-label="Search muscles and bones">
@@ -1119,13 +1139,7 @@ input.mvdate[hidden]{display:none;}
 
     <div class="pane" id="paneEx" hidden>
     <p class="banner" id="cmpBanner" hidden><span id="cmpText"></span><button class="linkbtn" id="cmpCancel">Cancel</button></p>
-    <div class="sec">
-      <div class="chip-row"><h2>Strength exercises</h2><button class="linkbtn" id="exClear" disabled>Clear</button></div>
-      <input class="search" id="qe" type="search" placeholder="Search exercise, equipment or muscle" aria-label="Search exercises">
-      <p class="fine sumline"><span id="eqSum"></span> · <button class="linkbtn" type="button" data-stopen="eq">Change</button></p>
-      <div class="list" id="exlist"></div>
-    </div>
-    <div class="sec" id="bestSec">
+    <div class="sec" id="bestSec">   <!-- above the long list (148 exercises), collapsed to one line -->
       <details class="fold" id="bestFold" data-fold="best">
       <summary><h2>Best exercises for a muscle</h2><small class="fsum" id="bestFs"></small></summary>
       <select class="search" id="bestM" aria-label="Muscle"></select>
@@ -1134,6 +1148,12 @@ input.mvdate[hidden]{display:none;}
       <ol class="best" id="best"></ol>
       </details>
     </div>
+    <div class="sec">
+      <div class="chip-row"><h2>Strength exercises</h2><button class="linkbtn" id="exClear" disabled>Clear</button></div>
+      <input class="search" id="qe" type="search" placeholder="Search exercise, equipment or muscle" aria-label="Search exercises">
+      <p class="fine sumline"><span id="eqSum"></span> · <button class="linkbtn" type="button" data-stopen="eq">Change</button></p>
+      <div class="list" id="exlist"></div>
+    </div>
     </div>
 
     <div class="pane" id="paneWk" hidden>
@@ -1141,12 +1161,14 @@ input.mvdate[hidden]{display:none;}
       <h2>Training calendar</h2>
       <p class="banner" id="migNote" hidden><span>Your old 7-day week is now a weekly pattern: its first day repeats every Monday, its second day every Tuesday, and so on, starting this week. You can change the mapping under "Weekly pattern" below.</span><button class="linkbtn" id="migOk" type="button">Got it</button></p>
       <div class="ovrow"><button class="btn prim" id="ovOpen" type="button" aria-haspopup="dialog"><span>Week overview</span><small id="ovBadge"></small></button><button class="btn" id="sxOpen" type="button" aria-haspopup="dialog">Statistics</button></div>
+      <details class="wfold" id="winFold"><summary><span class="wsl">Dates</span><span class="wsr" id="winSum"></span></summary>
       <div class="winbar" id="winbar" role="group" aria-label="7-day window">
         <button class="wnav" type="button" data-win="-7" aria-label="Back 7 days" title="Back 7 days">«</button><button class="wnav" type="button" data-win="-1" aria-label="Back 1 day" title="Back 1 day">‹</button>
         <input class="search" type="date" id="winDate" aria-label="First day of the 7-day window">
         <button class="wnav" type="button" data-win="1" aria-label="Forward 1 day" title="Forward 1 day">›</button><button class="wnav" type="button" data-win="7" aria-label="Forward 7 days" title="Forward 7 days">»</button>
       </div>
       <div class="winquick"><button class="linkbtn" id="winLast" type="button">Last 7 days</button><button class="linkbtn" id="winWeek" type="button">This week</button><button class="linkbtn" id="winNext" type="button">Next 7 days</button><small id="winLbl"></small></div>
+      </details>
       <div class="wstrip" id="wstrip" role="group" aria-label="Days of the 7-day window"></div>
       <div class="dayhead"><span id="dayLbl"></span></div>
       <p class="fine" id="dayMsg" role="status" style="margin:0 0 4px!important"></p>
@@ -1923,7 +1945,8 @@ function findInst(id){
   if(id.slice(0,2)==="v-"){ const dk=id.slice(id.lastIndexOf("@")+1); return keyDate(dk)?virt(dk).find(x=>x.id===id)||null:null; }
   return null;
 }
-function mat(I){ if(I&&I.virtual){ delete I.virtual; (CAL.days[I.dt]=CAL.days[I.dt]||[]).push(I); } return I; }   // the first change stores a pattern session
+function mat(I){ if(I&&I.virtual){ delete I.virtual; (CAL.days[I.dt]=CAL.days[I.dt]||[]).push(I); } return I; }   // the first change stores a pattern session; it keeps
+// its id v-<pid>@<date>, so UI state keyed by id (sessMore, curBy, edPin, renId, the Today view) carries over. Never give it a new id here.
 function addInst(dk,name,items,ses,tid){ const I={id:nid("i"),dt:dk,name:cleanName(name,"Session"),items:items||[],ses:ses||[],status:"planned"}; if(tid) I.tid=tid; (CAL.days[dk]=CAL.days[dk]||[]).push(I); return I; }
 function dropInst(I){ // remove from its date; a pattern session leaves a tombstone so that it does not come back (future) and is not counted as missed (past, statistics)
   const L=CAL.days[I.dt]||[], ix=L.indexOf(I); if(ix>=0) L.splice(ix,1);
@@ -1932,9 +1955,10 @@ function dropInst(I){ // remove from its date; a pattern session leaves a tombst
 }
 function removeInst(I){ if(I.virtual){ (CAL.days[I.dt]=CAL.days[I.dt]||[]).push({pid:I.pid,status:"removed"}); } else dropInst(I); }
 function moveInst(I,to){
-  if(!keyDate(to)||to===I.dt) return false; mat(I); const from=I.dt;
-  if(I.pid&&insts(to).some(x=>x.pid===I.pid)) delete I.pid;    // that pattern row already plays on the target date: this one becomes a manual session
-  dropInst(I); I.dt=to; (CAL.days[to]=CAL.days[to]||[]).push(I); return true;
+  if(!keyDate(to)||to===I.dt) return false; mat(I); const pid=I.pid;
+  dropInst(I);    // a pattern session leaves its tombstone on the old date (also when it stops being a pattern session below)
+  if(pid&&insts(to).some(x=>x.pid===pid)) delete I.pid;    // that pattern row already plays on the target date: this one becomes a manual session
+  I.dt=to; (CAL.days[to]=CAL.days[to]||[]).push(I); return true;
 }
 const editable=I=>I.status==="planned";
 function curInst(){ const L=insts(selDate); let I=curBy[selDate]?L.find(x=>x.id===curBy[selDate]):null; return I||L.find(editable)||L[0]||null; }
@@ -1964,9 +1988,9 @@ const syncPlan=()=>{
 syncPlan();
 /* ---------- training data of a session (inst.lg): prefill, progress ---------- */
 // values of the same exercise and variation from the most recent earlier done session that has any
-function lastSets(n,vn,before){
-  const vk=vn.join("|"), ks=Object.keys(CAL.days).filter(k=>k<before).sort().reverse();
-  for(const k of ks){ for(const I of CAL.days[k]){ if(!I.id||I.status!=="done"||!I.lg) continue; const x=I.lg.ex.find(y=>y.n===n&&y.v.join("|")===vk&&y.sets.some(t=>t.r!==undefined||t.w!==undefined)); if(x) return x.sets; } }
+function lastSets(n,vn,before){   // variations compared as option indices: [], [""] and ["",""] all mean the default (older logs store [])
+  const vkey=v=>hasOwn(EXI,n)?varIdx(EXI[n],v,false).join("|"):v.join("|"), vk=vkey(vn), ks=Object.keys(CAL.days).filter(k=>k<before).sort().reverse();
+  for(const k of ks){ for(const I of CAL.days[k]){ if(!I.id||I.status!=="done"||!I.lg) continue; const x=I.lg.ex.find(y=>y.n===n&&vkey(y.v)===vk&&y.sets.some(t=>t.r!==undefined||t.w!==undefined)); if(x) return x.sets; } }
   return [];
 }
 function logEntry(e,o,key){ // a planned entry as a log entry (strength sets prefilled from the last done session of the same exercise and variation)
@@ -2937,7 +2961,7 @@ function syncCardUI(){
 function placeCard(){ const want=isPhone()?cslot:vp; if(card.parentNode!==want) want.appendChild(card); syncCardUI(); }
 function revealCard(){ cardAway=false; if(card.classList.contains("show")) peekToHalf(); syncCardUI(); }
 function onLayout(){
-  setDpr(); placeCard(); closePops();
+  setDpr(); placeCard(); closePops(); syncWinFold(); syncIntro();
   const ph=isPhone(); sheetNom=ph?sheetH(sheet):0; if(!ph){ topInset=0; side.style.height=""; }
   $("#hint").textContent=isCoarse()?HINT_TOUCH:HINT_MOUSE;
   resize(); goal.r=baseRadius();
@@ -3266,6 +3290,9 @@ const UI_KEY="aom.ui.v1", UIS=(()=>{ const v=store.get(UI_KEY,null), f={}; if(v&
 const foldOpen=(k,def)=>typeof UIS.f[k]==="boolean"?UIS.f[k]:def;
 function foldToggled(k,open,def){ if(foldOpen(k,def)===open) return; UIS.f[k]=open; store.set(UI_KEY,UIS); }
 document.querySelectorAll("details.fold[data-fold]").forEach(d=>{ d.open=foldOpen(d.dataset.fold,false); d.addEventListener("toggle",()=>foldToggled(d.dataset.fold,d.open,false)); });
+// the 7-day window controls (#winFold, key "win"): open on desktop, collapsed on phones so that the selected date's sessions and Start fit the half sheet
+function syncWinFold(){ const d=$("#winFold"); if(d) d.open=foldOpen("win",!isPhone()); }
+syncWinFold(); { const wf=$("#winFold"); wf.addEventListener("toggle",()=>foldToggled("win",wf.open,!isPhone())); }
 const cfold=(k,title,body,sum)=>'<details class="cfold" data-cf="'+k+'"'+(foldOpen("c."+k,!isPhone())?' open':'')+'><summary>'+title+(sum?'<small>'+sum+'</small>':'')+'</summary>'+body+'</details>';
 card.addEventListener("toggle",e=>{ const d=e.target; if(d&&d.matches&&d.matches("details.cfold[data-cf]")) foldToggled("c."+d.dataset.cf,d.open,!isPhone()); },true);
 
@@ -3419,6 +3446,7 @@ $("#winDate").addEventListener("change",e=>{ const v=e.target.value; if(keyDate(
 function renderWin(){
   const f=winFrom(), l=addD(f,ND-1); $("#winDate").value=f;
   $("#winLbl").textContent=dShort(f)+" – "+dShort(l)+(winStart===null?" · the 7 days ending today":"");
+  $("#winSum").textContent=dShort(f)+" – "+dShort(l)+(winStart===null?" · last 7 days":"");
 }
 const wdOrder=()=>SET.weekStart==="sun"?[6,0,1,2,3,4,5]:[0,1,2,3,4,5,6];   // weekday indices (0 = Monday) in display order
 const abbr=i=>WDS[wdOf(week[i].date)]+" "+keyDate(week[i].date).getDate();
@@ -3427,7 +3455,7 @@ function renderStrip(M){
   st.innerHTML=week.map((d,i)=>{
     const L=insts(d.date), s=daySets(i), busy=dayBusy(i), nc=M.C[i].filter(Boolean).length, live=L.filter(x=>x.status!=="skipped"), isT=d.date===tk, t=keyDate(d.date),
       tt=d.name+(isT?" (today)":"")+": "+(L.length?L.map(x=>x.name+" ("+STATE_TXT[stateOf(x)]+")").join(", "):"rest day")+(s?", "+s+" sets":"")+(d.ses.length?" · "+d.ses.map(sesTip).join("; "):"")+(nc?", recovery conflict":"");
-    return '<button class="dbtn'+(i===day?' sel':'')+(live.length||busy?'':' rest')+(nc?' warn':'')+(isT?' today':'')+'" data-day="'+i+'" data-date="'+d.date+'" aria-pressed="'+(i===day)+'" title="'+esc(tt)+'" aria-label="'+esc(tt)+'"><b>'+WDS[wdOf(d.date)]+'</b><small class="dd">'+t.getDate()+' '+MONS[t.getMonth()]+(isT?' · today':'')+'</small>'+
+    return '<button class="dbtn'+(i===day?' sel':'')+(live.length||busy?'':' rest')+(nc?' warn':'')+(isT?' today':'')+'" data-day="'+i+'" data-date="'+d.date+'" aria-pressed="'+(i===day)+'" title="'+esc(tt)+'" aria-label="'+esc(tt)+'"><b>'+WDS[wdOf(d.date)]+'</b><small class="dd">'+t.getDate()+' '+MONS[t.getMonth()]+'</small>'+(isT?'<i class="tdt" aria-hidden="true">today</i>':'')+
       L.slice(0,3).map(x=>{ const z=stateOf(x), ls=x.lg?logStats(x.lg):null; return '<span class="pl se pd s-'+z+'" data-id="'+x.id+'" title="'+esc(x.name+": "+STATE_TXT[z]+(ls&&ls.units?", "+markTxt(x,ls).replace(/^✓ /,''):""))+'">'+STATE_MARK[z]+' '+esc(x.name)+(ls&&ls.units&&(z==="doing"||z==="done")?'<u style="width:'+ls.pct+'%"></u>':'')+'</span>'; }).join("")+(L.length>3?'<span class="pl pm">+'+(L.length-3)+' more</span>':'')+
       (s?'<span class="pl ps">'+s+' sets</span>':'')+d.ses.slice(0,3).map(x=>'<span class="pl '+pillCls(x)+'">'+esc(pillOf(x))+'</span>').join("")+(d.ses.length>3?'<span class="pl pm">+'+(d.ses.length-3)+' more</span>':'')+(L.length||busy?'':'<span class="pl pm">rest</span>')+
       '<span class="ld" aria-hidden="true"><u style="width:'+Math.min(100,s/24*100).toFixed(0)+'%"></u></span>'+(nc?'<i class="wi" aria-hidden="true">⚠</i>':'')+'</button>';}).join("");
@@ -3485,10 +3513,14 @@ function renderPlan(){
   renderWin(); renderStrip(M); renderDayHead(); renderSessions(M); renderEditor(M); renderTpl(); renderPat(); renderHist();
   const wt=plan.reduce((a,p)=>a+p.sets,0), tdays=week.filter((d,i)=>dayBusy(i)).length, wm=allSes().length?week.reduce((a,d,i)=>a+dayMin(i),0):0;
   $("#ovBadge").textContent=wt||wm?[wt?wt+" sets":"",wm?wm+" min":"",M.nc?"⚠ "+M.nc:""].filter(Boolean).join(" · "):"empty"; $("#ovBadge").title=wt||wm?tdays+" training day"+(tdays===1?"":"s")+(M.nc?", "+M.nc+" recovery conflict"+(M.nc===1?"":"s"):""):"";
-  $("#migNote").hidden=!CAL.note;
+  $("#migNote").hidden=!CAL.note; syncIntro();
   renderBal();
 }
 $("#migOk").onclick=()=>{ CAL.note=0; saveCal(); $("#migNote").hidden=true; };
+/* first visit: a one-line orientation at the top of the Index (also seen in the phone sheet's peek) until "Got it" (aom.ui.v1 "intro") or the
+   viewer has any templates or sessions */
+function syncIntro(){ $("#intro").hidden=!(foldOpen("intro",true)&&!TPL.length&&!Object.keys(CAL.days).length); $("#intro .ia").textContent=isCoarse()?"Tap":"Select"; }
+$("#introOk").onclick=()=>{ foldToggled("intro",false,true); syncIntro(); const q=$("#q"); if(q&&!isCoarse()) q.focus(); };
 $("#wstrip").addEventListener("click",e=>{const t=e.target.closest("[data-day]"); if(t) selectDay(+t.dataset.day);});
 $("#wstrip").addEventListener("wheel",e=>{ const st=e.currentTarget; if(Math.abs(e.deltaY)<=Math.abs(e.deltaX)||st.scrollWidth<=st.clientWidth) return;
   const l=st.scrollLeft; st.scrollLeft+=e.deltaY; if(st.scrollLeft!==l) e.preventDefault(); },{passive:false}); // vertical wheel scrolls the date cards sideways until their end
@@ -3503,7 +3535,8 @@ $("#sessList").addEventListener("click",e=>{
     const es=$("#edSec"); if(es&&es.scrollIntoView) try{ es.scrollIntoView({block:"nearest"}); }catch(_){}
   }
   else if(a==="train") startInst(I,t);
-  else if(a==="skip"){ mat(I); I.status=I.status==="skipped"?(I.finishedAt?"done":"planned"):"skipped"; $("#dayMsg").textContent=I.status==="skipped"?"Skipped "+I.name+". It no longer counts.":""; planChanged(); }
+  else if(a==="skip"){ mat(I); sessMore.add(I.id); I.status=I.status==="skipped"?(I.finishedAt?"done":"planned"):"skipped"; $("#dayMsg").textContent=I.status==="skipped"?"Skipped "+I.name+". It no longer counts.":""; planChanged();
+    const f=$("#sessList").querySelector('.scard[data-id="'+I.id+'"] [data-sact="skip"]'); if(f&&f.focus) f.focus(); }   // the re-render keeps the row open and the focus on Skip / Unskip
   else if(a==="rm"){
     if(I.lg&&lgAnyDone(I.lg)&&typeof confirm==="function"&&!confirm("Remove “"+I.name+"” with the sets you logged?")) return;
     removeInst(I); delete curBy[selDate]; edPin=null; edOpen=false; $("#dayMsg").textContent="Removed "+I.name+"."; planChanged();
@@ -3741,7 +3774,11 @@ function renderOvDet(){
   if(M.C[d][gi]){ h+='<br>⚠ '+esc(conflictText(M,d,gi)); el.classList.add("cf"); }
   el.innerHTML=h;
 }
-function openOv(){ if(sxOn) closeStats(false); ovOn=true; ovFrom=$("#ovOpen"); ovEl.hidden=false; closePops(); syncOvView(); renderOv(); $("#ovClose").focus(); }
+function openOv(){ if(sxOn) closeStats(false); ovOn=true; ovFrom=$("#ovOpen"); ovEl.hidden=false; closePops(); syncOvView(); renderOv(); $("#ovClose").focus(); boardToSel(); }
+function boardToSel(){ // scroll the board so that the selected date's column is the first one in view (phones: one column per screen)
+  const b=$("#ovBoard"), c=b&&b.querySelector('.bcol[data-d="'+day+'"]'); if(!c||!(b.scrollWidth>b.clientWidth)) return;
+  const dx=c.getBoundingClientRect().left-b.getBoundingClientRect().left-6; if(dx) b.scrollLeft=Math.max(0,b.scrollLeft+dx);
+}
 function closeOv(){ if(!ovOn) return; if(drag) dragStop(true); bPick=null; ovOn=false; ovEl.hidden=true; if(ovFrom&&ovFrom.focus&&ovFrom.isConnected) ovFrom.focus(); ovFrom=null; }
 $("#ovOpen").onclick=openOv; $("#ovClose").onclick=closeOv;
 /* ---------- schedule board: 7 day columns, cards in schedule order (entriesOf) ----------
