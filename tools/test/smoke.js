@@ -97,6 +97,8 @@ async function paletteRun(){
  ok(['l3:h3','l2:h2','l1:h1','ca2:a2','ca1:a1','ceq:eq','cb1:b1','cb2:b2','v0:v0','v1:v1','v2:v2','v3:v3','sw.fat:fat','sw.end:end'].every(r=>{const a=r.split(':');return css.includes('.'+a[0]+'{background:var(--m-'+a[1]+')')&&/^#[0-9A-Fa-f]{6}$/.test(P(a[1]));}),'every legend swatch class (.l3 .l2 .l1 .ca2 .cb2 .v0-.v3 .fat .end ...) takes its colour from the --m-* palette property');
  xqa('[data-tab="ex"]')[0].click();
  const it=xqa('#exlist .item').find(b=>b.textContent==='Back squat');it.click();
+ ok(xq('#card details.cfold[data-cf="howto"]').open&&!xq('#bestFold').open&&/^Gluteus maximus: /.test(xq('#bestFs').textContent)&&xqa('#best li').length===8&&xq('#bestSec').compareDocumentPosition(xq('#exlist'))===x.Node.DOCUMENT_POSITION_PRECEDING&&!xq('#bnav').contains(xq('.tabs'))&&xq('#shead').contains(xq('.tabs')),'desktop: the exercise list comes first, "Best exercises for a muscle" is a collapsed row with a summary (rendered inside), the cue of the card is open; the tabs stay in the sidebar');
+ ok(['#tplFold','#patFold','#histSet','#balFold','#sugFold','#volFold'].every(s=>!xq(s).open)&&x.localStorage.getItem('aom.ui.v1')===null,'desktop: the Workout sections start collapsed too, and nothing is stored until the viewer toggles one');
  const hc=[...new Set(meshes('muscle').filter(m=>m.visible).map(m=>m.material).filter(m=>!m.transparent).map(m=>m.color.getHexString()))];
  const heat=['h3','h2','h1'].map(n=>lin(P(n)).getHexString());
  ok(heat.every(h=>hc.includes(h)),'exercise heat: prime / synergist / stabiliser materials have exactly the legend colours ('+heat.map(h=>'#'+h).join(' ')+')');
@@ -1586,14 +1588,17 @@ async function settingsRun(){
  // ---- phone ----
  {const p=boot({phone:true}),pd=p.document,pq=s=>pd.querySelector(s);await waitFor(()=>!pd.getElementById('loading'),60000,'phone settings instance');
   const css=html0.slice(html0.indexOf('<style>'),html0.indexOf('</style>')),ph=css.slice(css.indexOf('@media (max-width:760px)'));
-  ok(pq('#shead').contains(pq('#stOpen'))&&/\.tabrow\{margin:0 -16px/.test(ph)&&/\.ov\{/.test(ph),'phone: the gear is in the sheet header; overlays are full screen on phones');
-  pq('#stOpen').click();
-  ok(!pq('#st').hidden&&pq('#vp').contains(pq('#st'))&&/settings/.test(p.location.hash),'phone: the gear opens Settings');
+  ok(pq('#bnav #bnSet')&&pq('#bnSet').dataset.stopen===''&&/\.shead \.brand,\.shead \.tabrow\{display:none;\}/.test(ph)&&/\.ov\{bottom:var\(--nav-h\);\}/.test(ph),'phone: Settings sits in the bottom navigation bar (the sheet header drops the tabs and the gear); overlays fill the screen above the bar');
+  pq('#bnSet').click();
+  ok(!pq('#st').hidden&&pq('#vp').contains(pq('#st'))&&/settings/.test(p.location.hash)&&pq('#bnSet').classList.contains('on')&&pq('#bnav').classList.contains('st'),'phone: the Settings button of the bar opens Settings and is marked active');
   pq('#segUnit [data-unit="lb"]').click();pq('#segTheme [data-th="dark"]').click();
   const sel=pq('#goalSel');sel.value='strength';sel.dispatchEvent(new p.Event('change',{bubbles:true}));
   ok(JSON.parse(p.localStorage.getItem('aom.set.v1')).units==='lb'&&pd.documentElement.getAttribute('data-theme')==='dark'&&JSON.parse(p.localStorage.getItem('aom.goal.v1')).g==='strength','phone: units, theme and goal can be changed in Settings');
   pq('#stClose').click();
-  ok(pq('#st').hidden,'phone: Show body closes Settings');}
+  ok(pq('#st').hidden&&!pq('#bnSet').classList.contains('on')&&pd.activeElement===pq('#bnSet'),'phone: Show body closes Settings, focus returns to the bar button');
+  // a section of the bar closes an open overlay and opens that pane
+  pq('#bnSet').click();pq('#bnav [data-nav="wk"]').click();
+  ok(pq('#st').hidden&&!pq('#paneWk').hidden&&pq('#bnav [data-nav="wk"]').getAttribute('aria-current')==='page','phone: tapping Workout in the bar while Settings is open closes Settings and shows the Workout pane');}
 }
 // ---- phone instance: matchMedia reports max-width:760px and a coarse pointer ----
 // ---- statistics (v2.2): what was actually trained. Fixed "today" Monday 2026-10-12, weeks start on Monday. ----
@@ -1830,18 +1835,39 @@ async function phoneRun(){
  ok(!pv.classList.contains('open')&&bv.getAttribute('aria-expanded')==='false','phone: outside click closes the popover');
  bv.click();pq('[data-view="back"]').click();
  ok(!pv.classList.contains('open'),'phone: choosing a view closes the View popover');
- // tab tap in peek opens the sheet to half
- pq('[data-tab="ex"]').click();
- ok(sheet()==='half'&&!pq('#paneEx').hidden,'phone: tapping a tab in peek opens the sheet to half and shows that pane');
+ // bottom navigation bar: fixed to the bottom edge outside the sheet, one button per section plus Settings; the sheet sits above it
+ const nav=pq('#bnav'),nb=t=>pq('#bnav [data-nav="'+t+'"]'),cur=()=>pqa('#bnav [data-nav]').filter(b=>b.getAttribute('aria-current')==='page').map(b=>b.dataset.nav).join();
+ const pcss=html0.slice(html0.indexOf('<style>'),html0.indexOf('</style>')),pph=pcss.slice(pcss.indexOf('/* the bottom navigation bar'));
+ ok(nav&&nav.tagName==='NAV'&&nav.getAttribute('aria-label')==='Sections'&&pqa('#bnav button').length===4&&pqa('#bnav [data-nav]').map(b=>b.dataset.nav).join()==='anat,ex,wk'&&pqa('#bnav button').every(b=>b.querySelector('svg')&&b.querySelector('span').textContent.length>3)&&!side.contains(nav)&&cur()==='anat',
+  'phone: a navigation bar outside the sheet: Anatomy | Exercises | Workout | Settings, icon + label, Anatomy marked current');
+ ok(/^\.bnav\{display:none;\}/m.test(pcss)&&/\.bnav\{display:flex;position:fixed;left:0;right:0;bottom:0;[^}]*height:var\(--nav-h\);[^}]*env\(safe-area-inset-bottom/.test(pph)&&/--nav-h:calc\(58px \+ env\(safe-area-inset-bottom/.test(pph)&&/\.bnav button\{[^}]*min-height:48px/.test(pph)&&/aside\{position:fixed;[^}]*bottom:var\(--nav-h\)/.test(pph)&&/\.shead \.brand,\.shead \.tabrow\{display:none;\}/.test(pph),
+  'phone: the bar is fixed to the bottom (safe-area aware, 48 px targets), hidden on desktop; the sheet sits above it and its header drops the app name and the tabs');
+ nb('ex').click();
+ ok(sheet()==='half'&&!pq('#paneEx').hidden&&pq('#paneAnat').hidden&&cur()==='ex'&&pq('.tabs [data-tab="ex"]').getAttribute('aria-selected')==='true'&&/tab=ex/.test(p.location.hash),'phone: Exercises in the bar opens the sheet to half on that pane, marks it current (the sidebar tabs and the hash follow)');
+ nb('ex').click();
+ ok(sheet()==='peek'&&!pq('#paneEx').hidden&&cur()==='ex','phone: tapping the active section again collapses the sheet to peek');
+ nb('ex').click();
+ ok(sheet()==='half'&&cur()==='ex','phone: ... and a third tap opens it again');
+ nb('wk').click();
+ ok(sheet()==='half'&&!pq('#paneWk').hidden&&pq('#paneEx').hidden&&cur()==='wk'&&/tab=wk/.test(p.location.hash),'phone: another section switches the pane and keeps the sheet open');
+ pq('#grab').click();
+ ok(sheet()==='full','phone: the handle still resizes the sheet');
+ nb('ex').click();
+ ok(sheet()==='full'&&!pq('#paneEx').hidden,'phone: switching sections keeps a full sheet full');
  toPeek();
  // selecting an exercise shows the card in the sheet
  pqa('#exlist .item').find(b=>b.textContent==='Back squat').click();
  ok(card.classList.contains('show')&&side.contains(card)&&pq('#card h2').textContent==='Back squat','phone: selecting an exercise shows its card inside the sheet');
  ok(sheet()==='half'||sheet()==='full','phone: sheet opened to at least half (is '+sheet()+')');
  ok(side.classList.contains('has-card'),'phone: panes are hidden while the card is shown');
+ ok(pq('#card details.cfold[data-cf="howto"]')&&!pq('#card details.cfold[data-cf="howto"]').open&&pq('#card details.cfold[data-cf="howto"] p').textContent.length>20&&pq('#card .actions.xa1 [data-act="add"]')&&pq('#card .actions.xa1 [data-act="anim"]'),'phone: the exercise card leads with Play and Add; the cue ("How to") starts collapsed but is there');
+ // the active section of the bar while a card covers the panes: shows the pane again (card collapses to a summary), the sheet stays open
+ const sh0=sheet();nb('ex').click();
+ ok(!side.classList.contains('has-card')&&card.classList.contains('mini')&&!pq('#paneEx').hidden&&sheet()===sh0,'phone: tapping the active section while a card is shown brings its pane back (card collapsed to a summary)');
+ card.querySelector('h2').click();
  // tapping a tab while a card is shown brings the panes back and collapses the card to a summary
- pq('[data-tab="anat"]').click();
- ok(!side.classList.contains('has-card')&&card.classList.contains('mini')&&card.classList.contains('show'),'phone: tab tap shows the panes, card collapses to a summary');
+ nb('anat').click();
+ ok(!side.classList.contains('has-card')&&card.classList.contains('mini')&&card.classList.contains('show')&&cur()==='anat','phone: another section of the bar shows its pane, card collapses to a summary');
  card.querySelector('h2').click();
  ok(side.classList.contains('has-card')&&!card.classList.contains('mini'),'phone: tapping the summary expands the card again');
  // close returns to the panes
@@ -1851,6 +1877,7 @@ async function phoneRun(){
  pq('[data-tab="anat"]').click();
  const mi2=pqa('#list .item').find(b=>b.dataset.kind==='muscle');mi2.click();
  ok(card.classList.contains('show')&&side.contains(card)&&side.classList.contains('has-card')&&pq('#card h2').textContent===mi2.dataset.key,'phone: selecting a muscle from the index shows its card in the sheet');
+ {const f=pq('#card details.cfold[data-cf="mex"]');ok(!f||(!f.open&&f.querySelectorAll('.ext tbody tr').length>0&&/\d+/.test(f.querySelector('summary small').textContent)),'phone: the muscle card keeps its exercise table in a collapsed "Exercises that train it" row with the count');}
  pq('#card .close').click();
  ok(!side.classList.contains('has-card'),'phone: closing the muscle card restores the panes');
  // touch tap: shows the name label and selects; a 7 px wobble still counts as a tap (mouse threshold is 5 px, touch 10 px)
@@ -1867,7 +1894,7 @@ async function phoneRun(){
  ok(pq('#lodNote').textContent==='','phone: note cleared again on Low');
  // calendar + week overview on the phone: the overlay covers the viewport and the sheet; the gap block starts collapsed
  const psw=n=>pq('#wstrip [data-day="'+n+'"]'),pdk=n=>addDays(TODAY,n),psess=dk=>((JSON.parse(p.localStorage.getItem('aom.cal.v1')||'null')||{days:{}}).days[dk]||[]).filter(x=>x.id);
- pq('[data-tab="wk"]').click();
+ nb('wk').click();if(sheet()==='peek') nb('wk').click();
  ok(pqa('#wstrip [data-day]').length===7&&pq('#winbar')&&pqa('#winbar button').length===4&&pq('#winNext')&&pq('#winLast')&&pq('#addSess')&&pq('#wstrip').scrollWidth>=0,'phone: the Workout tab has the window bar (4 arrows, date input, Last/Next 7 days), the date strip and "+ Add session"');
  pq('#winNext').click();
  ok(pqa('#wstrip [data-day]').map(b=>b.dataset.date).join()===[0,1,2,3,4,5,6].map(pdk).join()&&pq('#dayLbl').textContent.includes('Monday 12 October'),'phone: "Next 7 days" starts the window today');
@@ -1878,6 +1905,20 @@ async function phoneRun(){
  pqa('#addres [data-add]').find(b=>b.firstChild.textContent.trim()==='+ Barbell bench press').click();
  ok(pqa('#wstrip [data-day]').length===7&&psw(1).classList.contains('warn'),'phone: date strip with a conflict marker on Tue');
  ok(pq('#sugMore')&&!pq('#sugMore').open,'phone: "More options" starts collapsed');
+ // progressive disclosure: everything below the calendar is a collapsed row with a one-line summary; the content is rendered and opens on a tap
+ const folds=['#tplFold','#patFold','#histSet','#balFold','#sugFold','#volFold'];
+ ok(folds.every(x=>pq(x)&&pq(x).tagName==='DETAILS'&&!pq(x).open&&pq(x).querySelector('summary h2')&&pq(x).querySelector('summary .fsum').textContent.length>0),'phone: Templates, Weekly pattern, History, Week balance, Fill the gaps and Sets per muscle start collapsed, each with a summary ('+folds.map(x=>pq(x+' .fsum').textContent).join(' | ')+')');
+ ok(/^\d+ sets$/.test(pq('#balFs').textContent)&&/suggestion/.test(pq('#sugFs').textContent)&&/of 27 groups in target/.test(pq('#volFs').textContent)&&pq('#tplFs').textContent==='none yet'&&pq('#patFs').textContent==='empty','phone: the summaries count the plan (sets, suggestions, groups in target, templates, pattern)');
+ ok(pqa('#sug .sg').length>0&&pqa('#volsum tr').length===27&&pq('#bal .bc'),'phone: collapsed sections still hold their content (gap filler, volume table, balance)');
+ pq('#sugFold summary').click();await sleep(20);
+ ok(pq('#sugFold').open&&JSON.parse(p.localStorage.getItem('aom.ui.v1')).f.sug===true,'phone: tapping a summary opens the section and remembers it (aom.ui.v1)');
+ pq('#sugFold summary').click();await sleep(20);
+ ok(!pq('#sugFold').open&&JSON.parse(p.localStorage.getItem('aom.ui.v1')).f.sug===false,'phone: ... and closes it again');
+ const sc0=pq('#sessList .scard'),more=sc0.querySelector('[data-sact="more"]');
+ ok(more&&more.getAttribute('aria-expanded')==='false'&&sc0.querySelector('.sc5').hidden&&sc0.querySelector('.sc5 [data-sact="edit"]')&&sc0.querySelector('.sc5 [data-sdate]')&&sc0.querySelector('.sc5 [data-sact="skip"]')&&sc0.querySelector('.sc5 [data-sact="rm"]')&&!sc0.querySelector('.sc3 [data-sact="edit"]')&&sc0.querySelector('.sc3 .strain')&&more.getAttribute('aria-controls')===sc0.querySelector('.sc5').id,'phone: a session card shows name, state, summary and Start; Edit, Move to, Skip and Remove wait behind "⋯ More"');
+ more.click();
+ ok(!pq('#sessList .scard .sc5').hidden&&pq('#sessList .scard [data-sact="more"]').getAttribute('aria-expanded')==='true','phone: "⋯ More" reveals the secondary actions (aria-expanded)');
+ pq('#sessList .scard [data-sact="more"]').click();
  pq('#ovOpen').click();
  ok(!pq('#ov').hidden&&pq('#vp').contains(pq('#ov'))&&pqa('#ovGrid tr.g').length===27&&pqa('#ovGrid tr.g').every(r=>r.querySelectorAll('.cb').length===7),'phone: the overview opens (full-screen overlay in the viewport) with the 27 x 7 grid');
  ok(pq('#ovGrid tr.g[data-g="1"] .cb[data-d="1"]').dataset.c==='1'&&/Recovery conflicts <b>1<\/b>/.test(pq('#ovSum').innerHTML),'phone: the conflict cell is flagged');
@@ -1909,11 +1950,11 @@ async function phoneRun(){
  pq('#ovOpen').click();pd.dispatchEvent(new p.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
  ok(pq('#ov').hidden,'phone: Escape closes the overview');
  // a second session on the Tue date from the bottom sheet
- pq('[data-tab="wk"]').click();psw(1).click();pq('#addSess').click();
+ psw(1).click();pq('#addSess').click();
  ok(pqa('#sessList .scard').length===2&&pqa('#wstrip [data-day="1"] .pl.se').length===2,'phone: "+ Add session" adds a second session to the date, both show as chips on the card');
  pq('#sessList .scard.sel [data-sact="rm"]').click();
  // training on the phone: the Today view opens over everything, inputs are numeric, typing marks a set done and saves it
- pq('[data-tab="wk"]').click();psw(1).click();pq('#sessList .strain').click();
+ psw(1).click();pq('#sessList .strain').click();
  const ptd=pq('#td'),tkey=pdk(1);
  ok(!ptd.hidden&&pq('#vp').contains(ptd)&&ptd.classList.contains('ov')&&pqa('#tdBody .tx').length>=1&&pqa('#tdBody .tset input[data-f="r"]').every(i=>i.getAttribute('inputmode')==='numeric')&&pqa('#tdBody .tset input[data-f="w"]').every(i=>i.getAttribute('inputmode')==='decimal'),'phone: Start opens the Today view with numeric reps/weight inputs');
  const pr=pq('#tdBody .tset input[data-f="r"]');pr.value='9';pr.dispatchEvent(new p.Event('input',{bubbles:true}));
@@ -1934,6 +1975,14 @@ async function phoneRun(){
  ok(pqa('#tdList .tx').length===nb0&&!psess(tkey)[0].lg.ex.some(x=>x.add)&&!psess(tkey)[0].lg.ses.some(x=>x.add),'phone: Remove takes the added entries out again');
  pd.dispatchEvent(new p.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
  ok(ptd.hidden&&/Bench|Session/.test(psw(1).textContent)&&psw(1).querySelector('.pl.se.s-doing'),'phone: Escape closes the Today view, the Tue card shows the session in progress');
+ // the bar stays usable over the Today view: a section closes it
+ pq('#sessList .strain').click();nb('anat').click();
+ ok(ptd.hidden&&!pq('#paneAnat').hidden&&cur()==='anat','phone: a section of the bar closes the Today view and opens that pane');
+ // the open state of the sections survives a reload (a fresh instance with a stored aom.ui.v1)
+ {const q2=boot({phone:true,store:{'aom.ui.v1':JSON.stringify({f:{tpl:true,'c.howto':true,bad:'x','Bad key':true}})}}),qd=q2.document;await waitFor(()=>!qd.getElementById('loading'),60000,'phone ui-state instance');
+  ok(qd.querySelector('#tplFold').open&&!qd.querySelector('#patFold').open&&!qd.querySelector('#sugFold').open,'phone: a stored aom.ui.v1 reopens the sections the viewer left open (invalid entries ignored)');
+  [...qd.querySelectorAll('#exlist .item')].find(b=>b.textContent==='Back squat').click();
+  ok(qd.querySelector('#card details.cfold[data-cf="howto"]').open,'phone: ... and the card folds too ("How to")');}
  p.__setPhone(false);
  ok(card.parentNode===pq('#vp')&&!side.classList.contains('has-card')&&!card.classList.contains('mini'),'phone->desktop: card moves back over the viewport');
  ok(pq('#hint').textContent.includes('right-drag')&&p.__dpr===2,'phone->desktop: mouse hint text restored, pixel ratio cap back to 2');
@@ -2139,7 +2188,7 @@ async function animRun(){
  ok(ANIMS.every(n=>A[n])&&names.every(n=>META.ex.some(e=>e.n===n)&&A[n].keys[0].t===0&&A[n].keys[A[n].keys.length-1].t===1),'META.anim: '+names.length+' animations, all existing exercises, keys from t=0 to 1 ('+names.join(', ')+')');
  ok(names.every(n=>A[n].keys.every(k=>!('use' in k)))&&A['Back squat'].keys[0].ik.thighR&&A['Back squat'].keys[0].ik.thighR.target[0]===-A['Back squat'].keys[0].ik.thighL.target[0]&&A['Back squat'].keys[0].ik.armR.bar==='over','presets are resolved at build time and left entries are mirrored to the right (Back squat: right foot = mirrored left foot, both hands overhand on the bar)');
  ok(names.length>=140,'META.anim: at least 140 animated exercises ('+names.length+')');
- const exp='window.__an={get anim(){return anim},skU,segPos,segQ,SEGI,SEGJ,RIG,cpuSkin,allMeshes,boneMeshes,muscleMeshes,byKey,HM,propGrp,nerveMeshes,solvePose,poseAt,prepKeys,barC,barA,get barW(){return barW},get heldBar(){return heldBar},get skN(){return skN},get skinLv(){return skinLv},animStep,get animSideSel(){return animSideSel}};';
+ const exp='window.__an={get anim(){return anim},skU,segPos,segQ,SEGI,SEGJ,RIG,cpuSkin,allMeshes,boneMeshes,muscleMeshes,byKey,HM,propGrp,nerveMeshes,solvePose,poseAt,prepKeys,barC,barA,get barW(){return barW},get heldBar(){return heldBar},get skN(){return skN},get skinLv(){return skinLv},animStep,get animSideSel(){return animSideSel},goal,camera,coverBot,get sheetNom(){return sheetNom},get topInset(){return topInset},get sheet(){return sheet}};';
  const mk=o=>boot(Object.assign({store:{}},o,{js:js.replace('//@licexport',exp)}));
  const x=mk({}),xd=x.document,xq=s=>xd.querySelector(s),xqa=s=>[...xd.querySelectorAll(s)];
  await waitFor(()=>!xd.getElementById('loading'),60000,'animation test instance');
@@ -2497,6 +2546,32 @@ async function animRun(){
  await waitFor(()=>ph.__an.anim&&ph.__an.anim.ready,30000,'phone play');
  pq('#animSide [data-side="R"]').click();
  ok(!pq('#animSide').hidden&&pq('#animBar').contains(pq('#animSide'))&&ph.__an.anim.side==='R'&&pq('#animSide [data-side="R"]').getAttribute('aria-pressed')==='true'&&pq('#animSide [data-side="R"]').getAttribute('aria-current')==='true','phone: the side control is in the movement bar and a tap on Right plays the right side');
+ // phone movement bar: one slim row above the sheet (no name, icon buttons, a speed button that cycles), the sheet drops to peek and the framing leaves room for it
+ {const P=ph.__an,css=html0.slice(html0.indexOf('<style>'),html0.indexOf('</style>')),pc=css.slice(css.indexOf('/* phones: one slim row just above the sheet'));
+  ok(/\.animbar\{[^}]*bottom:var\(--abot[^}]*flex-direction:row;[^}]*height:54px;/.test(pc)&&/\.animbar \.abt b\{display:none;\}/.test(pc)&&/\.animbar \.abspeed\{display:none;\}/.test(pc)&&/\.animbar \.abside button::after\{content:attr\(data-sh\)/.test(pc)&&pq('#animSide [data-side="both"]').dataset.sh==='Both'&&pq('#animPP svg')&&pq('#animStop svg')&&pq('#animStop').getAttribute('aria-label'),'phone: the movement bar is one 54 px row (play / pause and stop as icons, the name in the card, short side labels L | R | Both)');
+  ok(P.sheet==='peek'&&/^\d+px$/.test(pq('#vp').style.getPropertyValue('--abot'))&&parseInt(pq('#vp').style.getPropertyValue('--abot'))>=58,'phone: playing lowers the sheet to peek; the bar sits above the sheet and the navigation bar (--abot '+pq('#vp').style.getPropertyValue('--abot')+')');
+  const sc=pq('#animSpdC'),sp0=P.anim.speed;sc.click();const sp1=P.anim.speed;sc.click();const sp2=P.anim.speed;sc.click();
+  ok(sp0===1&&sp1===1.5&&sp2===0.5&&P.anim.speed===1&&sc.textContent==='1×'&&/Speed 1×, change to 1\.5×/.test(sc.getAttribute('aria-label')),'phone: the speed button cycles 1× → 1.5× → 0.5× → 1× and says what comes next');
+  await waitFor(()=>ph.__cam&&ph.__cam.view&&ph.__cam.view.enabled,5000,'phone view offset');
+  const oy=ph.__cam.view.offsetY,cb=P.coverBot(P.sheetNom);
+  ok(oy===Math.round((P.coverBot(0)-P.topInset)/2)&&cb-P.sheetNom>=58+54,'phone: the view offset counts the navigation bar and the movement bar (offset '+oy+' px, covered at the bottom '+cb+' px)');
+  pq('#animPP').click();
+  ok(pq('#animPP').dataset.st==='play'&&pq('#animPP').textContent==='Play'&&pq('#animNote').textContent==='','phone: Pause shows the play icon; no "Paused" caption over the figure');
+  // framing: over the whole repetition every joint of the figure projects into the strip between the toolbar and the movement bar
+  const T=ph.THREE,inStrip=nm=>{const g=P.goal,c=new T.PerspectiveCamera(P.camera.fov,P.camera.aspect,0.01,30),s=Math.sin(g.phi);
+   c.position.set(g.tx+g.r*s*Math.sin(g.theta),g.ty+g.r*Math.cos(g.phi),g.tz+g.r*s*Math.cos(g.theta));c.lookAt(g.tx,g.ty,g.tz);c.updateMatrixWorld();c.updateProjectionMatrix();
+   const W=1000,H=800,cov=P.coverBot(P.sheetNom),off=(cov-P.topInset)/2;let worst=1e9;const ext=[1e9,-1e9,1e9,-1e9],v=new T.Vector3();
+   if(P.anim.side!==(P.anim.def.side||'L')) return {ok:false,why:'mirrored side'};
+   for(let k=0;k<12;k++){P.solvePose(P.poseAt(P.anim.K,k/12));for(let s2=0;s2<P.segPos.length;s2++){v.copy(P.segPos[s2]).project(c);const x=(v.x+1)/2*W,y=(1-v.y)/2*H-off;ext[0]=Math.min(ext[0],x);ext[1]=Math.max(ext[1],x);ext[2]=Math.min(ext[2],y);ext[3]=Math.max(ext[3],y);worst=Math.min(worst,x,W-x,y-P.topInset,H-cov-y);}}
+   return {ok:worst>=0,why:'x '+ext[0].toFixed(0)+'..'+ext[1].toFixed(0)+', y '+ext[2].toFixed(0)+'..'+ext[3].toFixed(0)+' in [0,'+W+'] x ['+P.topInset+','+(H-cov)+']'};};
+  pq('#animStop').click();pq('#animSide [data-side="both"]').click();
+  for(const nm of ['Back squat','Pull-up','Bulgarian split squat','Push-up','Turkish get-up']){
+   [...pd.querySelectorAll('#exlist .item')].find(b=>b.textContent===nm).click();if(!P.anim||P.anim.n!==nm) pq('#card [data-act="anim"]').click();
+   await waitFor(()=>P.anim&&P.anim.ready&&P.anim.n===nm,30000,'phone '+nm);
+   const r=inStrip(nm);ok(r.ok,'phone framing: '+nm+' stays inside the visible strip through the repetition ('+r.why+')');
+  }
+  pq('#animStop').click();await sleep(50);
+  ok(pq('#animBar').hidden&&ph.__cam.view.offsetY===Math.round((P.coverBot(0)-P.topInset)/2)&&P.coverBot(0)===58,'phone: Stop hides the bar and the view offset no longer counts it');}
 }
 async function boardRun(){
  const ovOpen=()=>{if(q('#ov').hidden)q('#ovOpen').click();};
