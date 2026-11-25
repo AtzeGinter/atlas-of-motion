@@ -2,12 +2,12 @@
 // layout changes by eye. Seeds a small training calendar (three templates, a weekly pattern, a finished strength session and a finished
 // run in the past days) into localStorage, then drives the page through its UI. Serve the repo over http first, e.g.
 //   cd <repo> && python -m http.server 8801
-//   cd tools/test && node uishot.js --out <dir> [--url http://127.0.0.1:8801/] [--only phone|desktop] [--dark] [--scenes anat,ex,card,wk,st,...]
+//   cd tools/test && node uishot.js --out <dir> [--url http://127.0.0.1:8801/] [--only phone|desktop] [--desk 1100x800] [--dark] [--scenes anat,ex,card,wk,st,...]
 // Scenes: anat, ex, card (Back squat card), wk (Workout tab), wkfull (Workout tab, sheet full / scrolled on desktop), st (Settings),
 // anim-<exercise> (playing, paused at t=0.15 / 0.5 / 0.85; several: anim-Pull-up,anim-Push-up). Writes <out>/<size>[-dark]-<scene>.png.
 const {spawn}=require('child_process'),fs=require('fs'),path=require('path'),os=require('os');
 const a=process.argv.slice(2),flag=(f,d)=>{const i=a.indexOf(f);if(i<0) return d;const v=a[i+1];a.splice(i,2);return v;},has=f=>{const i=a.indexOf(f);if(i<0) return false;a.splice(i,1);return true;};
-const out=flag('--out','.'),url=flag('--url','http://127.0.0.1:8801/'),only=flag('--only',null),dark=has('--dark');
+const out=flag('--out','.'),url=flag('--url','http://127.0.0.1:8801/'),only=flag('--only',null),dark=has('--dark'),desk=flag('--desk','1440x900').split('x').map(Number);
 const scenes=flag('--scenes','anat,ex,card,wk,wkfull,st,anim-Bulgarian split squat,anim-Pull-up,anim-Push-up').split(',');
 const cands=[process.env.BROWSER,'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Google/Chrome/Application/chrome.exe',
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','/usr/bin/google-chrome','/usr/bin/chromium','/usr/bin/microsoft-edge'].filter(Boolean);
@@ -27,7 +27,7 @@ function seed(){
   return {'aom.tpl.v1':JSON.stringify(T),'aom.cal.v1':JSON.stringify(cal),'aom.set.v1':JSON.stringify({units:'kg',weekStart:'mon',theme:dark?'dark':'light',endMin:[150,300],easyMin:75,vo2:[1,2]})};
 }
 async function run(size){
-  const ph=size==='phone', W=ph?412:1440, H=ph?915:900, port=9300+Math.floor(Math.random()*500), prof=fs.mkdtempSync(path.join(os.tmpdir(),'uishot-'));
+  const ph=size==='phone', W=ph?412:desk[0], H=ph?915:desk[1], port=9300+Math.floor(Math.random()*500), prof=fs.mkdtempSync(path.join(os.tmpdir(),'uishot-'));
   const br=spawn(exe,['--headless=new','--remote-debugging-port='+port,'--user-data-dir='+prof,'--window-size='+W+','+H,'--hide-scrollbars','--enable-unsafe-swiftshader','--no-first-run','about:blank'],{stdio:'ignore'});
   try{
     let ws=null;
@@ -49,7 +49,7 @@ async function run(size){
       await cmd('Page.navigate',{url:url+'?shot'+(hash||'')});
       await until('!document.getElementById("loading")',120000,'page load');await sleep(700);
     };
-    const shot=async name=>{ await sleep(1500); const r=await cmd('Page.captureScreenshot',{format:'png'}); const f=path.join(out,size+(dark?'-dark':'')+'-'+name+'.png'); fs.writeFileSync(f,Buffer.from(r.result.data,'base64')); console.log(f); };
+    const shot=async name=>{ await sleep(1500); const r=await cmd('Page.captureScreenshot',{format:'png'}); const f=path.join(out,size+(!ph&&desk[0]!==1440?desk[0]:'')+(dark?'-dark':'')+'-'+name+'.png'); fs.writeFileSync(f,Buffer.from(r.result.data,'base64')); console.log(f); };
     // open a tab through the phone bottom bar when there is one, else the sidebar tab
     const tab=t=>ev(`(()=>{const n=document.querySelector('#bnav [data-nav="${t}"]');const b=n&&getComputedStyle(n).display!=="none"?n:document.querySelector('.tabs [data-tab="${t}"]');b.click();return true;})()`);
     for(const sc of scenes){

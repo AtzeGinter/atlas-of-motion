@@ -1019,9 +1019,11 @@ input.mvdate[hidden]{display:none;}
 .sxshare .bc{flex:1 1 220px;}
 .sxban{position:absolute;z-index:3;left:24px;bottom:56px;width:min(420px,calc(100% - 48px));background:var(--card);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);padding:10px 14px 10px;display:flex;flex-direction:column;gap:6px;}
 .sxban[hidden]{display:none;}
-.animbar{position:absolute;z-index:3;left:24px;bottom:22px;width:max-content;max-width:min(470px,calc(100% - 48px));background:var(--card);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);padding:9px 14px;display:flex;flex-direction:column;gap:7px;}
+.animbar{position:absolute;z-index:3;left:24px;bottom:22px;width:max-content;max-width:min(540px,calc(100% - 48px));background:var(--card);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);padding:9px 14px;display:flex;flex-direction:column;gap:7px;}
 .animbar[hidden]{display:none;}
 .vp.animating .hint{display:none;}
+/* narrower desktops: the card (top right) would reach down to the movement bar (bottom left); end it above the bar instead (it scrolls) */
+@media (min-width:761px) and (max-width:1320px){.vp.animating .card{max-height:calc(100% - 180px);}}
 .animbar .abt b{display:block;font:600 16px var(--f-disp);}
 .animbar .abt small{display:block;font:italic 400 13.5px var(--f-read);color:var(--muted);min-height:1em;}
 .animbar .abb{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
