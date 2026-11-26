@@ -6,7 +6,7 @@
 // Scenes: anat, ex, card (Back squat card), wk (Workout tab), wkfull (Workout tab, sheet full / scrolled on desktop), st (Settings),
 // anim-<exercise> (playing, paused at t=0.15 / 0.5 / 0.85; several: anim-Pull-up,anim-Push-up), first (first visit: empty storage),
 // muscle (gluteus maximus card), best (Exercises tab, "Best exercises for a muscle" open), today (today's session started in the Today view,
-// two sets logged), ov (week overview), sx (Statistics), more (Workout tab, today's session card with "⋯ More" open).
+// two sets logged, rest timer running), recap (today's session finished: the body recap), bones (femur selected, muscles off), bonesmus (humerus selected), ov (week overview), sx (Statistics), more (Workout tab, today's session card with "⋯ More" open).
 // Writes <out>/<size>[-dark]-<scene>.png.
 const {spawn}=require('child_process'),fs=require('fs'),path=require('path'),os=require('os');
 const a=process.argv.slice(2),flag=(f,d)=>{const i=a.indexOf(f);if(i<0) return d;const v=a[i+1];a.splice(i,2);return v;},has=f=>{const i=a.indexOf(f);if(i<0) return false;a.splice(i,1);return true;};
@@ -24,6 +24,9 @@ function seed(){
     {id:'t3',name:'Legs',items:[it('Back squat',4),it('Romanian deadlift',3),it('Standing calf raise',3)],ses:[]}];
   const sets=(n,r,w)=>Array.from({length:n},()=>({r:r,w:w,done:true}));
   const cal={v:1,mig:1,seq:30,note:0,pattern:[{id:'p1',tid:'t1',wd:[0,3],from:dk(-14)},{id:'p2',tid:'t2',wd:[1,4],from:dk(-14)},{id:'p3',tid:'t3',wd:[2,5],from:dk(-14)}],days:{}};
+  const mixed=(rw)=>rw.map(x=>({r:x[0],w:x[1],done:true}));
+  cal.days[dk(-7)]=[{id:'i0',tid:'t1',pid:'p1',name:'Push',items:T[0].items,ses:[],status:'done',startedAt:now-7*864e5,finishedAt:now-7*864e5+3000e3,
+    lg:{ex:[{n:'Barbell bench press',v:[],o:0,sets:sets(4,5,80)},{n:'Overhead press',v:[],o:1,sets:mixed([[6,50],[6,50],[5,50]])},{n:'Triceps pushdown',v:[],o:2,sets:mixed([[12,25],[12,25],[10,27.5]])}],ses:[]}}];
   cal.days[dk(-2)]=[{id:'i1',tid:'t3',name:'Legs',items:T[2].items,ses:[],status:'done',startedAt:now-2*864e5,finishedAt:now-2*864e5+3600e3,
     lg:{ex:[{n:'Back squat',v:[],o:0,sets:sets(4,5,100)},{n:'Romanian deadlift',v:[],o:1,sets:sets(3,8,80)},{n:'Standing calf raise',v:[],o:2,sets:sets(3,12,60)}],ses:[]}}];
   cal.days[dk(-1)]=[{id:'i2',name:'Easy run',items:[],ses:[{a:'running',k:'easy',min:40,o:0}],status:'done',startedAt:now-864e5,finishedAt:now-864e5+2400e3,lg:{ex:[],ses:[{a:'running',k:'easy',min:40,o:0,done:true,act:42}]}}];
@@ -58,6 +61,9 @@ async function run(size){
     const tab=t=>ev(`(()=>{const n=document.querySelector('#bnav [data-nav="${t}"]');const b=n&&getComputedStyle(n).display!=="none"?n:document.querySelector('.tabs [data-tab="${t}"]');b.click();return true;})()`);
     for(const sc of scenes){
       if(sc==='anat'){ await load(); if(ph) await tab('anat'); await shot('anat'); }
+      else if(sc==='bones'||sc==='bonesmus'){ await load('#b='+encodeURIComponent(sc==='bones'?'femur':'humerus')); if(ph) await tab('anat');
+        if(sc==='bones') await ev('(()=>{["tMuscles","tTendons"].forEach(i=>{const c=document.getElementById(i);if(c.checked){c.checked=false;c.dispatchEvent(new Event("change",{bubbles:true}));}});return true;})()');
+        await shot(sc); }
       else if(sc==='ex'){ await load(); await tab('ex'); await shot('ex'); }
       else if(sc==='card'){ await load('#ex='+encodeURIComponent('Back squat')); await shot('card'); }
       else if(sc==='wk'||sc==='wkfull'){ await load(); await tab('wk');
@@ -75,6 +81,11 @@ async function run(size){
           await until('!document.getElementById("td").hidden',10000,'Today view');
           await ev('(()=>{[...document.querySelectorAll("#td [data-f=done]")].slice(0,2).forEach(c=>c.click());return true;})()'); }
         await shot(sc); }
+      else if(sc==='recap'){ await load(); await tab('wk');
+        await ev('(()=>{document.querySelector("#sessList .scard .strain").click();return true;})()');
+        await until('!document.getElementById("td").hidden',10000,'Today view');
+        await ev('(()=>{[...document.querySelectorAll("#td [data-f=done]")].forEach(c=>{if(!c.checked)c.click();});document.getElementById("tdFinish").click();return true;})()');
+        await until('!document.getElementById("rcBan").hidden',10000,'recap'); await sleep(1200); await shot('recap'); }
       else if(sc==='ov'){ await load(); await tab('wk'); await ev('(()=>{document.getElementById("ovOpen").click();return true;})()'); await shot('ov'); }
       else if(sc==='sx'){ await load('#stats'); await shot('sx'); }
       else if(sc.startsWith('anim-')){

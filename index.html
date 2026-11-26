@@ -26,7 +26,7 @@
   --bg:#F3EEE4; --panel:#EAE3D6; --card:#F8F4EC; --ink:#2A211B; --muted:#66584B; --line:#D8CDBB;
   --accent:#8E2A1E; --accent-soft:#EBD3CB; --ochre:#B8862E; --sage:#5F7F57; --plum:#6B3A5A; --slate-teal:#3F7F7A; --amber-warn:#B5651D; --teal-ink:#2E6A65;
   --chip:#E2D9C8; --onacc:#FBF6EE; --bad:#A3281C; --inkblue:#3B5873;
-  --vp-a:#F8F4EB; --vp-b:#E6DDCB; --shadow:0 8px 24px rgba(70,48,26,.13);
+  --vp-a:#F4EEE3; --vp-b:#E0D6C3; --shadow:0 8px 24px rgba(70,48,26,.13);
   --z1:#9DB59A; --z2:#5F8F7E; --z3:#C99A3A; --z4:#C9683A; --z5:#8E2A1E;
   --pe-bg:#DCE6D6; --pe-fg:#34502E; --pt-bg:#F1E0B8; --pt-fg:#6B4A0A; --ph-bg:#EBCFC6; --ph-fg:#7A2218;
   --f-disp:"Fraunces","Source Serif 4",Georgia,serif; --f-read:"Source Serif 4",Georgia,"Times New Roman",serif; --f-ui:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -647,6 +647,23 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
 .tvar{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 2px;}
 .tvar select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);background:var(--bg);border-radius:3px;color:var(--ink);min-width:0;max-width:100%;}
 .tx.skip .tvar{display:none;}
+/* v3.6: rest timer (a row under the Today view header, outside the scrolling list), "Last:" line with the progression hint, muted prefill */
+.tdrest{flex:none;position:relative;overflow:hidden;display:flex;align-items:center;gap:8px;padding:5px 8px 7px 12px;background:var(--card);border:1px solid var(--line);border-left:3px solid var(--ochre);border-radius:3px;}
+.tdrest[hidden]{display:none;}
+.tdrest .rt{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;white-space:nowrap;}
+.tdrest .rt small{font:600 12.5px var(--f-ui);font-variant-caps:all-small-caps;letter-spacing:.12em;color:var(--muted);}
+.tdrest .rt b{font:600 24px/1.1 var(--f-disp);font-variant-numeric:tabular-nums;}
+.tdrest .rt em{font:italic 400 13px var(--f-read);color:var(--muted);overflow:hidden;text-overflow:ellipsis;min-width:0;}
+.tdrest .btn{flex:none;padding:4px 0;min-width:46px;min-height:34px;font:600 13px var(--f-ui);}
+.tdrest .rbar{position:absolute;left:0;bottom:0;height:3px;background:var(--ochre);}
+.tdrest.up{border-left-color:var(--sage);animation:restUp 1s ease-in-out 3;}
+.tdrest.up .rt b{color:var(--pe-fg);}
+.tdrest.up .rbar{display:none;}
+@keyframes restUp{50%{background:var(--pe-bg);}}
+.tn .tlast{font:400 12.5px/1.35 var(--f-ui);font-style:normal;color:var(--muted);}
+.tn .thint{display:inline;padding:4px 2px;margin:-4px 0;font:600 12.5px var(--f-ui);color:var(--accent);white-space:nowrap;}
+.tn .thint.rep{color:var(--muted);font-weight:500;}
+.tset:not(.done) input.num{color:var(--muted);font-style:italic;}
 @media (max-width:760px){
   .tdsum{padding:8px 10px;gap:2px 12px;}
   .tdring{width:68px;height:68px;}
@@ -658,6 +675,9 @@ input.num{width:66px;border:1px solid var(--line);background:var(--card);border-
   .tx{padding:8px 8px 4px;}
   .tcols,.tset{grid-template-columns:24px 44px minmax(0,1fr) minmax(0,1fr) 40px;gap:4px;}
   .tset .x{width:40px;}
+  .tdrest{padding:4px 6px 6px 10px;gap:6px;}
+  .tdrest .rt b{font-size:22px;}
+  .tdrest .btn{min-width:44px;min-height:40px;}
 }
 @media (pointer:coarse){
   .btrain{min-height:36px;padding:2px 10px;}
@@ -1038,6 +1058,24 @@ input.mvdate[hidden]{display:none;}
 .sxshare .bc{flex:1 1 220px;}
 .sxban{position:absolute;z-index:3;left:24px;bottom:56px;width:min(420px,calc(100% - 48px));background:var(--card);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);padding:10px 14px 10px;display:flex;flex-direction:column;gap:6px;}
 .sxban[hidden]{display:none;}
+/* v3.6: one tap to today's open session (#tdPill; bottom-left of the viewport on desktop, centred in the strip above the sheet on phones) and the recap after Finish (#rcBan) */
+.tdpill{position:absolute;z-index:3;left:24px;bottom:22px;display:inline-flex;align-items:center;gap:9px;max-width:min(420px,calc(100% - 48px));height:40px;padding:0 16px 0 6px;border:1px solid var(--accent);border-radius:20px;background:var(--card);color:var(--ink);box-shadow:var(--shadow);font:600 14px var(--f-ui);cursor:pointer;white-space:nowrap;}
+.tdpill[hidden]{display:none;}
+.tdpill:hover{border-color:var(--accent);background:var(--accent-soft);}
+.tdpill .tpi{flex:none;display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--accent);color:var(--onacc);}
+.tdpill .tpi svg{width:12px;height:12px;margin-left:2px;}
+.tdpill .tpt{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+.tdpill .tpt small{font:italic 400 13.5px var(--f-read);color:var(--muted);}
+.rcban{gap:4px;}
+.rcban .rch{display:flex;align-items:center;gap:10px;}
+.rcban .rch .sxbt{flex:1;min-width:0;}
+.rcban .rch .sxbb{flex:none;flex-wrap:nowrap;}
+.rcban .rcl{margin:0;font:400 14px/1.35 var(--f-read);color:var(--ink);}
+.rcban .rcl b{font-weight:600;}
+.rcban .rcgi{white-space:nowrap;}
+.rcban .rcl:empty{display:none;}
+.rcban .rcw{color:var(--pe-fg);}
+.rcban .legend small{flex-basis:100%;font:italic 400 12.5px var(--f-read);color:var(--muted);}
 .animbar{position:absolute;z-index:3;left:24px;bottom:22px;width:max-content;max-width:min(540px,calc(100% - 48px));background:var(--card);border:1px solid var(--line);border-radius:3px;box-shadow:var(--shadow);padding:9px 14px;display:flex;flex-direction:column;gap:7px;}
 .animbar[hidden]{display:none;}
 .vp.animating .hint{display:none;}
@@ -1098,6 +1136,13 @@ input.mvdate[hidden]{display:none;}
   .animbar .abside button[aria-pressed="true"]::after{font-weight:700;}
   .animbar .abst{order:4;}
   #side[data-sheet="full"]~.vp .animbar{display:none;}
+  .tdpill{left:50%;transform:translateX(-50%);bottom:var(--abot,170px);max-width:calc(100% - 24px);height:44px;border-radius:22px;}
+  .rcban{left:10px;right:10px;width:auto;top:auto;bottom:var(--abot,170px);padding:8px 12px;border-radius:12px;}
+  .rcban .sxbt b{font-size:15px;}
+  .rcban .rcl{font-size:13.5px;}
+  .rcban .legend{font-size:12px;gap:2px 8px;}
+  .rcban .sxbb .btn{min-height:40px;}
+  #side[data-sheet="full"]~.vp .tdpill,#side[data-sheet="full"]~.vp .rcban{display:none;}
 }
 @media (pointer:coarse){
   .sxcols{--cw:20px;}
@@ -1277,7 +1322,7 @@ input.mvdate[hidden]{display:none;}
     </div>
     <div class="loading" id="loading"><div><strong>Atlas of Motion</strong><em>preparing the plates…</em><span id="loadMsg">Loading model</span></div></div>
     <div class="tip" id="tip"></div>
-    <div class="ver" id="ver" title="Atlas of Motion, version 3.5 (build e01ba5a)">v3.5 · e01ba5a</div>
+    <div class="ver" id="ver" title="Atlas of Motion, version 3.5 (build acd513f)">v3.5 · acd513f</div>
     <div class="hint" id="hint">Drag to rotate, scroll to zoom, right-drag to pan, click to inspect, H to hide</div>
     <div class="card" id="card" aria-live="polite"></div>
     <div class="animbar" id="animBar" role="group" aria-label="Exercise movement" hidden><div class="abt"><b id="animName"></b><small id="animNote" role="status"></small></div><div class="abb"><button class="btn abpp" id="animPP" type="button" data-st="pause"><svg class="ip" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 5v14l12-7z" fill="currentColor"/></svg><svg class="iz" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/></svg><span class="abl">Pause</span></button><div class="seg abspeed" id="animSpeed" role="group" aria-label="Speed"><button type="button" data-sp="0.5">0.5×</button><button type="button" data-sp="1">1×</button><button type="button" data-sp="1.5">1.5×</button></div><button class="btn abspc" id="animSpdC" type="button">1×</button><div class="seg abside" id="animSide" role="group" aria-label="Working side" title="Which side works: left, right, or both in turn (one repetition each)" hidden><button type="button" data-side="L" data-sh="L">Left</button><button type="button" data-side="R" data-sh="R">Right</button><button type="button" data-side="both" data-sh="Both">Both</button></div><button class="btn abst" id="animStop" type="button" aria-label="Stop the movement"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg><span class="abl">Stop</span></button></div><input type="range" id="animT" class="abt-range" min="0" max="1000" step="1" value="0" aria-label="Position in the movement"></div>
@@ -1299,6 +1344,7 @@ input.mvdate[hidden]{display:none;}
     <section class="ov td" id="td" role="dialog" aria-label="Training log" hidden>
       <div class="tdw">
         <div class="ovhead"><div class="tdh"><small class="tdd" id="tdDate"></small><h2 id="tdTitle"></h2></div><button class="btn" id="tdClose" type="button">Show body</button></div>
+        <div class="tdrest" id="tdRest" role="timer" aria-label="Rest timer" hidden><div class="rt"><small>Rest</small><b id="tdRestT">0:00</b><em id="tdRestN"></em></div><button class="btn" type="button" data-rest="-15" aria-label="15 seconds less rest">−15</button><button class="btn" type="button" data-rest="15" aria-label="15 seconds more rest">+15</button><button class="btn" type="button" data-rest="skip" aria-label="Skip the rest">Skip</button><span class="rbar" id="tdRestB" aria-hidden="true"></span></div>
         <div class="tdsum" id="tdSum"></div>
         <div class="tdbody" id="tdBody">
           <div class="tdlist" id="tdList"></div>
@@ -1340,6 +1386,8 @@ input.mvdate[hidden]{display:none;}
       </div>
     </section>
     <div class="sxban" id="sxBan" role="status" hidden><div class="sxbt"><b id="sxBanT">Average weekly sets</b><small id="sxBanS"></small></div><div class="legend" id="sxBanLeg"></div><div class="sxbb"><button class="btn" id="sxBack" type="button">Back to the normal view</button><button class="linkbtn" id="sxBackSt" type="button">Statistics</button></div></div>
+    <button class="tdpill" id="tdPill" type="button" hidden><span class="tpi" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 4v16l14-8z" fill="currentColor"/></svg></span><span class="tpt" id="tdPillT"></span></button>
+    <div class="sxban rcban" id="rcBan" role="status" hidden><div class="rch"><div class="sxbt"><b id="rcT"></b><small id="rcS"></small></div><div class="sxbb"><button class="linkbtn" id="rcImg" type="button">Save image</button><button class="btn" id="rcDone" type="button">Done</button></div></div><p class="rcl" id="rcG"></p><p class="rcl rcw" id="rcW"></p><div class="legend" id="rcLeg"></div></div>
     <section class="ov st" id="st" role="dialog" aria-label="Settings" hidden>
       <div class="stw">
         <div class="ovhead"><h2>Settings</h2><button class="btn" id="stClose" type="button">Show body</button></div>
@@ -1376,6 +1424,15 @@ input.mvdate[hidden]{display:none;}
             <div class="goal"><span id="wsLbl">Week starts on</span><div class="seg seg2" id="segWeek" role="group" aria-labelledby="wsLbl" style="margin:0"><button type="button" data-ws="mon" aria-pressed="true">Monday</button><button type="button" data-ws="sun" aria-pressed="false">Sunday</button></div></div>
             <p class="fine" style="margin-top:0!important">Weights are stored in kilograms and shown in the unit you choose. The first day sets the weekday order of the weekly pattern and what "This week" shows; the 7-day window itself can start on any date.</p>
           </div>
+          <div class="sec" id="stLog">
+            <h2>Training log</h2>
+            <div class="goal"><span id="restLbl">Rest timer</span><div class="seg seg2" id="segRest" role="group" aria-labelledby="restLbl" style="margin:0"><button type="button" data-rst="on" aria-pressed="true">On</button><button type="button" data-rst="off" aria-pressed="false">Off</button></div></div>
+            <div class="goal"><label for="restC">Rest, multi-joint lifts</label><div class="cust"><input class="search" id="restC" type="number" min="30" max="600" step="15" inputmode="numeric" aria-label="Rest after a set of a multi-joint lift, in seconds"><span>seconds</span></div></div>
+            <div class="goal"><label for="restI">Rest, isolation work</label><div class="cust"><input class="search" id="restI" type="number" min="15" max="600" step="15" inputmode="numeric" aria-label="Rest after a set of an isolation exercise, in seconds"><span>seconds</span></div></div>
+            <div class="goal"><span id="beepLbl">Beep at zero</span><div class="seg seg2" id="segBeep" role="group" aria-labelledby="beepLbl" style="margin:0"><button type="button" data-beep="off" aria-pressed="true">Off</button><button type="button" data-beep="on" aria-pressed="false">On</button></div></div>
+            <div class="goal"><label for="incStep">Weight step of the hint</label><div class="cust"><input class="search" id="incStep" type="number" min="0.5" max="20" step="0.5" inputmode="decimal" aria-label="Weight step of the progression hint"><span id="incU">kg</span></div></div>
+            <p class="fine" style="margin-top:0!important">Checking a set in the training log starts the rest timer; at zero the phone vibrates. Multi-joint lifts (squats, presses, rows, pulls, hinges) default to 2 minutes, everything else to 1. The hint under an exercise suggests one weight step more when every set was done last time without losing reps, else the same weight again.</p>
+          </div>
           <div class="sec" id="stDisp">
             <h2>Display</h2>
             <div class="goal"><span id="thLbl">Theme</span><div class="seg seg3" id="segTheme" role="group" aria-labelledby="thLbl" style="margin:0"><button type="button" data-th="auto" aria-pressed="true">Auto</button><button type="button" data-th="light" aria-pressed="false">Light</button><button type="button" data-th="dark" aria-pressed="false">Dark</button></div></div>
@@ -1403,7 +1460,7 @@ input.mvdate[hidden]{display:none;}
           </div>
           <div class="sec" id="stAbout">
             <h2>About</h2>
-            <p class="stver" id="stVer">Atlas of Motion, version 3.5 (build e01ba5a)</p>
+            <p class="stver" id="stVer">Atlas of Motion, version 3.5 (build acd513f)</p>
             <p class="fine" style="margin-top:0!important">A 3D atlas of the muscular system with a strength and endurance planner. Static page, no account, no tracking; it works offline once loaded.</p>
             <p class="fine" style="margin-top:0!important"><button class="linkbtn" id="stCredits" type="button" style="padding:0">Credits and sources (colophon)</button> · <a href="https://github.com/AtzeGinter/atlas-of-motion#credits-and-licensing" target="_blank" rel="noopener">Licence notes</a> · <a href="https://github.com/AtzeGinter/atlas-of-motion#commercial-use-of-the-3d-models" target="_blank" rel="noopener">Commercial use of the 3D models</a></p>
           </div>
@@ -1432,13 +1489,16 @@ const TISSUE="Connective tissue";
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
 const roman=n=>{ let r=""; [[1000,"M"],[900,"CM"],[500,"D"],[400,"CD"],[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]].forEach(p=>{ while(n>=p[0]){ r+=p[1]; n-=p[0]; } }); return r; };
 
-/* ---------- settings model (aom.set.v1): units, first weekday, theme, endurance goals. Read before the first paint so the stored theme does not flash ---------- */
-const SET_KEY="aom.set.v1", SET_DEF={units:"kg",weekStart:"mon",theme:"auto",endMin:[150,300],easyMin:75,vo2:[1,2]};
+/* ---------- settings model (aom.set.v1): units, first weekday, theme, endurance goals, rest timer and weight step. Read before the first paint so the stored theme does not flash ---------- */
+const SET_KEY="aom.set.v1", SET_DEF={units:"kg",weekStart:"mon",theme:"auto",endMin:[150,300],easyMin:75,vo2:[1,2],restOn:true,restC:120,restI:60,restBeep:false,incKg:2.5,incLb:5};
+const numIn=(v,lo,hi,d,q)=>{ if(v===null||v===""||typeof v==="boolean"||Array.isArray(v)) return d; const x=Math.round(+v/q)*q; return isFinite(x)&&x>=lo&&x<=hi?x:d; };   // a number in [lo,hi] on a grid of q, else the default
 const pairOk=(a,lo,hi,d)=>{ if(!Array.isArray(a)||a.length!==2||a[0]===null||a[1]===null||a[0]===""||a[1]==="") return d.slice(); const x=Math.round(+a[0]), y=Math.round(+a[1]); return x>=lo&&y<=hi&&x<=y?[x,y]:d.slice(); };
 function cleanSet(o){
   o=o&&typeof o==="object"&&!Array.isArray(o)?o:{}; const em=o.easyMin===null||o.easyMin===""?NaN:Math.round(+o.easyMin);
   return {units:o.units==="lb"?"lb":"kg",weekStart:o.weekStart==="sun"?"sun":"mon",theme:o.theme==="light"||o.theme==="dark"?o.theme:"auto",
-    endMin:pairOk(o.endMin,30,2000,SET_DEF.endMin),easyMin:em>=50&&em<=95?em:SET_DEF.easyMin,vo2:pairOk(o.vo2,0,14,SET_DEF.vo2)};
+    endMin:pairOk(o.endMin,30,2000,SET_DEF.endMin),easyMin:em>=50&&em<=95?em:SET_DEF.easyMin,vo2:pairOk(o.vo2,0,14,SET_DEF.vo2),
+    restOn:o.restOn!==false,restC:numIn(o.restC,30,600,SET_DEF.restC,1),restI:numIn(o.restI,15,600,SET_DEF.restI,1),restBeep:o.restBeep===true,
+    incKg:numIn(o.incKg,0.5,20,SET_DEF.incKg,0.5),incLb:numIn(o.incLb,1,50,SET_DEF.incLb,1)};
 }
 let SET=(function(){ let o=null; try{ o=JSON.parse(localStorage.getItem(SET_KEY)); }catch(e){} return cleanSet(o); })();
 function applyThemeAttr(){ const h=document.documentElement; if(SET.theme==="auto") h.removeAttribute("data-theme"); else h.setAttribute("data-theme",SET.theme); }
@@ -1482,11 +1542,11 @@ const lin=h=>new THREE.Color(h).convertSRGBToLinear();
 
 /* ---------- palette: the one place where the colours of the 3D materials and of their legends are defined ---------- */
 // PAL is theme independent; each entry is exported to CSS as --m-<name> (legend swatches, week badges, comparison table), so a swatch is always the colour of its material.
-// PALT holds what changes with the theme: the selection ochre (mirrors --ochre of the stylesheet) and the nerves (a little brighter on the dark ground). Uses: h3/h2/h1 exercise roles (prime, synergist, stabiliser),
+// PALT holds what changes with the theme: the bones (bone / boneH hover; on paper an ivory-ochre a step darker than the ground so the skeleton stands off it, ivory at night), the selection ochre (mirrors --ochre of the stylesheet) and the nerves (a little brighter on the dark ground). Uses: h3/h2/h1 exercise roles (prime, synergist, stabiliser),
 // l0 not involved, a2/a1/eq/b1/b2 comparison (much more in A ... much more in B), v0..v3 weekly volume bands, fat carried-over fatigue, end endurance load.
 const PAL={h3:"#A62E1C",h2:"#D8743F",h1:"#EBCB7F",l0:"#A89886",a2:"#3B5873",a1:"#8FA9BF",eq:"#A88B9C",b1:"#E0A07E",b2:"#9C2D1E",v0:"#E8D39B",v1:"#D9784C",v2:"#7A9E6E",v3:"#8A4D78",fat:"#C4A574",end:"#3F7F7A"};
-const PALT={light:{sel:"#B8862E",selE:"#2E1F06",sel2:"#D3AE66",hov:"#D9B25E",hovE:"#2E2008",nv:"#D8B24A",nvE:"#2B2200",nvH:"#F0D888",nvHE:"#4A3D00",nvS:"#FFDF3D",nvSE:"#6E5300",nvR:"#F6C934",nvRE:"#4A3300"},
-            dark:{sel:"#D9A84E",selE:"#3A280A",sel2:"#E8C77F",hov:"#E7C070",hovE:"#3A2A0C",nv:"#E3C05A",nvE:"#2B2200",nvH:"#F5E39A",nvHE:"#4A3D00",nvS:"#FFE766",nvSE:"#7A5A00",nvR:"#FAD45E",nvRE:"#4A3300"}};
+const PALT={light:{bone:"#C4AD86",boneH:"#D9C49E",boneHE:"#2A2008",sel:"#B8862E",selE:"#2E1F06",sel2:"#D3AE66",hov:"#D9B25E",hovE:"#2E2008",nv:"#D8B24A",nvE:"#2B2200",nvH:"#F0D888",nvHE:"#4A3D00",nvS:"#FFDF3D",nvSE:"#6E5300",nvR:"#F6C934",nvRE:"#4A3300"},
+            dark:{bone:"#E9DFC8",boneH:"#F6EED9",boneHE:"#2A2008",sel:"#D9A84E",selE:"#3A280A",sel2:"#E8C77F",hov:"#E7C070",hovE:"#3A2A0C",nv:"#E3C05A",nvE:"#2B2200",nvH:"#F5E39A",nvHE:"#4A3D00",nvS:"#FFE766",nvSE:"#7A5A00",nvR:"#FAD45E",nvRE:"#4A3300"}};
 const rootStyle=document.documentElement.style;
 Object.keys(PAL).forEach(k=>rootStyle.setProperty("--m-"+k,PAL[k]));
 const mqDark=window.matchMedia?window.matchMedia("(prefers-color-scheme: dark)"):null;
@@ -1515,10 +1575,10 @@ const M_END=stdMat(lin(PAL.end),{roughness:0.5});
 const M_GREY=stdMat(lin(PAL.l0),{transparent:true,opacity:0.16,depthWrite:false});
 const M_HOV=thMat("hov","hovE");
 const M_FADE=stdMat(lin(0x9a8d7b),{transparent:true,opacity:0.06,depthWrite:false});
-const B_MAT=stdMat(lin(0xe9dfc8),{roughness:0.75});   // ivory
+const B_MAT=thMat("bone",null,{roughness:0.75});   // bone: ivory-ochre on paper (so it stands off the pale ground), ivory at night
 const B_SEL=thMat("sel","selE",{roughness:0.5});
-const B_HOV=stdMat(lin(0xf6eed9),{emissive:lin(0x2a2008),roughness:0.75});
-const B_FADE=stdMat(lin(0xe9dfc8),{transparent:true,opacity:0.12,depthWrite:false});
+const B_HOV=thMat("boneH","boneHE",{roughness:0.75});
+const B_FADE=thMat("bone",null,{transparent:true,opacity:0.12,depthWrite:false});
 const M_SEL2=thMat("sel2","selE",{roughness:0.45}); // muscles a selected nerve reaches only through its branches
 const N_MAT=thMat("nv","nvE",{roughness:0.4});
 const N_HOV=thMat("nvH","nvHE",{roughness:0.4});
@@ -1529,9 +1589,9 @@ const FADED=new Set([M_FADE,B_FADE,M_GREY,N_FADE]);
 function applyTheme(){   // colours that follow light / dark; the stylesheet follows by itself
   const T=isDark()?PALT.dark:PALT.light;
   themed.forEach(t=>{ t[0].color.copy(lin(T[t[1]])); if(t[2]) t[0].emissive.copy(lin(T[t[2]])); });
-  rootStyle.setProperty("--m-nv",T.nv); rootStyle.setProperty("--m-sel",T.sel); dirty=true;
+  rootStyle.setProperty("--m-nv",T.nv); rootStyle.setProperty("--m-sel",T.sel); rootStyle.setProperty("--m-bone",T.bone); dirty=true;
 }
-rootStyle.setProperty("--m-nv",TH0.nv); rootStyle.setProperty("--m-sel",TH0.sel);
+rootStyle.setProperty("--m-nv",TH0.nv); rootStyle.setProperty("--m-sel",TH0.sel); rootStyle.setProperty("--m-bone",TH0.bone);
 
 /* ---------- geometry: one gzip file per quality level, fetched at runtime ---------- */
 const nextFrame=()=>new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));
@@ -1988,10 +2048,30 @@ const syncPlan=()=>{
 syncPlan();
 /* ---------- training data of a session (inst.lg): prefill, progress ---------- */
 // values of the same exercise and variation from the most recent earlier done session that has any
-function lastSets(n,vn,before){   // variations compared as option indices: [], [""] and ["",""] all mean the default (older logs store [])
+function lastLog(n,vn,before){   // {x: log entry, dt: date} of that most recent earlier session, or null. Variations compared as option indices: [], [""] and ["",""] all mean the default (older logs store [])
   const vkey=v=>hasOwn(EXI,n)?varIdx(EXI[n],v,false).join("|"):v.join("|"), vk=vkey(vn), ks=Object.keys(CAL.days).filter(k=>k<before).sort().reverse();
-  for(const k of ks){ for(const I of CAL.days[k]){ if(!I.id||I.status!=="done"||!I.lg) continue; const x=I.lg.ex.find(y=>y.n===n&&vkey(y.v)===vk&&y.sets.some(t=>t.r!==undefined||t.w!==undefined)); if(x) return x.sets; } }
-  return [];
+  for(const k of ks){ for(const I of CAL.days[k]){ if(!I.id||I.status!=="done"||!I.lg) continue; const x=I.lg.ex.find(y=>y.n===n&&vkey(y.v)===vk&&y.sets.some(t=>t.r!==undefined||t.w!==undefined)); if(x) return {x:x,dt:k}; } }
+  return null;
+}
+function lastSets(n,vn,before){ const l=lastLog(n,vn,before); return l?l.x.sets:[]; }
+/* "Last: 4 × 5 @ 100 kg · Mon 23 Nov": the done sets of that entry. Same reps everywhere = "sets × reps", else the reps listed ("5, 5, 4"); one weight or a range "20–22.5 kg" */
+function lastTxt(L){
+  const D=L.x.sets.filter(t=>t.done&&(t.r!==undefined||t.w!==undefined)); if(!D.length||L.x.skip) return "";
+  const R=D.map(t=>t.r), W=D.filter(t=>t.w!==undefined&&t.w>0).map(t=>t.w);
+  const rp=R.every(r=>r===R[0])?(R[0]===undefined?D.length+" sets":D.length+" × "+R[0]):R.map(r=>r===undefined?"–":r).join(", ");
+  const lo=W.length?Math.min(...W):0, hi=W.length?Math.max(...W):0, wt=W.length?" @ "+(wFmt(lo)===wFmt(hi)?wFmt(hi):wFmt(lo)+"–"+wFmt(hi))+" "+wU():"";
+  return rp+wt+" · "+dShort(L.dt);
+}
+/* progression hint (rule-based, no network): "try" when last time every set of the exercise was done, each with reps and the same weight, and no set fell
+   below the reps of the first one (the rep target held); then the suggestion is that weight plus one step (Settings: 2.5 kg, 5 lb). Otherwise "repeat" the
+   heaviest weight. Nothing for sets without a weight (bodyweight work). Returns {t:"try"|"repeat", kg, txt} or null. */
+function progHint(L){
+  const S=L.x.sets; if(L.x.skip||!S.length) return null;
+  const W=S.filter(t=>t.done&&t.w>0).map(t=>t.w); if(!W.length) return null;
+  const top=Math.max(...W), r0=S[0].r, held=S.every(t=>t.done&&t.r!==undefined&&t.w===top&&r0!==undefined&&t.r>=r0);
+  if(!held) return {t:"repeat",kg:top,txt:"→ repeat "+wFmt(top)+" "+wU()};
+  if(SET.units==="lb"){ const lb=Math.round(top*LB_PER_KG)+SET.incLb; return {t:"try",kg:Math.round(lb/LB_PER_KG*100)/100,txt:"→ try "+lb+" lb"}; }
+  const kg=Math.round((top+SET.incKg)*2)/2; return {t:"try",kg:kg,txt:"→ try "+wFmt(kg)+" kg"};
 }
 function logEntry(e,o,key){ // a planned entry as a log entry (strength sets prefilled from the last done session of the same exercise and variation)
   if(e.t==="e"){ const r={a:e.x.a,k:e.x.k,min:e.x.min,o:o,done:false}; ["n","len","rec","sp"].forEach(f=>{ if(e.x[f]!==undefined) r[f]=e.x[f]; }); return {t:"e",x:r}; }
@@ -2187,9 +2267,14 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 let sheetNom=0, sheetPx=0, topInset=0; // topInset: strip under the floating toolbar that also counts as covered (phone only)
 // phone: the bottom navigation bar and (while an exercise plays) the movement bar above the sheet also cover the viewport
 const ABAR_H=54+8;   // nominal height of the phone movement bar plus its gap above the sheet (CSS .animbar height)
+const STRIP=[["animBar",ABAR_H],["tdPill",44+8],["rcBan",120+8]];   // phone: what can sit in the strip above the sheet (one at a time), with nominal heights
 const NAV_H=58;   // nominal height of the phone navigation bar without the safe area (CSS --nav-h)
 function navPx(){ if(!isPhone()) return 0; const n=document.getElementById("bnav"), h=n?n.getBoundingClientRect().height:0; return h>0?h:NAV_H; }
-function abarPx(){ const b=document.getElementById("animBar"); if(!isPhone()||!b||b.hidden) return 0; const h=b.getBoundingClientRect().height; return h>0?h+8:ABAR_H; }
+function abarPx(){ // the movement bar, the today pill or the recap banner (whichever shows) above the sheet
+  if(!isPhone()) return 0;
+  for(const r of STRIP){ const b=document.getElementById(r[0]); if(b&&!b.hidden){ const h=b.getBoundingClientRect().height; return h>0?h+8:r[1]; } }
+  return 0;
+}
 const coverBot=n=>n+navPx()+abarPx();   // px covered at the bottom by a sheet of height n plus the bars
 const visFrac=n=>{const H=vp.clientHeight||1; return clamp((H-coverBot(n)-topInset)/H,0.4,1);};
 function baseRadius(){const a=camera.aspect||1; return 3.6*Math.pow(Math.max(1,0.62/a),0.85)/visFrac(sheetNom);}
@@ -2809,7 +2894,7 @@ function animStep(dt){   // advance the repetition by dt seconds; in "Both" a si
 }
 const ASPEEDS=[0.5,1,1.5];
 function syncAnimUI(){
-  const b=$("#animBar"), was=!b.hidden; b.hidden=!anim; vp.classList.toggle("animating",!!anim);
+  const b=$("#animBar"), was=!b.hidden; b.hidden=!anim; vp.classList.toggle("animating",!!anim); syncPill();
   if(was!==!b.hidden&&isPhone()) applyInset();   // the phone movement bar covers a strip above the sheet: re-centre the body
   const cb=card.querySelector('[data-act="anim"]'); if(cb){ const on=!!(anim&&anim.i===selEx); cb.textContent=on?"■ Stop movement":"▶ Play movement"; cb.setAttribute("aria-pressed",String(on)); }
   if(!anim) return;
@@ -2923,6 +3008,7 @@ function setSheet(st){
   if(prev&&sheetNom) goal.r=clamp(goal.r*visFrac(prev)/visFrac(sheetNom),0.3,rMax()); // keep the model fitted to the uncovered area
   grab.setAttribute("aria-label","Resize panel (now "+st+")");
   if(st!=="peek"&&isPhone()) $("#hint").style.opacity="0";
+  syncPill();
 }
 function peekToHalf(){ if(isPhone()&&sheet==="peek") setSheet("half"); }
 let sdrag=null, noClick=false;
@@ -2957,6 +3043,7 @@ function syncCardUI(){
   if(has&&!was){ listScroll=sbody.scrollTop; }
   side.classList.toggle("has-card",has);
   if(has&&!was) sbody.scrollTop=0; else if(!has&&was) sbody.scrollTop=listScroll;
+  if(has!==was) syncPill();
 }
 function placeCard(){ const want=isPhone()?cslot:vp; if(card.parentNode!==want) want.appendChild(card); syncCardUI(); }
 function revealCard(){ cardAway=false; if(card.classList.contains("show")) peekToHalf(); syncCardUI(); }
@@ -2964,10 +3051,12 @@ function onLayout(){
   setDpr(); placeCard(); closePops(); syncWinFold(); syncIntro();
   const ph=isPhone(); sheetNom=ph?sheetH(sheet):0; if(!ph){ topInset=0; side.style.height=""; }
   $("#hint").textContent=isCoarse()?HINT_TOUCH:HINT_MOUSE;
-  resize(); goal.r=baseRadius();
+  syncPill(); resize(); goal.r=baseRadius();
 }
 if(mqPhone) [mqPhone,mqCoarse].forEach(m=>{ if(m.addEventListener) m.addEventListener("change",onLayout); else if(m.addListener) m.addListener(onLayout); });
-if(typeof ResizeObserver!=="undefined"){ const ro=new ResizeObserver(applyInset); [side,$("#bnav"),$("#animBar")].forEach(el=>ro.observe(el)); }
+if(typeof ResizeObserver!=="undefined"){ const ro=new ResizeObserver(applyInset); [side,$("#bnav"),$("#animBar"),$("#tdPill"),$("#rcBan")].forEach(el=>ro.observe(el)); }
+// something appeared in or left the strip above the sheet (phone): keep the body fitted to the uncovered area and centred in it
+function stripChanged(f0){ if(!isPhone()) return; const f1=visFrac(sheetNom); if(!anim&&f0!==f1) goal.r=clamp(goal.r*f0/f1,0.3,rMax()); applyInset(); }
 
 /* ---------- mesh quality switch (Layers popover) ---------- */
 const segLods=[$("#segLod"),$("#segLod2")];   // the Layers popover and the Settings page show the same control
@@ -3216,6 +3305,9 @@ function setMode(m){
       heat.set(ms,mt); heatTip.set(ms,tp);}); }
   else if(m==="mv"){ heat=new Map(); heatTip=new Map();  // movement highlighting
     if(curMovement) meshLevels(MOVEMENTS[curMovement].t).forEach((l,ms)=>{heat.set(ms,HM[l]); heatTip.set(ms,l===3?"prime mover":"assists this movement");}); }
+  else if(m==="vol"&&volStats&&volStats.rc){ heat=new Map(); heatTip=new Map();   // recap of a finished session: its muscles in the colour of their 7-day status
+    volStats.map.forEach((s,ms)=>{if(s>0){const w=volStats.wk.get(ms)||s; heat.set(ms,VM[volBand(w)]); heatTip.set(ms,fmt(s)+" sets in this session · "+fmt(w)+" in 7 days");}});
+    volStats.end.forEach(ms=>{ heat.set(ms,M_END); heatTip.set(ms,"endurance load"); }); }
   else if(m==="vol"&&volStats){ heat=new Map(); heatTip=new Map(); volStats.map.forEach((s,ms)=>{if(s>0){heat.set(ms,VM[volBand(s)]); heatTip.set(ms,fmt(s)+" sets a week on average");}}); }
   else if(m==="vol"){ volCache=volumeByMesh(); heat=new Map(); heatTip=new Map();
     if(!volDay) volCache.forEach((s,ms)=>{if(s>0){heat.set(ms,VM[volBand(s)]); heatTip.set(ms,fmt(s)+" weekly sets");}});
@@ -3225,7 +3317,7 @@ function setMode(m){
       sumMeshes().forEach((g,gi)=>{ const f=M.F[day][gi]; if(f>=F_REC-EPS) g[1].forEach(ms=>{ if(!heat.has(ms)){heat.set(ms,M_FAT); heatTip.set(ms,"still recovering (carry-over "+fmt(f)+")");} }); }); } }
   applyVisuals(); syncModeUI();
 }
-function syncModeUI(){ $("#exClear").disabled=selEx===null&&!cmp; $("#tVol").checked=volOn; $("#volScope").hidden=!volOn||!!volStats; $("#btnVol").setAttribute("aria-pressed",String(volOn)); $("#volToolScope").hidden=!volOn||!!volStats; document.querySelectorAll("[data-vs]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.vs==="day")===volDay)); document.querySelectorAll("[data-vs2]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.vs2==="day")===volDay)); renderLegend(); syncBanner(); syncSxBan(); }
+function syncModeUI(){ $("#exClear").disabled=selEx===null&&!cmp; $("#tVol").checked=volOn; $("#volScope").hidden=!volOn||!!volStats; $("#btnVol").setAttribute("aria-pressed",String(volOn)); $("#volToolScope").hidden=!volOn||!!volStats; document.querySelectorAll("[data-vs]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.vs==="day")===volDay)); document.querySelectorAll("[data-vs2]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.vs2==="day")===volDay)); renderLegend(); syncBanner(); syncSxBan(); syncRcBan(); syncPill(); }
 document.querySelectorAll("[data-vs]").forEach(b=>b.onclick=()=>{ volStats=null; volDay=b.dataset.vs==="day"; if(mode==="vol") setMode("vol"); else syncModeUI(); });
 document.querySelectorAll("[data-vs2]").forEach(b=>b.onclick=()=>{ const btn=document.querySelector('[data-vs="'+(b.dataset.vs2==="day"?"day":"week")+'"]'); if(btn) btn.click(); });
 function syncBanner(){ const b=$("#cmpBanner"); b.hidden=!cmpPick; if(cmpPick&&selEx!==null) $("#cmpText").textContent="Pick a second exercise to compare with "+EX[selEx].n+"."; }
@@ -3420,7 +3512,7 @@ function addToPlan(i,v,d,sets){
   if(d===undefined) d=day;
   const dk=week[d].date, I=targetInst(dk,true); I.items.push(item); edTpl=null; if(dk!==selDate) edOpen=false; selDate=dk; curBy[dk]=I.id; planChanged();
 }
-function refreshAll(){ syncPlan(); clampSel(); volCache=null; dayCache=null; renderPlan(); renderVolSum(); renderSuggest(); renderOv(); planRefresh(); if(mode==="vol") setMode("vol"); if(sxOn) sxRender(true); }
+function refreshAll(){ syncPlan(); clampSel(); volCache=null; dayCache=null; renderPlan(); renderVolSum(); renderSuggest(); renderOv(); planRefresh(); if(mode==="vol") setMode("vol"); if(sxOn) sxRender(true); syncPill(); }
 function planChanged(){ saveCal(); refreshAll(); }
 function tplChanged(){ saveTpl(); vgen++; planChanged(); }
 function patChanged(){ vgen++; planChanged(); }
@@ -3774,12 +3866,12 @@ function renderOvDet(){
   if(M.C[d][gi]){ h+='<br>⚠ '+esc(conflictText(M,d,gi)); el.classList.add("cf"); }
   el.innerHTML=h;
 }
-function openOv(){ if(sxOn) closeStats(false); ovOn=true; ovFrom=$("#ovOpen"); ovEl.hidden=false; closePops(); syncOvView(); renderOv(); $("#ovClose").focus(); boardToSel(); }
+function openOv(){ if(sxOn) closeStats(false); ovOn=true; ovFrom=$("#ovOpen"); ovEl.hidden=false; closePops(); syncOvView(); renderOv(); $("#ovClose").focus(); boardToSel(); syncPill(); }
 function boardToSel(){ // scroll the board so that the selected date's column is the first one in view (phones: one column per screen)
   const b=$("#ovBoard"), c=b&&b.querySelector('.bcol[data-d="'+day+'"]'); if(!c||!(b.scrollWidth>b.clientWidth)) return;
   const dx=c.getBoundingClientRect().left-b.getBoundingClientRect().left-6; if(dx) b.scrollLeft=Math.max(0,b.scrollLeft+dx);
 }
-function closeOv(){ if(!ovOn) return; if(drag) dragStop(true); bPick=null; ovOn=false; ovEl.hidden=true; if(ovFrom&&ovFrom.focus&&ovFrom.isConnected) ovFrom.focus(); ovFrom=null; }
+function closeOv(){ if(!ovOn) return; if(drag) dragStop(true); bPick=null; ovOn=false; ovEl.hidden=true; if(ovFrom&&ovFrom.focus&&ovFrom.isConnected) ovFrom.focus(); ovFrom=null; syncPill(); }
 $("#ovOpen").onclick=openOv; $("#ovClose").onclick=closeOv;
 /* ---------- schedule board: 7 day columns, cards in schedule order (entriesOf) ----------
    Drag with pointer events (mouse: after 4 px, touch: after a 300 ms long press, so scrolling still works; Escape cancels), Alt+arrows on a focused card, sets stepper, inline minutes,
@@ -4060,7 +4152,9 @@ function tdBlock(e,i){
   const x=e.x, sk=!!x.skip, skb=nm=>'<button class="linkbtn tsk" type="button" data-act="skip" aria-pressed="'+sk+'">'+(sk?'Skipped · undo':'Skip')+'<span class="sronly"> '+nm+'</span></button>'+(x.add?'<button class="linkbtn tsk tdrm warnb" type="button" data-act="rmex">Remove<span class="sronly"> '+nm+'</span></button>':'');
   if(e.t==="s"){
     const dn=x.sets.filter(t=>t.done).length, nm=esc(x.n), vt=x.v.filter(Boolean).join(", "), xi=hasOwn(EXI,x.n)?EXI[x.n]:-1, vg=x.add&&xi>=0?(EX[xi].v||[]):[], vc=vg.length?varIdx(xi,x.v,false):[];
-    return '<article class="tx s'+(sk?' skip':'')+(!sk&&x.sets.length&&dn===x.sets.length?' done':'')+'" data-i="'+i+'" aria-label="'+nm+'"><header><div class="tn"><b>'+nm+'</b>'+(vt&&!vg.length?'<small>'+esc(vt)+'</small>':'')+'</div><span class="tcnt" title="Sets done">'+dn+'/'+x.sets.length+'</span>'+skb(nm)+'</header>'+
+    const I=tdInst(), LL=I?lastLog(x.n,x.v,I.dt):null, lt=LL?lastTxt(LL):"", hn=lt&&hasFeature("progression")?progHint(LL):null;
+    const last=lt?'<span class="tlast">Last: '+esc(lt)+(hn?' <button class="linkbtn thint'+(hn.t==="try"?'':' rep')+'" type="button" data-act="hint" data-kg="'+hn.kg+'" title="Use this weight for the sets that are not done yet">'+esc(hn.txt)+'<span class="sronly"> for '+nm+'</span></button>':'')+'</span>':'';
+    return '<article class="tx s'+(sk?' skip':'')+(!sk&&x.sets.length&&dn===x.sets.length?' done':'')+'" data-i="'+i+'" aria-label="'+nm+'"><header><div class="tn"><b>'+nm+'</b>'+(vt&&!vg.length?'<small>'+esc(vt)+'</small>':'')+last+'</div><span class="tcnt" title="Sets done">'+dn+'/'+x.sets.length+'</span>'+skb(nm)+'</header>'+
       (vg.length?'<div class="tvar">'+vg.map((g,gi)=>'<select data-tdv="'+gi+'" aria-label="'+esc(x.n+" "+g[0])+'">'+g[1].map((op,oi)=>'<option value="'+oi+'"'+(vc[gi]===oi?' selected':'')+'>'+esc(op[0]||"Default")+'</option>').join("")+'</select>').join("")+'</div>':'')+
       '<div class="tcols" aria-hidden="true"><span>Set</span><span>Done</span><span>Reps</span><span>'+wU()+'</span><span></span></div>'+x.sets.map((t,k)=>tdSetRow(t,k,nm)).join("")+
       '<button class="linkbtn tadd" type="button" data-act="addset">+ Add set<span class="sronly"> to '+nm+'</span></button></article>';
@@ -4101,9 +4195,9 @@ function tdRefresh(){ // after an edit: summary, counts and check states only (i
   });
 }
 function tdField(t){
-  const a=t.closest(".tx"), f=t.dataset.f, e=a&&tdEnts[+a.dataset.i]; if(!e||!f) return; const x=e.x;
+  const a=t.closest(".tx"), f=t.dataset.f, e=a&&tdEnts[+a.dataset.i]; if(!e||!f) return; const x=e.x; let was=true, s=null;
   if(e.t==="s"){
-    const r=t.closest(".tset"), s=r&&x.sets[+r.dataset.s]; if(!s) return;
+    const r=t.closest(".tset"); s=r&&x.sets[+r.dataset.s]; if(!s) return; was=s.done;
     if(f==="done") s.done=t.checked;
     else if(f==="r"||f==="w"){
       const v=t.value===""?undefined:nN(f==="w"?wParse(t.value):t.value,0,999); if(t.value!==""&&v===undefined) return;
@@ -4115,6 +4209,7 @@ function tdField(t){
     if(v!==(x[f]||0)){ if(v) { x[f]=v; x.done=true; } else delete x[f]; }
   }
   saveCal(); tdRefresh();
+  if(s&&!was&&s.done&&!x.skip&&!logStats(tdLog()).complete) restStart(x.n);   // a set just became done: rest (not after the last one of the session)
 }
 tdBody.addEventListener("input",e=>{ if(e.target.dataset.f&&e.target.dataset.f!=="done") tdField(e.target); });
 tdBody.addEventListener("change",e=>{
@@ -4125,6 +4220,7 @@ tdBody.addEventListener("click",e=>{
   const b=e.target.closest("button[data-act]"); if(!b) return;
   const a=b.closest(".tx"), i=+a.dataset.i, en=tdEnts[i], act=b.dataset.act; if(!en) return; const x=en.x; let fs=null, last=false;
   if(act==="rmex"){ if(x.add&&tdRemoveAdded(en)){ planChanged(); tdRender(); tdMsg("Removed "+(en.t==="s"?x.n:actOf(x).n)+" from the session."); $("#tdAddEx").focus(); } return; }
+  if(act==="hint"&&en.t==="s"){ const kg=+b.dataset.kg; if(!(kg>0)) return; x.sets.forEach(t=>{ if(!t.done) t.w=kg; }); saveCal(); tdRender(); tdMsg("Weight "+wFmt(kg)+" "+wU()+" set for the open sets of "+x.n+"."); return; }
   if(act==="skip"){ if(x.skip) delete x.skip; else x.skip=true; fs='[data-act="skip"]'; }
   else if(act==="addset"&&en.t==="s"){ if(x.sets.length>=40) return; const l=x.sets[x.sets.length-1], t={done:false}; if(l){ if(l.r!==undefined) t.r=l.r; if(l.w!==undefined) t.w=l.w; } x.sets.push(t); fs='.tset [data-f="r"]'; last=true; }
   else if(act==="rmset"&&en.t==="s"){ x.sets.splice(+b.closest(".tset").dataset.s,1); fs='[data-act="addset"]'; }
@@ -4133,6 +4229,42 @@ tdBody.addEventListener("click",e=>{
   const ns=tdBody.querySelectorAll('.tx[data-i="'+i+'"] '+fs), n=ns.length?(last?ns[ns.length-1]:ns[0]):null; if(n) n.focus();
 });
 function tdMsg(t){ $("#tdMsg").textContent=t; }
+/* rest timer (v3.6, FEATURES.timer): a set that becomes done starts a countdown shown in #tdRest under the header. The end is a timestamp (Date.now),
+   so a sleeping tab catches up when it wakes; nothing is persisted. At zero: navigator.vibrate, a highlighted row for a few seconds and (Settings, off by
+   default) a short WebAudio beep. Default length: SET.restC for multi-joint lifts, SET.restI for the rest (multiJoint below). */
+let rest=null, restIv=0;   // rest = {id: session, n: exercise, end: ms, dur: s, up: ms when it reached zero}
+const MJ={};
+function multiJoint(i){ // derived from the exercise data: several body regions working (level >= 2), a press (shoulder + upper arm), a squat / lunge / hinge (thigh + hip prime movers) or a heavy lift outside arm and calf work; never core, neck or light (ld 1) work
+  if(MJ[i]!==undefined) return MJ[i]; const e=EX[i], G=l=>new Set(e.t.filter(t=>t[2]>=l).map(t=>DB[t[0]].g)), g2=G(2), g3=G(3);
+  let m=false; if(e.ld>1&&e.c!=="Core"&&e.c!=="Neck") m=g2.size>=3||(g2.has("Shoulder")&&g2.has("Upper arm"))||(g3.has("Thigh")&&g3.has("Hip"))||(e.ld===3&&e.c!=="Arms"&&![...g3].every(g=>g==="Lower leg"));
+  return MJ[i]=m;
+}
+const restOf=n=>hasOwn(EXI,n)&&multiJoint(EXI[n])?SET.restC:SET.restI;
+const mmss=s=>Math.floor(s/60)+":"+String(s%60).padStart(2,"0");
+function restStart(n){
+  if(!hasFeature("timer")||!SET.restOn) return; const d=restOf(n);
+  rest={id:tdId,n:n,end:Date.now()+d*1000,dur:d,up:0}; clearInterval(restIv); restIv=setInterval(restTick,250); restRender();
+}
+function restClear(){ rest=null; clearInterval(restIv); restIv=0; restRender(); }
+function restAdj(d){ if(!rest) return; if(rest.up){ restClear(); return; } rest.end+=d*1000; rest.dur=Math.max(1,rest.dur+d); restTick(); }
+function restTick(){
+  if(!rest){ clearInterval(restIv); restIv=0; return; } const now=Date.now();
+  if(!rest.up&&now>=rest.end) restDone(); else if(rest.up&&now-rest.up>6000){ restClear(); return; }
+  restRender();
+}
+function restDone(){
+  rest.up=Date.now();
+  try{ if(navigator.vibrate) navigator.vibrate([200,100,200]); }catch(_){}
+  if(SET.restBeep) try{ const A=window.AudioContext||window.webkitAudioContext; if(A){ const c=new A(), o=c.createOscillator(), g=c.createGain(); o.frequency.value=880; g.gain.value=0.15; o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime+0.18); o.onended=()=>{ try{ c.close(); }catch(_){} }; } }catch(_){}
+}
+function restRender(){
+  const el=$("#tdRest"), on=!!rest&&rest.id===tdId; el.hidden=!on; if(!on) return;
+  const left=rest.up?0:Math.max(0,Math.ceil((rest.end-Date.now())/1000));
+  el.classList.toggle("up",!!rest.up); $("#tdRestT").textContent=rest.up?"Go":mmss(left); $("#tdRestN").textContent=rest.up?"next set":"after "+rest.n;
+  $("#tdRestB").style.width=(rest.up?0:Math.min(100,left/Math.max(1,rest.dur)*100)).toFixed(1)+"%"; el.setAttribute("aria-label",rest.up?"Rest over":"Rest "+mmss(left)+" left");
+}
+$("#tdRest").addEventListener("click",e=>{ const b=e.target.closest("[data-rest]"); if(!b) return; const v=b.dataset.rest; if(v==="skip") restClear(); else restAdj(+v); });
+document.addEventListener("visibilitychange",()=>{ if(rest) restTick(); });
 /* adding to the session from the Today view: "+ Add exercise" (search like the planner's, 3 sets, default variation) and "+ Add endurance". The new entry goes into the log (lg, flag add:true) AND into the
    instance's plan (items / ses) so volume, date chips, statistics and "Sync with plan" agree; a pattern session is stored first, the template is never touched (except by the optional offer on Finish). */
 const tdExForm=$("#tdExForm"), tdEndForm=$("#tdEndForm"), tdQ=$("#tdQ"), tdRes=$("#tdRes"), tdOffer=$("#tdOffer"); let tdEndSel={};
@@ -4228,11 +4360,13 @@ $("#tdOfferYes").onclick=()=>{
 function openToday(id,from){
   const I=findInst(id); if(!I||!I.lg) return; if(ovOn) closeOv(); closePops();
   tdForms(null); tdOffer.hidden=true;
-  tdId=I.id; tdFrom=from||null; tdOn=true; tdMsg(""); tdEl.hidden=false; $("#tdDate").textContent=(I.dt===todayKey()?"Today · ":"")+fmtDate(I.dt); $("#tdTitle").textContent=I.name; tdRender(); $("#tdClose").focus();
+  if(rest&&rest.id!==I.id) restClear(); rcPend=null;
+  tdId=I.id; tdFrom=from||null; tdOn=true; tdMsg(""); tdEl.hidden=false; restRender(); syncPill(); $("#tdDate").textContent=(I.dt===todayKey()?"Today · ":"")+fmtDate(I.dt); $("#tdTitle").textContent=I.name; tdRender(); $("#tdClose").focus();
 }
 function closeToday(){
-  if(!tdOn) return; tdOn=false; tdEl.hidden=true; tdForms(null); tdOffer.hidden=true; planChanged();
+  if(!tdOn) return; tdOn=false; tdEl.hidden=true; tdForms(null); tdOffer.hidden=true; const rp=rcPend; rcPend=null; planChanged();
   const f=tdFrom&&tdFrom.isConnected&&!tdFrom.disabled&&!tdFrom.closest("[hidden]")?tdFrom:$("#sessList .strain"); tdFrom=null; if(f&&!f.disabled&&f.focus) f.focus();
+  if(rp) showRecap(findInst(rp));   // the first Finish of a session: show what it trained on the body
 }
 function startInst(I,from){ // open the session's training data; the first start stores a pattern session and copies the plan into the log
   if(!I) return; mat(I); if(I.status==="skipped") I.status="planned";
@@ -4258,7 +4392,7 @@ $("#hist").addEventListener("click",e=>{ const b=e.target.closest("[data-id]"); 
 $("#tdClose").onclick=closeToday;
 $("#tdFinish").onclick=()=>{
   const I=tdInst(); if(!I||!tdOffer.hidden){ closeToday(); return; }   // with the template offer showing, "Close" = Not now
-  const fresh=!I.finishedAt; if(fresh){ I.finishedAt=Date.now(); I.status="done"; saveCal(); }
+  const fresh=!I.finishedAt; if(fresh){ I.finishedAt=Date.now(); I.status="done"; saveCal(); rcPend=I.id; restClear(); }
   if(fresh&&tdOfferShow(I)){ tdRefresh(); return; }
   closeToday();
 };
@@ -4271,6 +4405,55 @@ $("#tdSync").onclick=()=>{
   });
   if(n) saveCal(); tdMsg(n?"Added "+n+" from the plan.":"Already in sync with the plan."); tdRender();
 };
+/* today pill (v3.6): one tap from opening the app to logging today's session. The first open session of today with content (planned or started, not finished
+   or skipped); hidden while an exercise plays, an overlay is open, the recap or the statistics banner shows, a card covers the phone panes or the sheet is full. On phones it sits in
+   the strip above the sheet like the movement bar (counted by abarPx / coverBot), on desktop bottom-left in the viewport. Updated by refreshAll() and the
+   overlay / sheet / mode changes. */
+var pillOK;   // set once start-up is through (syncPill reads state declared further down)
+function pillInst(){ return insts(todayKey()).find(I=>I.status==="planned"&&!I.finishedAt&&(I.items.length||I.ses.length||(I.lg&&logStats(I.lg).units>0)))||null; }
+function syncPill(){
+  if(!pillOK) return; const b=$("#tdPill"), I=pillInst(), f0=visFrac(sheetNom);
+  const show=!!I&&!anim&&!ovOn&&!tdOn&&!stOn&&!sxOn&&!(mode==="vol"&&volStats)&&!(isPhone()&&(sheet==="full"||side.classList.contains("has-card"))), was=!b.hidden;
+  b.hidden=!show;
+  if(show){
+    const st=I.lg?logStats(I.lg):null, go=!!(st&&(I.startedAt||lgAnyDone(I.lg))), pr=st?(st.sets?st.done+"/"+st.sets+" sets":st.minDone+"/"+st.min+" min"):"";
+    $("#tdPillT").innerHTML=go?'Continue '+esc(I.name)+' <small>· '+esc(pr)+'</small>':esc(I.name)+' <small>· today</small>';
+    b.setAttribute("aria-label",(go?"Continue today's session ":"Start today's session ")+I.name+(go?", "+pr+" done":"")); b.dataset.id=I.id;
+  }
+  if(was!==show) stripChanged(f0);
+}
+$("#tdPill").onclick=function(){ const I=pillInst(); if(I) startInst(I,this); };
+/* recap after the first "Finish session" (v3.6): the Today view closes and the body shows what the session trained: muscles with done sets in the colour
+   of their 7-day status (VM bands of the week ending on the session's date, like the "Selected day" heatmap), endurance-loaded muscles teal. It rides on
+   mode "vol" with volStats = {map: sets per mesh in this session, wk: 7-day sets per mesh, end: [meshes], rc: {...}}; #rcBan (desktop bottom-left, phones
+   in the strip above the sheet, which drops to peek) has "Done" (back to the normal view) and "Save image" (the toolbar's PNG export). */
+let rcPend=null;   // id of the session finished just now: closing the Today view shows its recap
+function showRecap(I){
+  if(!I) return; const c=doneOf(I), mp=volumeByMesh(c.items), end=[];
+  c.ses.forEach(x=>{ const raw=sesRaw(x); actOf(x).p.forEach(e=>{ if(e[2]*raw>=.4) (byKey[e[0]]||[]).forEach(ms=>{ if((!e[1]||ms.userData.part===e[1])&&!(mp.get(ms)>0)&&end.indexOf(ms)<0) end.push(ms); }); }); });
+  if(![...mp.values()].some(v=>v>0)&&!end.length) return;
+  const wkItems=[]; for(let k=0;k<7;k++) dayContent(addD(I.dt,-k)).items.forEach(x=>wkItems.push(x));
+  const wk=volumeByMesh(wkItems), gs=groupSets(c.items), gw=groupSets(wkItems);
+  const top=SUMMARY.map((g,gi)=>[g[0],gs[gi]]).filter(g=>g[1]>=1).sort((a,b)=>b[1]-a[1]).slice(0,3), inT=SUMMARY.map((g,gi)=>gi).filter(gi=>gs[gi]>=1&&volBand(gw[gi])===2).map(gi=>SUMMARY[gi][0].toLowerCase());
+  const dur=I.startedAt&&I.finishedAt?Math.round((I.finishedAt-I.startedAt)/60000):0, emin=c.ses.reduce((a,x)=>a+x.min,0), min=dur>=1&&dur<=360?dur:emin;
+  const sets=c.items.reduce((a,x)=>a+x.sets,0);
+  volStats={map:mp,wk:wk,end:end,rc:{id:I.id,t:I.name+" done",s:[sets?sets+" set"+(sets===1?"":"s"):"",min?min+" min":""].filter(Boolean).join(" · "),
+    g:top.length?"Most work: "+top.map(g=>'<span class="rcgi">'+esc(g[0])+" <b>"+fmt(g[1])+"</b></span>").join(" · "):"",w:inT.length?"In target this week: "+inT.join(", "):""},label:""};
+  selEx=null; cmp=null; cmpPick=false; view="sel"; volOn=true; volDay=false; if(!state.muscles){ state.muscles=true; $("#tMuscles").checked=true; }
+  if(isPhone()&&sheet!=="peek") setSheet("peek");
+  setMode("vol"); renderCard(); syncExList();
+  // frame the whole body from the side that worked more (front or back)
+  const ms=[]; mp.forEach((v,m)=>{ if(v>=1) ms.push(m); }); goal.phi=1.48; setTarget(0,0.88,0); goal.r=baseRadius(); goal.theta=nearestAngle(orbit.theta,0); if(ms.length) faceTowards(ms);
+}
+function syncRcBan(){
+  if(!pillOK) return; const b=$("#rcBan"), on=mode==="vol"&&!!volStats&&!!volStats.rc, was=!b.hidden, f0=visFrac(sheetNom); b.hidden=!on;
+  if(on){ const r=volStats.rc; $("#rcT").textContent=r.t; $("#rcS").textContent=r.s; $("#rcG").innerHTML=r.g; $("#rcW").textContent=r.w;
+    $("#rcLeg").innerHTML='<small>Colour: sets in the 7 days up to this session, vs your goal</small>'+$("#volLegend").innerHTML.replace(/<span><i class="sw l0"><\/i>None<\/span>/,"")+(volStats.end.length?'<span><i class="sw end"></i>Endurance</span>':''); }
+  if(was!==on) stripChanged(f0);
+}
+function rcDone(){ volStats=null; volOn=false; setMode(null); renderCard(); syncExList(); }
+$("#rcDone").onclick=rcDone;
+$("#rcImg").onclick=()=>$("#saveImg").click();
 window.addEventListener("keydown",e=>{
   if(e.key==="Escape"&&tdOn&&!stOn){
     e.preventDefault(); e.stopImmediatePropagation();
@@ -4651,6 +4834,7 @@ function copyLink(btn){
 const LICPUB={"kty":"EC","crv":"P-256","x":"do9Ry1KZuCJwTVNef3eGfkvgWEwOj0uO1kISDKdug4M","y":"1zckDJHrjAnHqyH6TkLIx3hAzCeIlBbK0guEC-rUIYU"}, LICREV=[], LIC_KEY="aom.lic.v1";
 const FEATURES={   // pattern for later: name -> {pro:true means Pro only, label}. Nothing is gated yet, so every entry is pro:false.
   stats:{pro:false,label:"Training statistics"},
+  timer:{pro:false,label:"Rest timer"},
   templates:{pro:false,label:"Programme templates"},
   progression:{pro:false,label:"Progression suggestions"}
 };
@@ -4721,20 +4905,22 @@ $("#licDel").onclick=()=>{ try{ localStorage.removeItem(LIC_KEY); }catch(e){} li
 //@licexport
 
 /* ---------- settings page (v2.1): one place for everything that is configuration. An overlay on the viewport like the week overview (full screen on phones) ---------- */
-// The controls keep their ids when they moved here (goal #goalSel, heart rate #hrMax, equipment #eqchips, backup #exportData, licence #lic ...). Persisted: aom.set.v1 (units, weekStart, theme, endMin, easyMin, vo2);
+// The controls keep their ids when they moved here (goal #goalSel, heart rate #hrMax, equipment #eqchips, backup #exportData, licence #lic ...). Persisted: aom.set.v1 (units, weekStart, theme, endMin, easyMin, vo2, restOn, restC, restI, restBeep, incKg, incLb);
 // the goal stays in aom.goal.v1, heart rate in aom.hr.v1, equipment in aom.eq.v1, mesh quality in aom.lod.v1 and the licence in aom.lic.v1.
-const stEl=$("#st"), STSEC={goals:"#stGoals",hr:"#stHr",eq:"#stEq",units:"#stUnits",display:"#stDisp",data:"#stData",lic:"#stLic",about:"#stAbout"}; let stOn=false, stFrom=null;
+const stEl=$("#st"), STSEC={goals:"#stGoals",hr:"#stHr",eq:"#stEq",units:"#stUnits",log:"#stLog",display:"#stDisp",data:"#stData",lic:"#stLic",about:"#stAbout"}; let stOn=false, stFrom=null;
 function saveSet(){ store.set(SET_KEY,SET); }
 function syncSetUI(){
   const pr=(sel,attr,val)=>document.querySelectorAll(sel).forEach(b=>b.setAttribute("aria-pressed",String(b.dataset[attr]===val)));
   pr("#segUnit [data-unit]","unit",SET.units); pr("#segWeek [data-ws]","ws",SET.weekStart); pr("#segTheme [data-th]","th",SET.theme);
   $("#endLo").value=SET.endMin[0]; $("#endHi").value=SET.endMin[1]; $("#easyMin").value=SET.easyMin; $("#vo2Lo").value=SET.vo2[0]; $("#vo2Hi").value=SET.vo2[1];
   $("#endReset").disabled=SET.endMin.join()===SET_DEF.endMin.join()&&SET.easyMin===SET_DEF.easyMin&&SET.vo2.join()===SET_DEF.vo2.join();
+  pr("#segRest [data-rst]","rst",SET.restOn?"on":"off"); pr("#segBeep [data-beep]","beep",SET.restBeep?"on":"off"); $("#restC").value=SET.restC; $("#restI").value=SET.restI;
+  const lb=SET.units==="lb", inc=$("#incStep"); inc.value=lb?SET.incLb:SET.incKg; inc.min=lb?1:0.5; inc.max=lb?50:20; inc.step=lb?1:0.5; $("#incU").textContent=wU();
 }
 function setChanged(what){   // a setting changed: persist and refresh whatever shows it
   saveSet(); syncSetUI();
   if(what==="theme"){ applyThemeAttr(); applyTheme(); }
-  else if(what==="units"){ if(tdOn) tdRender(); }
+  else if(what==="units"||what==="log"){ if(tdOn) tdRender(); }
   else if(what==="week"){ renderPat(); }
   else if(what==="endurance"){ renderBal(); renderOv(); }
   if(sxOn) sxRender();
@@ -4752,15 +4938,20 @@ $("#endLo").onchange=()=>pairInput("endMin","#endLo","#endHi",30,2000,false); $(
 $("#vo2Lo").onchange=()=>pairInput("vo2","#vo2Lo","#vo2Hi",0,14,false); $("#vo2Hi").onchange=()=>pairInput("vo2","#vo2Lo","#vo2Hi",0,14,true);
 $("#easyMin").onchange=()=>{ const v=Math.round(+$("#easyMin").value); SET.easyMin=isFinite(v)&&$("#easyMin").value!==""?Math.min(95,Math.max(50,v)):SET.easyMin; setChanged("endurance"); };
 $("#endReset").onclick=()=>{ SET.endMin=SET_DEF.endMin.slice(); SET.easyMin=SET_DEF.easyMin; SET.vo2=SET_DEF.vo2.slice(); setChanged("endurance"); };
+// training log (v3.6): rest timer on/off, rest seconds for multi-joint lifts and isolation work, beep, weight step of the progression hint (kg or lb, in the chosen unit)
+document.querySelectorAll("#segRest [data-rst]").forEach(b=>b.onclick=()=>{ SET.restOn=b.dataset.rst==="on"; if(!SET.restOn) restClear(); setChanged("log"); });
+document.querySelectorAll("#segBeep [data-beep]").forEach(b=>b.onclick=()=>{ SET.restBeep=b.dataset.beep==="on"; setChanged("log"); });
+[["#restC","restC",30],["#restI","restI",15]].forEach(r=>{ $(r[0]).onchange=e=>{ const v=Math.round(+e.target.value); if(e.target.value!==""&&isFinite(v)) SET[r[1]]=Math.min(600,Math.max(r[2],v)); setChanged("log"); }; });
+$("#incStep").onchange=e=>{ const v=+String(e.target.value).replace(",","."), lb=SET.units==="lb"; if(e.target.value!==""&&isFinite(v)){ if(lb) SET.incLb=Math.min(50,Math.max(1,Math.round(v))); else SET.incKg=Math.min(20,Math.max(0.5,Math.round(v*2)/2)); } setChanged("log"); };
 // open / close
 function openSettings(sec,from){
-  stFrom=from||document.activeElement; stOn=true; stEl.hidden=false; closePops(); syncSetUI(); renderHr(); syncGoalUI(); syncLodUI(); $("#bnSet").classList.add("on"); $("#bnav").classList.add("st");
+  stFrom=from||document.activeElement; stOn=true; stEl.hidden=false; closePops(); syncSetUI(); renderHr(); syncGoalUI(); syncLodUI(); $("#bnSet").classList.add("on"); $("#bnav").classList.add("st"); syncPill();
   const t=sec&&STSEC[sec]?$(STSEC[sec]):null, body=$("#stBody");
   if(t){ if(t.scrollIntoView) try{ t.scrollIntoView({block:"start"}); }catch(_){} else body.scrollTop=t.offsetTop; } else body.scrollTop=0;
   const f=t&&t.querySelector("input,select,textarea,button"); (f||$("#stClose")).focus(); syncHash();
 }
 function closeSettings(){
-  if(!stOn) return; stOn=false; stEl.hidden=true; syncHash(); $("#bnSet").classList.remove("on"); $("#bnav").classList.remove("st");
+  if(!stOn) return; stOn=false; stEl.hidden=true; syncHash(); $("#bnSet").classList.remove("on"); $("#bnav").classList.remove("st"); syncPill();
   const f=stFrom&&stFrom.isConnected&&!stFrom.closest("[hidden]")?stFrom:$(isPhone()?"#bnSet":"#stOpen"); stFrom=null; if(f&&f.focus) f.focus();
 }
 document.addEventListener("click",e=>{ const t=e.target.closest&&e.target.closest("[data-stopen]"); if(!t) return; const k=t.dataset.stopen; if(stOn&&t.closest("#st")) return; openSettings(k,t); });
@@ -5062,11 +5253,11 @@ function sxRender(rebuild){
   sxSummary(S); sxCalendar(S); sxGrid(S); sxVolume(S); sxStrengthSec(S); sxEndurance(S);
 }
 function openStats(from){
-  if(ovOn) closeOv(); closePops(); if(!sxOn){ sxFrom=from||document.activeElement; sxOn=true; sxEl.hidden=false; sxBuild(); sxRender(); syncHash(); }
+  if(ovOn) closeOv(); closePops(); if(!sxOn){ sxFrom=from||document.activeElement; sxOn=true; sxEl.hidden=false; sxBuild(); sxRender(); syncHash(); syncPill(); }
   $("#sxClose").focus();
 }
 function closeStats(back){
-  if(!sxOn) return; sxOn=false; sxEl.hidden=true; syncHash();
+  if(!sxOn) return; sxOn=false; sxEl.hidden=true; syncHash(); syncPill();
   if(back!==false){ const f=sxFrom&&sxFrom.isConnected&&!sxFrom.closest("[hidden]")?sxFrom:$("#sxOpen"); if(f&&f.focus) f.focus(); }
   sxFrom=null;
 }
@@ -5077,7 +5268,7 @@ window.addEventListener("keydown",e=>{ if(e.key==="Escape"&&sxOn&&!stOn&&!tdOn){
 window.addEventListener("resize",()=>{ if(!sxOn) return; clearTimeout(sxRT); sxRT=setTimeout(()=>sxRender(),150); });
 // show the average weekly sets of the range on the body (the volume heatmap with the range's average instead of the 7-day plan)
 function syncSxBan(){
-  const on=mode==="vol"&&!!volStats; $("#sxBan").hidden=!on; if(!on) return;
+  const on=mode==="vol"&&!!volStats&&!volStats.rc; $("#sxBan").hidden=!on; if(!on) return;
   $("#sxBanT").textContent="Average weekly sets"; $("#sxBanS").textContent=volStats.label+" · goal "+rng(tg.lo,tg.hi)+" sets per week"; $("#sxBanLeg").innerHTML=$("#volLegend").innerHTML;
 }
 function sxShowBody(){
@@ -5099,6 +5290,7 @@ if(mqDark){ const onTheme=()=>applyTheme(); if(mqDark.addEventListener) mqDark.a
 if(window.MutationObserver) new MutationObserver(applyTheme).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]});
 syncSetUI(); buildList(); buildEq(); buildExList(); buildBest(); renderHr(); renderPlan(); renderVolSum(); renderSuggest(); syncGoalUI(); syncModeUI(); applyVisuals();
 if(store.get(NV_KEY,false)===true) setNerves(true);   // the Nerves layer is remembered per viewer
+pillOK=true; syncPill();   // today pill: from here on the whole state exists
 if(applyHash(location.hash)){ hashReady=true; syncHash(); } else hashReady=true;
 licStartup();   // async, does not block start-up
 $("#loading").remove();

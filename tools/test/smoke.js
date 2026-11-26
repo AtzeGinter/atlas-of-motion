@@ -93,6 +93,13 @@ async function paletteRun(){
  xd.documentElement.setAttribute('data-theme','dark');await sleep(60);
  ok(same(selMat().color,oD)&&xd.documentElement.style.getPropertyValue('--m-sel').toLowerCase()===oD.toLowerCase(),'... and follows to the dark theme --ochre ('+oD+') when the theme changes');
  xd.documentElement.setAttribute('data-theme','light');await sleep(60);
+ {// v3.6 bone contrast: the bone materials come from PALT (light: an ivory-ochre a step darker than the paper ground; dark: ivory) and follow the theme
+  const bL=(js.match(/light:\{bone:"(#[0-9A-Fa-f]{6})"/)||[])[1],bD=(js.match(/dark:\{bone:"(#[0-9A-Fa-f]{6})"/)||[])[1],bone=()=>meshes('bone').find(m=>!m.userData.key.includes('humerus')).material,vpA=(css.match(/:root\{[^}]*--vp-a:(#[0-9A-Fa-f]{6})/)||[])[1];
+  const lum=h=>{const c=lin(h);return 0.2126*c.r+0.7152*c.g+0.0722*c.b;};
+  ok(bL&&bD&&bL!==bD&&same(bone().color,bL)&&xd.documentElement.style.getPropertyValue('--m-bone').toLowerCase()===bL.toLowerCase()&&lum(vpA)/lum(bL)>1.5,'bones: light-theme bone '+bL+' from PALT (--m-bone), clearly darker than the viewport ground '+vpA+' (luminance ratio '+(lum(vpA)/lum(bL)).toFixed(2)+')');
+  xd.documentElement.setAttribute('data-theme','dark');await sleep(60);
+  ok(same(bone().color,bD),'... and ivory '+bD+' on the dark ground');
+  xd.documentElement.setAttribute('data-theme','light');await sleep(60);}
  // legend swatches: the CSS classes reference the --m-* properties, which the script sets from the same PAL entries the materials are made from
  const P=n=>xd.documentElement.style.getPropertyValue('--m-'+n);
  ok(['l3:h3','l2:h2','l1:h1','ca2:a2','ca1:a1','ceq:eq','cb1:b1','cb2:b2','v0:v0','v1:v1','v2:v2','v3:v3','sw.fat:fat','sw.end:end'].every(r=>{const a=r.split(':');return css.includes('.'+a[0]+'{background:var(--m-'+a[1]+')')&&/^#[0-9A-Fa-f]{6}$/.test(P(a[1]));}),'every legend swatch class (.l3 .l2 .l1 .ca2 .cb2 .v0-.v3 .fat .end ...) takes its colour from the --m-* palette property');
@@ -1463,7 +1470,7 @@ async function settingsRun(){
  // ---- settings page: open / close ----
  ok(xq('#st').hidden&&xq('#stOpen')&&xq('.tabrow').contains(xq('.tabs'))&&xq('.tabrow').contains(xq('#stOpen'))&&xq('#shead').contains(xq('#stOpen'))&&xq('#stOpen').getAttribute('aria-label')==='Settings','Settings: hidden at start; the gear sits next to the tabs in the sidebar header');
  xq('#stOpen').focus();xq('#stOpen').click();
- ok(!xq('#st').hidden&&xq('#vp').contains(xq('#st'))&&xd.activeElement===xq('#stClose')&&/(^#|&)settings$/.test(x.location.hash)&&xqa('#st .sec h2').map(h=>h.firstChild.textContent.trim()).join('|')==='Training goals|Heart rate|Equipment|Units and calendar|Display|Data|Pro & licence|About','Settings: the gear opens the overlay in the viewport; sections I-VIII; hash #settings');
+ ok(!xq('#st').hidden&&xq('#vp').contains(xq('#st'))&&xd.activeElement===xq('#stClose')&&/(^#|&)settings$/.test(x.location.hash)&&xqa('#st .sec h2').map(h=>h.firstChild.textContent.trim()).join('|')==='Training goals|Heart rate|Equipment|Units and calendar|Training log|Display|Data|Pro & licence|About','Settings: the gear opens the overlay in the viewport; sections I-IX (v3.6: Training log after Units); hash #settings');
  key(xq('#stClose'),'Escape');
  ok(xq('#st').hidden&&!/settings/.test(x.location.hash)&&xd.activeElement===xq('#stOpen'),'Settings: Escape closes it, #settings removed from the hash, focus returns to the gear');
  xq('#stOpen').click();xq('#stClose').click();
@@ -2186,6 +2193,146 @@ async function endRun(){
 }
 // ---- schedule board in the week overview: view switch, cards, drag and drop (pointer events), keyboard moves, slot picker, steppers, persistence ----
 // ---- exercise animation: rig (spine, forearm rotation, fingers), skin weights, every motion (bar in both hands, planted feet), playback, scrubbing, uniform fallback, rest pose, reduced motion ----
+// ---- v3.6: today pill, rest timer, "Last:" line with the progression hint, muted prefill, recap on the body after Finish ----
+async function v36Run(){
+ const S=(n,r,w)=>Array.from({length:n},()=>({r:r,w:w,done:true})),M=a=>a.map(x=>({r:x[0],w:x[1],done:true}));
+ const past={id:'i1',tid:'t1',pid:'p1',name:'Push',items:[{n:'Barbell bench press',sets:4,v:[],o:0},{n:'Overhead press',sets:3,v:[],o:1},{n:'Lateral raise',sets:3,v:[],o:2}],ses:[],status:'done',startedAt:1,finishedAt:2,
+  lg:{ex:[{n:'Barbell bench press',v:[''],o:0,sets:S(4,5,100)},{n:'Overhead press',v:[''],o:1,sets:M([[5,50],[5,50],[4,50]])},{n:'Lateral raise',v:[''],o:2,sets:M([[12,10],[12,10],[10,12]])}],ses:[]}};
+ const seed={v:1,mig:1,seq:9,note:0,pattern:[{id:'p1',tid:'t1',wd:[0],from:'2026-10-05'}],days:{'2026-10-05':[past],[TODAY]:[{id:'i2',name:'Pull',items:[{n:'Barbell row',sets:2,v:[],o:0},{n:'Pull-up',sets:2,v:[],o:1}],ses:[],status:'planned'}]}};
+ const tp=[{id:'t1',name:'Push',items:past.items,ses:[]}];
+ const exp='window.__v={multiJoint,EXI,restOf,FEATURES,hasFeature,cleanSet,get mode(){return mode},get volStats(){return volStats},goal,byKey,VM,get SET(){return SET},coverBot,get sheetNom(){return sheetNom},get topInset(){return topInset}};';
+ const mk=o=>boot(Object.assign({win:TODAY},o,{js:js.replace('//@licexport',exp)}));
+ const w=mk({store:{'aom.cal.v1':JSON.stringify(seed),'aom.tpl.v1':JSON.stringify(tp)}}),d=w.document,q=s=>d.querySelector(s),qa=s=>[...d.querySelectorAll(s)],ev=(el,t)=>el.dispatchEvent(new w.Event(t,{bubbles:true}));
+ await waitFor(()=>!d.getElementById('loading'),60000,'v3.6 instance');
+ const V=w.__v,cal=()=>JSON.parse(w.localStorage.getItem('aom.cal.v1')||'null'),setj=()=>JSON.parse(w.localStorage.getItem('aom.set.v1')||'null'),txt=el=>el?el.textContent.replace(/\s+/g,' ').trim():'';
+ const pill=q('#tdPill'),tdo=()=>!q('#td').hidden,blocks=()=>qa('#tdBody .tx'),blk=n=>blocks().find(b=>b.querySelector('.tn b').textContent===n),rowsOf=b=>[...b.querySelectorAll('.tset')];
+ const last=n=>{const c=blk(n).querySelector('.tlast').cloneNode(true);c.querySelectorAll('.sronly').forEach(x=>x.remove());return txt(c);},hint=n=>blk(n).querySelector('.thint'),rt=()=>q('#tdRestT').textContent,restOn=()=>!q('#tdRest').hidden;
+ const css=html0.slice(html0.indexOf('<style>'),html0.indexOf('</style>'));
+ // features and the exercise classification behind the default rest
+ ok(V.FEATURES.timer&&V.FEATURES.timer.pro===false&&V.hasFeature('timer')&&V.hasFeature('progression'),'FEATURES.timer exists (pro:false, nothing gated); the hint uses FEATURES.progression');
+ const mj=['Back squat','Barbell bench press','Seated dumbbell press','Romanian deadlift','Pull-up','Bulgarian split squat','Barbell row'],iso=['Lateral raise','Barbell curl','Leg extension','Triceps pushdown','Plank','Crunch','Standing calf raise'];
+ ok(mj.every(n=>V.multiJoint(V.EXI[n]))&&iso.every(n=>!V.multiJoint(V.EXI[n]))&&V.restOf('Back squat')===120&&V.restOf('Lateral raise')===60,'rest defaults from the exercise data: multi-joint lifts 2:00 ('+mj.join(', ')+'), isolation work 1:00 ('+iso.join(', ')+')');
+ {const c=V.cleanSet({restOn:0,restC:5,restI:'x',restBeep:'yes',incKg:30,incLb:99}),c2=V.cleanSet({restOn:false,restC:150,restI:45,restBeep:true,incKg:1,incLb:10}),c0=V.cleanSet(null);
+  ok(c0.restOn===true&&c0.restC===120&&c0.restI===60&&c0.restBeep===false&&c0.incKg===2.5&&c0.incLb===5&&c.restOn===true&&c.restC===120&&c.restI===60&&c.restBeep===false&&c.incKg===2.5&&c.incLb===5&&c2.restOn===false&&c2.restC===150&&c2.restI===45&&c2.restBeep===true&&c2.incKg===1&&c2.incLb===10,'aom.set.v1 rest timer and weight step fields: defaults (on, 120 s, 60 s, no beep, 2.5 kg, 5 lb), junk falls back, valid values are kept');}
+ // 1. the today pill (desktop: bottom-left of the viewport)
+ ok(!pill.hidden&&q('#vp').contains(pill)&&txt(pill)==='Push · today'&&/^Start today's session Push$/.test(pill.getAttribute('aria-label'))&&/\.tdpill\{position:absolute;[^}]*left:24px;bottom:22px;/.test(css),'desktop: the today pill names the first open session of today ("'+txt(pill)+'"), bottom-left in the viewport');
+ q('#ovOpen').click();
+ ok(pill.hidden,'... hidden while the week overview is open');
+ q('#ovClose').click();
+ ok(!pill.hidden,'... and back when it closes');
+ pill.click();
+ let I=cal().days[TODAY].find(x=>x.pid==='p1');
+ ok(tdo()&&q('#tdTitle').textContent==='Push'&&pill.hidden&&I&&I.lg&&I.startedAt>0,'one tap on the pill starts the session (pattern session stored with its log) and opens the Today view; the pill hides');
+ // 3. "Last:" line, hint, muted prefill
+ ok(last('Barbell bench press')==='Last: 4 × 5 @ 100 kg · Mon 5 Oct → try 102.5 kg'&&!hint('Barbell bench press').classList.contains('rep'),'last time, all sets hit: "'+last('Barbell bench press')+'"');
+ ok(last('Overhead press')==='Last: 5, 5, 4 @ 50 kg · Mon 5 Oct → repeat 50 kg'&&hint('Overhead press').classList.contains('rep'),'a set fell short of the first set\'s reps: "'+last('Overhead press')+'"');
+ ok(last('Lateral raise')==='Last: 12, 12, 10 @ 10–12 kg · Mon 5 Oct → repeat 12 kg','mixed reps and weights are listed compactly: "'+last('Lateral raise')+'"');
+ const vals=n=>rowsOf(blk(n)).map(r=>r.querySelector('[data-f="r"]').value+'x'+r.querySelector('[data-f="w"]').value).join(' ');
+ ok(vals('Barbell bench press')==='5x100 5x100 5x100 5x100'&&rowsOf(blk('Barbell bench press')).every(r=>!r.classList.contains('done'))&&/\.tset:not\(\.done\) input\.num\{color:var\(--muted\);font-style:italic;\}/.test(css),'prefilled values (copied from last time) are shown in muted italic ink until the set is done');
+ // 2. rest timer with a fake clock
+ const vib=[];w.navigator.vibrate=p=>{vib.push(p);return true;};
+ let T0=w.Date.now();const realNow=w.Date.now;w.Date.now=()=>T0;const at=async s=>{w.Date.now=()=>T0+s*1000;await sleep(400);};
+ ok(!restOn(),'no rest timer before a set is done');
+ rowsOf(blk('Barbell bench press'))[0].querySelector('[data-f="done"]').click();
+ ok(restOn()&&rt()==='2:00'&&/after Barbell bench press/.test(q('#tdRestN').textContent)&&q('#td .tdw').firstElementChild.nextElementSibling===q('#tdRest')&&!q('#tdBody').contains(q('#tdRest')),'checking a set starts the rest timer (2:00 for a multi-joint lift), in a row under the header outside the scrolling list');
+ ok(rowsOf(blk('Barbell bench press'))[0].classList.contains('done'),'... and the checked set is in normal ink');
+ await at(30.2);
+ ok(rt()==='1:30','the countdown follows the clock (timestamp based): 1:30 after 30 s ('+rt()+')');
+ q('#tdRest [data-rest="-15"]').click();
+ ok(rt()==='1:15','−15 takes 15 seconds off ('+rt()+')');
+ q('#tdRest [data-rest="15"]').click();
+ ok(rt()==='1:30','+15 adds them back ('+rt()+')');
+ await at(121);
+ ok(restOn()&&q('#tdRest').classList.contains('up')&&rt()==='Go'&&vib.length===1&&JSON.stringify(vib[0])==='[200,100,200]','at zero: a visual cue ("Go", .up) and one vibration ('+JSON.stringify(vib)+')');
+ await at(128);
+ ok(!restOn(),'the cue goes away by itself a few seconds later');
+ const lr=rowsOf(blk('Lateral raise'))[0].querySelector('[data-f="r"]');lr.value='11';ev(lr,'input');
+ ok(restOn()&&rt()==='1:00'&&/Lateral raise/.test(q('#tdRestN').textContent),'typing reps marks a set done and starts the rest (1:00 for isolation work)');
+ await at(140);
+ lr.value='12';ev(lr,'input');
+ ok(rt()==='0:48','editing a set that is already done does not restart it ('+rt()+')');
+ q('#tdRest [data-rest="skip"]').click();
+ ok(!restOn(),'Skip ends the rest');
+ rowsOf(blk('Lateral raise'))[0].querySelector('[data-f="done"]').click();
+ ok(!restOn(),'unchecking a set starts nothing');
+ // hint: one tap sets the suggested weight on the open sets
+ hint('Barbell bench press').click();
+ I=cal().days[TODAY].find(x=>x.pid==='p1');
+ ok(vals('Barbell bench press')==='5x100 5x102.5 5x102.5 5x102.5'&&I.lg.ex[0].sets.map(t=>t.w).join()==='100,102.5,102.5,102.5'&&I.lg.ex[0].sets.slice(1).every(t=>!t.done),'tapping the hint puts 102.5 kg into the sets that are not done (they stay open)');
+ // Settings: rest timer on/off and length, weight step and units
+ q('#stOpen').click();
+ ok(!q('#st').hidden&&q('#stLog')&&q('#segRest [data-rst="on"]').getAttribute('aria-pressed')==='true'&&q('#restC').value==='120'&&q('#restI').value==='60'&&q('#segBeep [data-beep="off"]').getAttribute('aria-pressed')==='true'&&q('#incStep').value==='2.5'&&q('#incU').textContent==='kg','Settings, Training log: rest timer On, 120 / 60 seconds, beep Off, weight step 2.5 kg');
+ q('#segRest [data-rst="off"]').click();
+ ok(setj().restOn===false&&q('#segRest [data-rst="off"]').getAttribute('aria-pressed')==='true','turning the rest timer off is stored in aom.set.v1');
+ q('#stClose').click();
+ rowsOf(blk('Barbell bench press'))[1].querySelector('[data-f="done"]').click();
+ ok(!restOn(),'... and a done set then starts no timer');
+ q('#stOpen').click();q('#segRest [data-rst="on"]').click();q('#restC').value='90';ev(q('#restC'),'change');q('#incStep').value='5';ev(q('#incStep'),'change');
+ ok(setj().restOn===true&&setj().restC===90&&setj().incKg===5,'rest length and weight step are stored (90 s, 5 kg)');
+ q('#stClose').click();
+ rowsOf(blk('Barbell bench press'))[2].querySelector('[data-f="done"]').click();
+ ok(restOn()&&rt()==='1:30'&&/→ try 105 kg/.test(last('Barbell bench press')),'the new rest length applies (1:30) and the hint uses the new step ('+last('Barbell bench press')+')');
+ q('#stOpen').click();q('#segUnit [data-unit="lb"]').click();
+ ok(q('#incStep').value==='5'&&q('#incU').textContent==='lb'&&q('#incStep').step==='1','in lb the weight step field shows the pound step (default 5 lb)');
+ q('#stClose').click();
+ ok(last('Barbell bench press')==='Last: 4 × 5 @ 220 lb · Mon 5 Oct → try 225 lb','lb: "'+last('Barbell bench press')+'"');
+ q('#stOpen').click();q('#segUnit [data-unit="kg"]').click();q('#incStep').value='2.5';ev(q('#incStep'),'change');q('#stClose').click();
+ w.Date.now=realNow;
+ // 5. recap: an added exercise brings the template offer first; the recap follows it
+ q('#tdAddEx').click();q('#tdQ').value='dumbbell bench press';ev(q('#tdQ'),'input');q('#tdRes [data-tdadd]').click();
+ qa('#tdBody .tset [data-f="done"]').filter(c=>!c.checked).forEach(c=>c.click());
+ q('#tdFinish').click();
+ ok(tdo()&&!q('#tdOffer').hidden&&q('#rcBan').hidden&&!restOn(),'Finish with an added exercise: the template offer shows first, no recap yet, the timer is cleared');
+ q('#tdOfferNo').click();
+ const VS=V.volStats,pec=V.byKey['pectoralis major'].find(m=>m.userData.part==='sternocostal part'),quad=V.byKey['vastus lateralis'][0];
+ ok(!tdo()&&!q('#rcBan').hidden&&V.mode==='vol'&&VS&&VS.rc&&q('#sxBan').hidden&&pill.hidden,'"Not now" closes the Today view and shows the recap on the body (mode vol, the statistics banner and the pill stay hidden)');
+ ok(q('#rcT').textContent==='Push done'&&/^\d+ sets/.test(q('#rcS').textContent)&&/^Most work: /.test(txt(q('#rcG')))&&/Side delts|Triceps|chest/i.test(txt(q('#rcG')))&&q('#rcLeg .sw.v2')&&q('#rcDone')&&q('#rcImg'),'recap: "'+q('#rcT').textContent+' · '+q('#rcS').textContent+'", "'+txt(q('#rcG'))+'", the 7-day legend, Done and Save image');
+ ok(V.VM.includes(pec.material)&&!V.VM.includes(quad.material),'the trained muscles carry the 7-day status colours (pectoralis major), untrained ones do not (vastus lateralis)');
+ ok(Math.abs(Math.cos(V.goal.theta)-1)<1e-6,'a push session is framed from the front');
+ let shots=0;const oc=q('#saveImg').onclick;q('#saveImg').onclick=()=>{shots++;};q('#rcImg').click();q('#saveImg').onclick=oc;
+ ok(shots===1,'"Save image" uses the toolbar PNG export');
+ q('#rcDone').click();
+ ok(q('#rcBan').hidden&&V.mode===null&&!V.volStats&&!pill.hidden&&txt(pill)==='Pull · today','"Done" returns to the normal view; the pill now offers the next open session of today ("'+txt(pill)+'")');
+ // a pull session: framed from the back; the recap is shown only on the first Finish
+ pill.click();
+ ok(tdo()&&q('#tdTitle').textContent==='Pull','the pill opens the next session');
+ qa('#tdBody .tset [data-f="done"]').forEach(c=>c.click());
+ q('#tdFinish').click();
+ ok(!tdo()&&!q('#rcBan').hidden&&q('#rcT').textContent==='Pull done'&&Math.abs(Math.cos(V.goal.theta)+1)<1e-6,'a pull session\'s recap frames the body from the back');
+ ok(pill.hidden,'no open session left today: no pill');
+ q('#rcDone').click();
+ ok(pill.hidden&&q('#rcBan').hidden,'... also after the recap');
+ q('#wstrip [data-day="0"]').click();q('#sessList .scard [data-sact="train"]').click();
+ ok(tdo()&&q('#tdFinish').textContent==='Close','a finished session reopens with "Close"');
+ q('#tdFinish').click();
+ ok(!tdo()&&q('#rcBan').hidden&&V.mode!=='vol','closing it again shows no recap');
+ w.close();
+ // phone: the pill and the recap sit in the strip above the sheet and are counted as covered
+ const p=mk({phone:true,store:{'aom.cal.v1':JSON.stringify({v:1,mig:1,seq:9,note:0,pattern:[{id:'p1',tid:'t1',wd:[0],from:TODAY}],days:{}}),'aom.tpl.v1':JSON.stringify(tp)}}),pd=p.document,pq=s=>pd.querySelector(s),pqa=s=>[...pd.querySelectorAll(s)];
+ await waitFor(()=>!pd.getElementById('loading'),60000,'v3.6 phone instance');
+ const P=p.__v,pp=pq('#tdPill'),side=pq('#side'),grab=pq('#grab');
+ ok(!pp.hidden&&side.dataset.sheet==='peek'&&P.coverBot(0)===58+52&&/\.tdpill\{left:50%;transform:translateX\(-50%\);bottom:var\(--abot/.test(css),'phone: the pill sits centred in the strip above the sheet (bottom: --abot) and counts as covered (coverBot(0) = '+P.coverBot(0)+')');
+ await waitFor(()=>p.__cam&&p.__cam.view&&p.__cam.view.enabled,5000,'phone view offset');
+ ok(p.__cam.view.offsetY===Math.round((P.coverBot(0)-P.topInset)/2),'phone: the view offset centres the body above the pill');
+ grab.click();grab.click();
+ ok(side.dataset.sheet==='full'&&pp.hidden&&P.coverBot(0)===58,'phone: hidden while the sheet is full (and no longer counted)');
+ grab.click();
+ ok(side.dataset.sheet==='peek'&&!pp.hidden,'phone: back at peek it shows again');
+ pq('#bnav [data-nav="ex"]').click();pq('#exlist .item').click();
+ ok(side.classList.contains('has-card')&&pp.hidden,'phone: hidden while a card covers the panes');
+ pq('#bnav [data-nav="wk"]').click();
+ ok(!side.classList.contains('has-card')&&!pp.hidden,'phone: the pill returns when the panes show again');
+ pq('#bnSet').click();
+ ok(pp.hidden,'phone: hidden while Settings is open');
+ pq('#stClose').click();
+ pp.click();
+ ok(!pq('#td').hidden&&pp.hidden,'phone: one tap opens the Today view');
+ pqa('#tdBody .tset [data-f="done"]').forEach(c=>c.click());pq('#tdFinish').click();
+ ok(pq('#td').hidden&&!pq('#rcBan').hidden&&side.dataset.sheet==='peek'&&P.coverBot(0)===58+128&&/\.rcban\{left:10px;right:10px;width:auto;top:auto;bottom:var\(--abot/.test(css),'phone: the recap lowers the sheet to peek and sits in the strip above it, counted as covered (coverBot(0) = '+P.coverBot(0)+')');
+ pq('#rcDone').click();
+ ok(pq('#rcBan').hidden&&P.coverBot(0)===58,'phone: Done frees the strip');
+ p.close();
+}
 async function animRun(){
  const R=META.rig,A=META.anim||{},S=META.skin||{},NS=R?R.seg.length:0,NB=R?R.nbody:0,nm=R?R.seg.map(s=>s[0]):[];
  ok(R&&NS===52&&NB===22&&nm[0]==='pelvis'&&R.seg[0][1]===-1&&R.seg.every((s,i)=>i===0||(s[1]>=0&&s[1]<i)),'rig: 52 segments (22 body + 30 finger), pelvis is the root, every parent comes before its children');
@@ -3031,6 +3178,7 @@ async function boardRun(){
  await run('boardRun',boardRun);
  await run('logRun',logRun);
  await run('tdAddRun',tdAddRun);
+ await run('v36Run',v36Run);
  await run('sugRun',sugRun);
  await run('migrateRun',migrateRun);
  await run('calRun',calRun);
